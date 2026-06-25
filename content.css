@@ -1,0 +1,347 @@
+/* ===== ChatGPT Input Toggle — content.css ===== */
+
+/* ----------------------------------------
+   Toggle button
+---------------------------------------- */
+#cit-toggle-btn {
+  position: fixed;
+  bottom: 84px;
+  right: 20px;
+  z-index: 2147483000;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(52, 53, 65, 0.85);
+  color: #ececf1;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  transition: bottom 0.3s ease, background 0.2s ease, transform 0.15s ease;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#cit-toggle-btn:hover {
+  background: rgba(52, 53, 65, 1);
+}
+
+#cit-toggle-btn:active {
+  transform: scale(0.92);
+}
+
+#cit-toggle-btn .cit-icon {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+body.cit-composer-hidden #cit-toggle-btn {
+  bottom: 60px;
+}
+
+body.cit-composer-hidden #cit-toggle-btn .cit-icon {
+  transform: rotate(180deg);
+}
+
+/* ----------------------------------------
+   Settings button
+---------------------------------------- */
+#cit-settings-btn {
+  position: fixed;
+  bottom: 22px;
+  right: 22px;
+  z-index: 2147483000;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(52, 53, 65, 0.55);
+  color: rgba(236, 236, 241, 0.5);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: color 0.2s ease, background 0.2s ease;
+  padding: 0;
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#cit-settings-btn:hover {
+  background: rgba(52, 53, 65, 0.95);
+  color: #ececf1;
+}
+
+/* ----------------------------------------
+   Settings panel
+---------------------------------------- */
+#cit-settings-panel {
+  position: fixed;
+  bottom: 62px;
+  right: 14px;
+  z-index: 2147483001;
+  width: 280px;
+  background: #2a2b36;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 12px 16px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  animation: cit-panel-in 0.16s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@keyframes cit-panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.cit-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.cit-settings-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: rgba(236, 236, 241, 0.5);
+}
+
+.cit-settings-close {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: rgba(236, 236, 241, 0.45);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.cit-settings-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ececf1;
+}
+
+.cit-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cit-settings-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.cit-settings-row span {
+  font-size: 13px;
+  color: #ececf1;
+  user-select: none;
+}
+
+/* toggle switch */
+.cit-toggle-switch {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  flex-shrink: 0;
+  border: none;
+  padding: 0;
+  transition: background 0.2s ease;
+}
+
+.cit-toggle-switch.cit-on {
+  background: #10a37f;
+}
+
+.cit-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.cit-toggle-switch.cit-on .cit-toggle-knob {
+  transform: translateX(16px);
+}
+
+/* ----------------------------------------
+   Toast (auto-hide hint)
+---------------------------------------- */
+#cit-toast {
+  position: fixed;
+  bottom: 92px;
+  right: 64px;
+  z-index: 2147483002;
+  max-width: 260px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  background: rgba(20, 21, 28, 0.92);
+  color: #ececf1;
+  font-size: 12.5px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  white-space: nowrap;
+}
+
+#cit-toast.cit-toast-show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ----------------------------------------
+   Composer hide/show animation is driven
+   entirely by inline styles in content.js
+   (React reconciles away added classes and
+   Tailwind's !important beats class rules),
+   so there are no composer rules here.
+
+   Trim the bottom gap when the composer is gone.
+---------------------------------------- */
+body.cit-composer-hidden [class*="group/scroll-root"] {
+  padding-bottom: 16px !important;
+}
+
+/* ----------------------------------------
+   Light mode
+---------------------------------------- */
+html[class*="light"] #cit-toggle-btn,
+html[data-theme="light"] #cit-toggle-btn {
+  background: rgba(255, 255, 255, 0.9);
+  color: #343541;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14);
+}
+
+html[class*="light"] #cit-toggle-btn:hover,
+html[data-theme="light"] #cit-toggle-btn:hover {
+  background: #fff;
+}
+
+html[class*="light"] #cit-settings-btn,
+html[data-theme="light"] #cit-settings-btn {
+  background: rgba(255, 255, 255, 0.7);
+  color: rgba(52, 53, 65, 0.5);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+html[class*="light"] #cit-settings-btn:hover,
+html[data-theme="light"] #cit-settings-btn:hover {
+  background: #fff;
+  color: #343541;
+}
+
+html[class*="light"] #cit-settings-panel,
+html[data-theme="light"] #cit-settings-panel {
+  background: #f7f7f8;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+}
+
+html[class*="light"] .cit-settings-title,
+html[data-theme="light"] .cit-settings-title {
+  color: rgba(52, 53, 65, 0.5);
+}
+
+html[class*="light"] .cit-settings-close,
+html[data-theme="light"] .cit-settings-close {
+  color: rgba(52, 53, 65, 0.5);
+}
+
+html[class*="light"] .cit-settings-close:hover,
+html[data-theme="light"] .cit-settings-close:hover {
+  background: rgba(0, 0, 0, 0.07);
+  color: #343541;
+}
+
+html[class*="light"] .cit-settings-row span,
+html[data-theme="light"] .cit-settings-row span {
+  color: #343541;
+}
+
+html[class*="light"] .cit-settings-row,
+html[data-theme="light"] .cit-settings-row {
+  border-color: rgba(0, 0, 0, 0.07);
+}
+
+html[class*="light"] .cit-toggle-switch,
+html[data-theme="light"] .cit-toggle-switch {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+html[class*="light"] #cit-toast,
+html[data-theme="light"] #cit-toast {
+  background: rgba(255, 255, 255, 0.96);
+  color: #343541;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+}
+
+/* ----------------------------------------
+   Responsive
+---------------------------------------- */
+@media (max-width: 480px) {
+  #cit-toggle-btn {
+    right: 12px;
+    bottom: 74px;
+    width: 34px;
+    height: 34px;
+  }
+  body.cit-composer-hidden #cit-toggle-btn {
+    bottom: 52px;
+  }
+  #cit-settings-btn {
+    right: 12px;
+    bottom: 12px;
+    width: 28px;
+    height: 28px;
+  }
+  #cit-settings-panel {
+    right: 8px;
+    width: calc(100vw - 16px);
+  }
+  #cit-toast {
+    right: 12px;
+    bottom: 116px;
+    max-width: calc(100vw - 24px);
+    white-space: normal;
+  }
+}
