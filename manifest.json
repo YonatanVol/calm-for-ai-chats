@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "ChatGPT Input Toggle",
-  "version": "1.0.0",
-  "description": "Hide/show the ChatGPT input composer for distraction-free reading.",
+  "name": "Calm — Reading Mode for AI Chats",
+  "version": "2.0.0",
+  "description": "Distraction-free reading for ChatGPT and Gemini: hide the input, Zen mode, reading width, and more.",
   "content_scripts": [
     {
-      "matches": ["https://chatgpt.com/*"],
+      "matches": ["https://chatgpt.com/*", "https://gemini.google.com/*"],
       "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
