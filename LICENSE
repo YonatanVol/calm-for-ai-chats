@@ -1,0 +1,31 @@
+Calm — Reading Mode for AI Chats
+Copyright © 2026 Yonatan Volsky. All rights reserved.
+
+This software, including its source code, design, and associated assets
+(the "Software"), is the proprietary and confidential property of
+Yonatan Volsky (the "Author"). The Software is made source-available for
+transparency and evaluation only. It is NOT open-source software.
+
+YOU MAY:
+  • View and inspect the source code for personal, educational, and
+    evaluation purposes.
+
+YOU MAY NOT, without the prior written permission of the Author:
+  • Copy, reproduce, or republish the Software or any substantial portion;
+  • Modify, adapt, translate, or create derivative works;
+  • Distribute, sublicense, sell, rent, lease, host, or otherwise
+    commercialize the Software or any derivative;
+  • Use the Software, in whole or in part, in another product or service;
+  • Remove or alter any copyright, trademark, or proprietary notice.
+
+"Calm" and the associated name and branding are trademarks of the Author.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+For licensing or commercial inquiries, open an issue at:
+https://github.com/YonatanVol/calm-for-ai-chats

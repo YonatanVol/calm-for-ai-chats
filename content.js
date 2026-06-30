@@ -1,6 +1,9 @@
 /* ===== Calm — Reading Mode for AI Chats (ChatGPT + Gemini) =====
  *
- * Free, local, zero-network. Hides the composer for distraction-free reading,
+ * Copyright © 2026 Yonatan Volsky. All rights reserved.
+ * Proprietary and source-available; see LICENSE. Not open-source.
+ *
+ * Local, zero-network. Hides the composer for distraction-free reading,
  * plus Zen mode, reading-width, scroll sensitivity, remember-state, quick-nav.
  *
  * Notes learned the hard way:

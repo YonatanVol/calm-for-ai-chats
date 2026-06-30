@@ -30,13 +30,35 @@ Works on `chatgpt.com` and `gemini.google.com`.
 
 ---
 
-## 🧩 Install (developer / unpacked)
+## 🧩 Install
+
+### Quick (one command)
+
+```bash
+python3 install.py
+```
+
+Validates the extension, builds a packaged `.zip`, and prints the install steps.
+Handy flags:
+
+```bash
+python3 install.py --launch   # load it into a fresh Chrome window right now
+python3 install.py --open     # open chrome://extensions
+python3 install.py --zip      # just build the Web-Store zip
+```
+
+### Manual (unpacked)
 
 1. Clone or download this repo.
 2. Open `chrome://extensions`.
 3. Enable **Developer mode** (top‑right).
 4. Click **Load unpacked** and select this folder.
 5. Open ChatGPT or Gemini — the controls appear bottom‑right.
+
+### Chrome Web Store
+
+Coming soon. See [`STORE_LISTING.md`](STORE_LISTING.md) for the submission guide
+and [`PRIVACY.md`](PRIVACY.md) for the privacy policy.
 
 ---
 
@@ -71,5 +93,11 @@ icons/          # extension icons
 - Themes, line‑spacing and font controls.
 
 ---
+
+## 📄 License
+
+**Proprietary and source-available** — see [`LICENSE`](LICENSE). You may read the
+code for evaluation; copying, modifying, redistributing, or commercial use are
+not permitted without written permission. "Calm" is a trademark of the author.
 
 © 2026 Yonatan Volsky. All rights reserved.
