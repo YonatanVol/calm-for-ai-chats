@@ -45,7 +45,7 @@ BRANCH = "main"
 ZIP_URL = f"https://codeload.github.com/{REPO}/zip/refs/heads/{BRANCH}"
 CLONE_URL = f"https://github.com/{REPO}.git"
 INSTALL_DIR = os.path.expanduser("~/.calm-for-ai-chats")
-EXTENSION_FILES = ["manifest.json", "content.js", "content.css", "icons"]
+EXTENSION_FILES = ["manifest.json", "src", "content.css", "icons"]
 
 # Directory of this script if it lives next to the extension files; else None.
 try:

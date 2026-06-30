@@ -1,12 +1,18 @@
 {
   "manifest_version": 3,
   "name": "Calm — Reading Mode for AI Chats",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Distraction-free reading for ChatGPT and Gemini: hide the input, Zen mode, reading width, and more.",
   "content_scripts": [
     {
       "matches": ["https://chatgpt.com/*", "https://gemini.google.com/*"],
-      "js": ["content.js"],
+      "js": [
+        "src/adapters.js",
+        "src/state.js",
+        "src/modes.js",
+        "src/ui.js",
+        "src/core.js"
+      ],
       "css": ["content.css"],
       "run_at": "document_idle"
     }
