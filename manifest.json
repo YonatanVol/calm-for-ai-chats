@@ -11,7 +11,8 @@
         "src/state.js",
         "src/modes.js",
         "src/ui.js",
-        "src/core.js"
+        "src/core.js",
+        "src/typeahead.js"
       ],
       "css": ["content.css"],
       "run_at": "document_idle"

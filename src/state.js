@@ -25,6 +25,7 @@
     sensitivity: 5, // 1 (needs big scroll) .. 10 (hair trigger)
     readingWidth: 0, // 0 = off; else px
     zenComposer: true, // zen also hides the composer
+    typeAhead: "both", // off | auto | buffer | both — typing while input hidden
   };
 
   function loadSettings() {
@@ -68,6 +69,7 @@
     top: "cit-nav-top",
     bottom: "cit-nav-bottom",
     widthStyle: "cit-width-style",
+    typeChip: "cit-type-chip",
   };
 
   // Shared MUTABLE runtime state — every module reads/writes this one object.
@@ -83,6 +85,7 @@
     accUp: 0,
     accTimer: null,
     draftSaved: false,
+    pendingText: "", // type-ahead buffer (typing while composer hidden)
     lastToastAt: 0,
     toastTimer: null,
     lastUrl: location.href,

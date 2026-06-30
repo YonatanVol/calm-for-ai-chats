@@ -62,6 +62,28 @@
     }
   }
 
+  // ---- Type-ahead chip (shown while typing into a hidden composer) ----
+  function showTypeChip(text) {
+    var c = document.getElementById(IDS.typeChip);
+    if (!c) {
+      c = document.createElement("div");
+      c.id = IDS.typeChip;
+      c.innerHTML =
+        '<span class="cit-type-dot"></span>' +
+        '<span class="cit-type-label">typing…&nbsp;</span>' +
+        '<b class="cit-type-preview"></b>' +
+        '<span class="cit-type-hint">⌃⇧H</span>';
+      document.body.appendChild(c);
+    }
+    var preview = text.length > 24 ? "…" + text.slice(-24) : text;
+    c.querySelector(".cit-type-preview").textContent = preview; // textContent = no XSS
+    c.classList.add("cit-type-show");
+  }
+  function hideTypeChip() {
+    var c = document.getElementById(IDS.typeChip);
+    if (c) c.classList.remove("cit-type-show");
+  }
+
   // ---- Buttons ----
   function mkBtn(id, label, title, onClick) {
     var b = document.createElement("button");
@@ -141,6 +163,14 @@
     p.appendChild(toggleRow("Auto-hide on scroll", "autoHideOnScroll"));
     p.appendChild(sliderRow("Scroll sensitivity", "sensitivity", 1, 10, 1));
     p.appendChild(toggleRow("Zen also hides input", "zenComposer"));
+    p.appendChild(
+      selectRow("Type while hidden", "typeAhead", [
+        { value: "both", label: "Both" },
+        { value: "auto", label: "Auto-reveal" },
+        { value: "buffer", label: "Buffer" },
+        { value: "off", label: "Off" },
+      ])
+    );
     p.appendChild(
       toggleRow("Remember state", "rememberState", function () {
         if (S.rememberState) CALM.saveState();
@@ -229,14 +259,41 @@
     return r;
   }
 
+  function selectRow(label, key, options, after) {
+    var r = document.createElement("div");
+    r.className = "cit-settings-row";
+    var span = document.createElement("span");
+    span.textContent = label;
+    var sel = document.createElement("select");
+    sel.className = "cit-select";
+    options.forEach(function (o) {
+      var op = document.createElement("option");
+      op.value = o.value;
+      op.textContent = o.label;
+      if (S[key] === o.value) op.selected = true;
+      sel.appendChild(op);
+    });
+    sel.addEventListener("change", function () {
+      S[key] = sel.value;
+      CALM.saveSettings();
+      if (after) after();
+    });
+    r.appendChild(span);
+    r.appendChild(sel);
+    return r;
+  }
+
   CALM.ui = {
     showToast: showToast,
     hideToast: hideToast,
     updateQuickNav: updateQuickNav,
     smoothScrollTo: smoothScrollTo,
+    showTypeChip: showTypeChip,
+    hideTypeChip: hideTypeChip,
     createUI: createUI,
     toggleSettingsPanel: toggleSettingsPanel,
     toggleRow: toggleRow,
     sliderRow: sliderRow,
+    selectRow: selectRow,
   };
 })();

@@ -61,6 +61,16 @@
     ui.updateQuickNav();
     if (S.rememberState) CALM.saveState();
     restoreDraft();
+    flushTypeAhead();
+  }
+  // Type-ahead: text typed while the composer was hidden is flushed into the
+  // input on reveal, with the caret at the end, so typing stays continuous.
+  function flushTypeAhead() {
+    if (rt.pendingText) {
+      insertIntoInput(site.promptInput(), rt.pendingText, true);
+      rt.pendingText = "";
+    }
+    if (ui.hideTypeChip) ui.hideTypeChip();
   }
   function manualToggleComposer() {
     if (rt.composerHidden) showComposer();
