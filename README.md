@@ -32,33 +32,49 @@ Works on `chatgpt.com` and `gemini.google.com`.
 
 ## 🧩 Install
 
-### Quick (one command)
+### One command (no "Load unpacked")
+
+Fetches Calm from GitHub and loads it straight into your Chrome — your real
+profile, your logins:
 
 ```bash
-python3 install.py
+curl -fsSL https://raw.githubusercontent.com/YonatanVol/calm-for-ai-chats/main/install.py | python3 - --auto
 ```
 
-Validates the extension, builds a packaged `.zip`, and prints the install steps.
-Handy flags:
+Or inside a checkout:
 
 ```bash
-python3 install.py --launch   # load it into a fresh Chrome window right now
-python3 install.py --open     # open chrome://extensions
-python3 install.py --zip      # just build the Web-Store zip
+python3 install.py --auto
+```
+
+> **What to expect:** Chrome relaunches with Calm loaded and shows a
+> "developer mode extensions" banner (normal for sideloaded extensions). The
+> installer also writes a reusable launcher (`~/.calm-for-ai-chats/calm-chrome.command`
+> on macOS) so you can start Chrome with Calm anytime.
+>
+> Chrome **intentionally** blocks fully‑silent, permanent installs of
+> non‑store extensions — the only one‑click, banner‑free path is the
+> **Chrome Web Store** (below).
+
+Other flags:
+
+```bash
+python3 install.py           # build a .zip + print manual steps
+python3 install.py --zip     # just build the Web-Store zip
+python3 install.py --launch  # try it in a throwaway demo profile
+python3 install.py --open    # open chrome://extensions
 ```
 
 ### Manual (unpacked)
 
-1. Clone or download this repo.
-2. Open `chrome://extensions`.
-3. Enable **Developer mode** (top‑right).
-4. Click **Load unpacked** and select this folder.
-5. Open ChatGPT or Gemini — the controls appear bottom‑right.
+1. Open `chrome://extensions` → enable **Developer mode** (top‑right).
+2. **Load unpacked** → select this folder.
 
 ### Chrome Web Store
 
-Coming soon. See [`STORE_LISTING.md`](STORE_LISTING.md) for the submission guide
-and [`PRIVACY.md`](PRIVACY.md) for the privacy policy.
+Coming soon — the one‑click, permanent install for everyone. See
+[`STORE_LISTING.md`](STORE_LISTING.md) for the submission guide and
+[`PRIVACY.md`](PRIVACY.md) for the privacy policy.
 
 ---
 
