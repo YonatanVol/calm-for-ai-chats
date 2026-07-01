@@ -26,6 +26,12 @@
     readingWidth: 0, // 0 = off; else px
     zenComposer: true, // zen also hides the composer
     typeAhead: "both", // off | auto | buffer | both — typing while input hidden
+    // Mode parameters
+    readerFontScale: 110, // % (80..160) — Reader mode
+    readerLineHeight: 16, // ×0.1 => 1.6 — Reader mode
+    nightLevel: 35, // overlay opacity % (10..70) — Night/Dim
+    autoScrollSpeed: 3, // px per tick (1..10) — Auto-scroll
+    pauseMinutes: 15, // snooze duration (5..60) — Pause
   };
 
   function loadSettings() {
@@ -79,6 +85,9 @@
     composerHidden: false,
     zenOn: false,
     zenHidden: [],
+    activeModes: {}, // { modeId: true } — which modes are on
+    paused: false, // Pause/Snooze suspends auto-hide
+    modeTimers: {}, // per-mode interval handles (autoscroll, pause, ...)
     scrollLocked: false,
     scrollLockTimer: null,
     lastScrollTop: 0,
@@ -125,7 +134,7 @@
         STATE_KEY,
         JSON.stringify({
           composerHidden: CALM.rt.composerHidden,
-          zen: CALM.rt.zenOn,
+          modes: CALM.rt.activeModes,
         })
       );
     } catch (_) {}

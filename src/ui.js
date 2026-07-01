@@ -84,6 +84,31 @@
     if (c) c.classList.remove("cit-type-show");
   }
 
+  // ---- Generic status chips (pause countdown, pomodoro, etc.) ----
+  function chipStack() {
+    var s = document.getElementById("cit-chip-stack");
+    if (!s) {
+      s = document.createElement("div");
+      s.id = "cit-chip-stack";
+      document.body.appendChild(s);
+    }
+    return s;
+  }
+  function showChip(id, text) {
+    var c = document.getElementById("cit-chip-" + id);
+    if (!c) {
+      c = document.createElement("div");
+      c.id = "cit-chip-" + id;
+      c.className = "cit-chip";
+      chipStack().appendChild(c);
+    }
+    c.textContent = text;
+  }
+  function hideChip(id) {
+    var c = document.getElementById("cit-chip-" + id);
+    if (c) c.remove();
+  }
+
   // ---- Buttons ----
   function mkBtn(id, label, title, onClick) {
     var b = document.createElement("button");
@@ -189,6 +214,18 @@
     );
     p.appendChild(toggleRow("Hint when auto-hidden", "showHints"));
 
+    p.appendChild(divider("Modes"));
+    ["zen", "reader", "night", "privacy", "presentation", "autoscroll", "pause", "pomodoro"].forEach(
+      function (id) {
+        p.appendChild(modeRow(id));
+      }
+    );
+    p.appendChild(sliderRow("Reader font %", "readerFontScale", 80, 160, 5, CALM.modes.refreshVars));
+    p.appendChild(sliderRow("Reader line-height ×10", "readerLineHeight", 12, 22, 1, CALM.modes.refreshVars));
+    p.appendChild(sliderRow("Night dim %", "nightLevel", 10, 70, 5, CALM.modes.refreshVars));
+    p.appendChild(sliderRow("Auto-scroll speed", "autoScrollSpeed", 1, 10, 1));
+    p.appendChild(sliderRow("Pause minutes", "pauseMinutes", 5, 60, 5));
+
     document.body.appendChild(p);
 
     function closeOnOutside(e) {
@@ -283,6 +320,44 @@
     return r;
   }
 
+  function divider(label) {
+    var d = document.createElement("div");
+    d.className = "cit-settings-divider";
+    d.textContent = label;
+    return d;
+  }
+
+  function modeRow(id) {
+    var m = CALM.modes.MODES[id];
+    var r = document.createElement("div");
+    r.className = "cit-settings-row";
+    var span = document.createElement("span");
+    span.textContent = m.icon + "  " + m.label;
+    var sw = document.createElement("button");
+    sw.type = "button";
+    sw.className = "cit-toggle-switch" + (CALM.modes.isActive(id) ? " cit-on" : "");
+    sw.setAttribute("data-cit-mode", id);
+    var knob = document.createElement("div");
+    knob.className = "cit-toggle-knob";
+    sw.appendChild(knob);
+    sw.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      CALM.modes.toggle(id);
+      sw.classList.toggle("cit-on", CALM.modes.isActive(id));
+    });
+    r.appendChild(span);
+    r.appendChild(sw);
+    return r;
+  }
+  function refreshModeButtons() {
+    var list = document.querySelectorAll("[data-cit-mode]");
+    for (var i = 0; i < list.length; i++) {
+      var id = list[i].getAttribute("data-cit-mode");
+      list[i].classList.toggle("cit-on", CALM.modes.isActive(id));
+    }
+  }
+
   CALM.ui = {
     showToast: showToast,
     hideToast: hideToast,
@@ -290,6 +365,9 @@
     smoothScrollTo: smoothScrollTo,
     showTypeChip: showTypeChip,
     hideTypeChip: hideTypeChip,
+    showChip: showChip,
+    hideChip: hideChip,
+    refreshModeButtons: refreshModeButtons,
     createUI: createUI,
     toggleSettingsPanel: toggleSettingsPanel,
     toggleRow: toggleRow,

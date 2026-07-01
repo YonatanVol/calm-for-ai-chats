@@ -359,6 +359,73 @@ html[data-theme="light"] .cit-select option {
 }
 
 /* ----------------------------------------
+   Modes: Night overlay, Presentation, chips, divider
+---------------------------------------- */
+#cit-night-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147482000; /* below Calm's own UI so buttons stay bright */
+  pointer-events: none;
+  background: #ff9b3d;
+  mix-blend-mode: multiply;
+  opacity: var(--cit-night-opacity, 0.35);
+  transition: opacity 0.25s ease;
+}
+
+/* Presentation mode hides ALL Calm UI for clean capture/sharing. */
+html.cit-presentation .cit-btn,
+html.cit-presentation #cit-settings-panel,
+html.cit-presentation #cit-type-chip,
+html.cit-presentation #cit-chip-stack,
+html.cit-presentation #cit-toast {
+  display: none !important;
+}
+
+#cit-chip-stack {
+  position: fixed;
+  right: 20px;
+  bottom: 224px;
+  z-index: 2147483002;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.cit-chip {
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: rgba(16, 163, 127, 0.95);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  animation: cit-chip-in 0.2s ease;
+}
+@keyframes cit-chip-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cit-settings-divider {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(236, 236, 241, 0.4);
+  margin: 12px 0 2px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+html[class*="light"] .cit-settings-divider,
+html[data-theme="light"] .cit-settings-divider {
+  color: rgba(52, 53, 65, 0.45);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+/* ----------------------------------------
    Responsive
 ---------------------------------------- */
 @media (max-width: 480px) {

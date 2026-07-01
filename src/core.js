@@ -155,7 +155,7 @@
     );
   }
   function handleScrollEl(el) {
-    if (!S.autoHideOnScroll || rt.scrollLocked) {
+    if (!S.autoHideOnScroll || rt.scrollLocked || rt.paused) {
       rt.lastScrollTop = el.scrollTop;
       return;
     }
@@ -270,6 +270,11 @@
     "keydown",
     function (e) {
       if (!S.keyboardShortcut) return;
+      // Escape leaves Presentation mode (its buttons are hidden).
+      if (e.code === "Escape" && modes.isActive && modes.isActive("presentation")) {
+        modes.exit("presentation");
+        return;
+      }
       if (!(e.ctrlKey || e.metaKey) || !e.shiftKey) return;
       if (e.code === "KeyH") {
         e.preventDefault();
@@ -279,6 +284,10 @@
         e.preventDefault();
         e.stopPropagation();
         modes.toggleZen();
+      } else if (e.code === "KeyP") {
+        e.preventDefault();
+        e.stopPropagation();
+        modes.toggle("presentation");
       }
     },
     true
@@ -300,8 +309,12 @@
       modes.applyWidth();
       if (S.rememberState) {
         var st = CALM.loadState();
-        if (st.zen) modes.applyZen(true);
-        else if (st.composerHidden) hideComposer();
+        if (st.modes) {
+          Object.keys(st.modes).forEach(function (id) {
+            if (st.modes[id]) modes.enter(id);
+          });
+        }
+        if (st.composerHidden && !rt.composerHidden) hideComposer();
       }
     })();
   }
