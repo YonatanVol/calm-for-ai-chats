@@ -426,6 +426,65 @@ html[data-theme="light"] .cit-settings-divider {
 }
 
 /* ----------------------------------------
+   Presets
+---------------------------------------- */
+.cit-preset-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.cit-mini-btn {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ececf1;
+  border-radius: 7px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.cit-mini-btn:hover {
+  background: #10a37f;
+  border-color: #10a37f;
+}
+.cit-mini-btn.cit-del {
+  padding: 3px 7px;
+  color: rgba(236, 236, 241, 0.6);
+}
+.cit-mini-btn.cit-del:hover {
+  background: #b3261e;
+  border-color: #b3261e;
+  color: #fff;
+}
+.cit-save-preset {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(236, 236, 241, 0.7);
+  border-radius: 9px;
+  padding: 8px;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.cit-save-preset:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ececf1;
+}
+html[class*="light"] .cit-mini-btn,
+html[data-theme="light"] .cit-mini-btn {
+  background: rgba(0, 0, 0, 0.05);
+  color: #343541;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+html[class*="light"] .cit-save-preset,
+html[data-theme="light"] .cit-save-preset {
+  color: rgba(52, 53, 65, 0.7);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+/* ----------------------------------------
    Responsive
 ---------------------------------------- */
 @media (max-width: 480px) {

@@ -10,6 +10,7 @@
         "src/adapters.js",
         "src/state.js",
         "src/modes.js",
+        "src/presets.js",
         "src/ui.js",
         "src/core.js",
         "src/typeahead.js"

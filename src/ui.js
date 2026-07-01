@@ -226,6 +226,12 @@
     p.appendChild(sliderRow("Auto-scroll speed", "autoScrollSpeed", 1, 10, 1));
     p.appendChild(sliderRow("Pause minutes", "pauseMinutes", 5, 60, 5));
 
+    p.appendChild(divider("Presets"));
+    var presetHost = document.createElement("div");
+    presetHost.className = "cit-preset-host";
+    p.appendChild(presetHost);
+    buildPresets(presetHost);
+
     document.body.appendChild(p);
 
     function closeOnOutside(e) {
@@ -356,6 +362,56 @@
       var id = list[i].getAttribute("data-cit-mode");
       list[i].classList.toggle("cit-on", CALM.modes.isActive(id));
     }
+  }
+
+  function buildPresets(host) {
+    host.innerHTML = "";
+    CALM.presets.list().forEach(function (p) {
+      var r = document.createElement("div");
+      r.className = "cit-settings-row cit-preset-row";
+      var span = document.createElement("span");
+      span.textContent = p.name;
+      var wrap = document.createElement("div");
+      wrap.className = "cit-preset-actions";
+      var apply = document.createElement("button");
+      apply.type = "button";
+      apply.className = "cit-mini-btn";
+      apply.textContent = "Apply";
+      apply.addEventListener("click", function (e) {
+        e.stopPropagation();
+        CALM.presets.apply(p.name);
+        refreshModeButtons();
+      });
+      wrap.appendChild(apply);
+      if (!p.builtin) {
+        var del = document.createElement("button");
+        del.type = "button";
+        del.className = "cit-mini-btn cit-del";
+        del.textContent = "✕";
+        del.addEventListener("click", function (e) {
+          e.stopPropagation();
+          CALM.presets.del(p.name);
+          buildPresets(host);
+        });
+        wrap.appendChild(del);
+      }
+      r.appendChild(span);
+      r.appendChild(wrap);
+      host.appendChild(r);
+    });
+    var save = document.createElement("button");
+    save.type = "button";
+    save.className = "cit-save-preset";
+    save.textContent = "＋ Save current as preset";
+    save.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var name = window.prompt("Preset name:");
+      if (name) {
+        CALM.presets.saveCurrent(name);
+        buildPresets(host);
+      }
+    });
+    host.appendChild(save);
   }
 
   CALM.ui = {
