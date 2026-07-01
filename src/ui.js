@@ -185,62 +185,41 @@
     header.appendChild(close);
     p.appendChild(header);
 
-    p.appendChild(toggleRow("Auto-hide on scroll", "autoHideOnScroll"));
-    p.appendChild(sliderRow("Scroll sensitivity", "sensitivity", 1, 10, 1));
-    p.appendChild(toggleRow("Zen also hides input", "zenComposer"));
-    p.appendChild(
-      selectRow("Type while hidden", "typeAhead", [
-        { value: "both", label: "Both" },
-        { value: "auto", label: "Auto-reveal" },
-        { value: "buffer", label: "Buffer" },
-        { value: "off", label: "Off" },
-      ])
-    );
-    p.appendChild(
-      toggleRow("Remember state", "rememberState", function () {
-        if (S.rememberState) CALM.saveState();
-      })
-    );
-    p.appendChild(toggleRow("Quick scroll buttons", "showQuickNav", updateQuickNav));
-    p.appendChild(
-      sliderRow("Reading width (0=off)", "readingWidth", 0, 1600, 20, CALM.modes.applyWidth)
-    );
-    p.appendChild(toggleRow("Keyboard shortcuts", "keyboardShortcut"));
-    p.appendChild(
-      toggleRow("Show toggle button", "showToggleButton", function () {
-        var b = document.getElementById(IDS.toggle);
-        if (b) b.style.display = S.showToggleButton ? "" : "none";
-      })
-    );
-    p.appendChild(toggleRow("Hint when auto-hidden", "showHints"));
-
-    p.appendChild(divider("Modes"));
-    ["zen", "reader", "night", "privacy", "presentation", "autoscroll", "pause", "pomodoro"].forEach(
-      function (id) {
-        p.appendChild(modeRow(id));
+    var tabbar = document.createElement("div");
+    tabbar.className = "cit-tabbar";
+    var content = document.createElement("div");
+    content.className = "cit-tab-content";
+    var TABS = [
+      { id: "modes", label: "Modes", build: buildModesTab },
+      { id: "reading", label: "Reading", build: buildReadingTab },
+      { id: "behavior", label: "Behavior", build: buildBehaviorTab },
+      { id: "presets", label: "Presets", build: buildPresetsTab },
+      { id: "about", label: "About", build: buildAboutTab },
+    ];
+    function showTab(id) {
+      content.innerHTML = "";
+      var btns = tabbar.querySelectorAll(".cit-tab");
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].classList.toggle("cit-tab-on", btns[i].getAttribute("data-tab") === id);
       }
-    );
-    p.appendChild(sliderRow("Reader font %", "readerFontScale", 80, 160, 5, CALM.modes.refreshVars));
-    p.appendChild(sliderRow("Reader line-height ×10", "readerLineHeight", 12, 22, 1, CALM.modes.refreshVars));
-    p.appendChild(sliderRow("Night dim %", "nightLevel", 10, 70, 5, CALM.modes.refreshVars));
-    p.appendChild(sliderRow("Auto-scroll speed", "autoScrollSpeed", 1, 10, 1));
-    p.appendChild(sliderRow("Pause minutes", "pauseMinutes", 5, 60, 5));
-
-    p.appendChild(divider("Pomodoro"));
-    p.appendChild(sliderRow("Focus minutes", "pomoFocusMin", 5, 60, 5));
-    p.appendChild(sliderRow("Break minutes", "pomoBreakMin", 1, 20, 1));
-    p.appendChild(sliderRow("Long break minutes", "pomoLongBreakMin", 5, 30, 5));
-    p.appendChild(sliderRow("Cycles before long break", "pomoCycles", 2, 8, 1));
-    p.appendChild(toggleRow("Auto Zen during focus", "pomoAutoZen"));
-    p.appendChild(toggleRow("Chime at phase end", "pomoSound"));
-
-    p.appendChild(divider("Presets"));
-    var presetHost = document.createElement("div");
-    presetHost.className = "cit-preset-host";
-    p.appendChild(presetHost);
-    buildPresets(presetHost);
-
+      for (var j = 0; j < TABS.length; j++) if (TABS[j].id === id) TABS[j].build(content);
+    }
+    TABS.forEach(function (t) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "cit-tab";
+      b.textContent = t.label;
+      b.setAttribute("data-tab", t.id);
+      b.addEventListener("click", function (e) {
+        e.stopPropagation();
+        showTab(t.id);
+      });
+      tabbar.appendChild(b);
+    });
+    p.appendChild(tabbar);
+    p.appendChild(content);
     document.body.appendChild(p);
+    showTab("modes");
 
     function closeOnOutside(e) {
       if (!p.contains(e.target) && e.target.id !== IDS.settings) {
@@ -251,6 +230,74 @@
     setTimeout(function () {
       document.addEventListener("click", closeOnOutside, true);
     }, 0);
+  }
+
+  function buildModesTab(c) {
+    ["zen", "reader", "night", "privacy", "presentation", "autoscroll", "pause", "pomodoro"].forEach(
+      function (id) {
+        c.appendChild(modeRow(id));
+      }
+    );
+    c.appendChild(divider("Mode settings"));
+    c.appendChild(sliderRow("Auto-scroll speed", "autoScrollSpeed", 1, 10, 1));
+    c.appendChild(sliderRow("Pause minutes", "pauseMinutes", 5, 60, 5));
+    c.appendChild(divider("Pomodoro"));
+    c.appendChild(sliderRow("Focus minutes", "pomoFocusMin", 5, 60, 5));
+    c.appendChild(sliderRow("Break minutes", "pomoBreakMin", 1, 20, 1));
+    c.appendChild(sliderRow("Long break minutes", "pomoLongBreakMin", 5, 30, 5));
+    c.appendChild(sliderRow("Cycles before long break", "pomoCycles", 2, 8, 1));
+    c.appendChild(toggleRow("Auto Zen during focus", "pomoAutoZen"));
+    c.appendChild(toggleRow("Chime at phase end", "pomoSound"));
+  }
+  function buildReadingTab(c) {
+    c.appendChild(sliderRow("Reading width (0=off)", "readingWidth", 0, 1600, 20, CALM.modes.applyWidth));
+    c.appendChild(sliderRow("Reader font %", "readerFontScale", 80, 160, 5, CALM.modes.refreshVars));
+    c.appendChild(sliderRow("Reader line-height ×10", "readerLineHeight", 12, 22, 1, CALM.modes.refreshVars));
+    c.appendChild(sliderRow("Night dim %", "nightLevel", 10, 70, 5, CALM.modes.refreshVars));
+  }
+  function buildBehaviorTab(c) {
+    c.appendChild(toggleRow("Auto-hide on scroll", "autoHideOnScroll"));
+    c.appendChild(sliderRow("Scroll sensitivity", "sensitivity", 1, 10, 1));
+    c.appendChild(toggleRow("Zen also hides input", "zenComposer"));
+    c.appendChild(
+      selectRow("Type while hidden", "typeAhead", [
+        { value: "both", label: "Both" },
+        { value: "auto", label: "Auto-reveal" },
+        { value: "buffer", label: "Buffer" },
+        { value: "off", label: "Off" },
+      ])
+    );
+    c.appendChild(
+      toggleRow("Remember state", "rememberState", function () {
+        if (S.rememberState) CALM.saveState();
+      })
+    );
+    c.appendChild(toggleRow("Quick scroll buttons", "showQuickNav", updateQuickNav));
+    c.appendChild(toggleRow("Keyboard shortcuts", "keyboardShortcut"));
+    c.appendChild(
+      toggleRow("Show toggle button", "showToggleButton", function () {
+        var b = document.getElementById(IDS.toggle);
+        if (b) b.style.display = S.showToggleButton ? "" : "none";
+      })
+    );
+    c.appendChild(toggleRow("Hint when auto-hidden", "showHints"));
+  }
+  function buildPresetsTab(c) {
+    var host = document.createElement("div");
+    host.className = "cit-preset-host";
+    c.appendChild(host);
+    buildPresets(host);
+  }
+  function buildAboutTab(c) {
+    var d = document.createElement("div");
+    d.className = "cit-about";
+    d.innerHTML =
+      '<div class="cit-about-name">Calm</div>' +
+      '<div class="cit-about-ver">Reading Mode for AI Chats</div>' +
+      "<p>Distraction-free reading for ChatGPT &amp; Gemini — hide the input, 8 focus modes, a Pomodoro timer, and more.</p>" +
+      '<p class="cit-about-dim">Your conversations are never read or sent. Settings stay on your device.</p>' +
+      '<p><span class="cit-about-pro">Pro — cloud sync, dashboard &amp; Spotify — coming soon.</span></p>';
+    c.appendChild(d);
   }
 
   function toggleRow(label, key, after) {
