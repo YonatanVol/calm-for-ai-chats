@@ -11,6 +11,8 @@
         "src/state.js",
         "src/modes.js",
         "src/presets.js",
+        "src/audio.js",
+        "src/pomodoro.js",
         "src/ui.js",
         "src/core.js",
         "src/typeahead.js"

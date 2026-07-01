@@ -32,6 +32,13 @@
     nightLevel: 35, // overlay opacity % (10..70) — Night/Dim
     autoScrollSpeed: 3, // px per tick (1..10) — Auto-scroll
     pauseMinutes: 15, // snooze duration (5..60) — Pause
+    // Pomodoro
+    pomoFocusMin: 25,
+    pomoBreakMin: 5,
+    pomoLongBreakMin: 15,
+    pomoCycles: 4, // focus blocks before a long break
+    pomoAutoZen: true, // auto Zen during focus, reveal on break
+    pomoSound: true, // play a chime at phase end
   };
 
   function loadSettings() {

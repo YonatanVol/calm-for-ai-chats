@@ -226,6 +226,14 @@
     p.appendChild(sliderRow("Auto-scroll speed", "autoScrollSpeed", 1, 10, 1));
     p.appendChild(sliderRow("Pause minutes", "pauseMinutes", 5, 60, 5));
 
+    p.appendChild(divider("Pomodoro"));
+    p.appendChild(sliderRow("Focus minutes", "pomoFocusMin", 5, 60, 5));
+    p.appendChild(sliderRow("Break minutes", "pomoBreakMin", 1, 20, 1));
+    p.appendChild(sliderRow("Long break minutes", "pomoLongBreakMin", 5, 30, 5));
+    p.appendChild(sliderRow("Cycles before long break", "pomoCycles", 2, 8, 1));
+    p.appendChild(toggleRow("Auto Zen during focus", "pomoAutoZen"));
+    p.appendChild(toggleRow("Chime at phase end", "pomoSound"));
+
     p.appendChild(divider("Presets"));
     var presetHost = document.createElement("div");
     presetHost.className = "cit-preset-host";
