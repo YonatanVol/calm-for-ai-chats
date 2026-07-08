@@ -14,3 +14,13 @@ dist/
 
 # Logs
 *.log
+
+# Python (bytecode caches break Chrome's unpacked-extension loader)
+__pycache__/
+*.pyc
+
+# Node (web app, later)
+node_modules/
+.next/
+.env
+.env.local
