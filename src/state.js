@@ -108,6 +108,8 @@
     navObserver: null,
     retryTimer: null,
     initialized: false,
+    initGen: 0, // generation token: aborts stale init attempt-loops after nav
+    pendingModes: null, // modes to re-enter fresh after a SPA navigation
   };
 
   // Entitlement seam — all free in v1; Phase 7 resolves from Supabase/Stripe.
