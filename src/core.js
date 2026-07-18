@@ -249,7 +249,7 @@
     });
 
     // 2. Hard-clean any residue in case an exit had stale refs.
-    ["cit-reader-style", "cit-privacy-style", "cit-night-overlay",
+    ["cit-zen-style", "cit-reader-style", "cit-privacy-style", "cit-night-overlay",
      "cit-pomo-widget", "cit-pomo-overlay"].forEach(function (id) {
       var e = document.getElementById(id);
       if (e) e.remove();

@@ -77,6 +77,8 @@
           largestScroller(),
         ]);
       },
+      // ChatGPT: stylesheet zen (stable IDs) + inline fallback (zenInline).
+      zenInline: true,
       zenTargets: function () {
         return [
           q("#page-header"),
@@ -84,6 +86,15 @@
           q("#stage-sidebar-tiny-bar"),
           q('[class*="bottom-of-thread"]'),
         ].filter(Boolean);
+      },
+      zenCss: function () {
+        return (
+          "html.cit-zen #page-header," +
+          "html.cit-zen #stage-slideover-sidebar," +
+          "html.cit-zen #stage-sidebar-tiny-bar," +
+          'html.cit-zen [class*="bottom-of-thread"]' +
+          "{display:none !important;}"
+        );
       },
       // Reader typography target (message prose).
       readerTargets: function () {
@@ -127,13 +138,30 @@
         }
         return firstOf([s, largestScroller()]);
       },
+      // Gemini: stylesheet-only zen (Angular re-renders make inline styles and
+      // saved refs go stale — the old ".closest('div')" ancestor walk hid
+      // arbitrary layout containers and could never be undone reliably).
+      // Only known, self-contained custom elements are targeted.
+      zenInline: false,
       zenTargets: function () {
         return [
           q("bard-sidenav"),
-          q("bard-mode-switcher") &&
-            q("bard-mode-switcher").closest("header, toolbar, .top-bar, div"),
+          q("bard-mode-switcher"),
+          q("chat-app-side-nav-menu-button"),
           q("modular-zero-state"),
         ].filter(Boolean);
+      },
+      zenCss: function () {
+        return (
+          "html.cit-zen bard-sidenav," +
+          "html.cit-zen bard-mode-switcher," +
+          "html.cit-zen chat-app-side-nav-menu-button," +
+          "html.cit-zen modular-zero-state," +
+          "html.cit-zen bot-banner," +
+          "html.cit-zen chat-app-banners," +
+          "html.cit-zen chat-app-announcement-banners" +
+          "{display:none !important;}"
+        );
       },
       readerTargets: function () {
         return "message-content, .markdown, .model-response-text";
