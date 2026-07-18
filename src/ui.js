@@ -16,9 +16,9 @@
   var C = CALM.const;
 
   // ---- Toast ----
-  function showToast() {
+  function showToast(text, force) {
     var now = Date.now();
-    if (now - rt.lastToastAt < C.TOAST_THROTTLE_MS) return;
+    if (!force && now - rt.lastToastAt < C.TOAST_THROTTLE_MS) return;
     rt.lastToastAt = now;
     var t = document.getElementById(IDS.toast);
     if (!t) {
@@ -26,7 +26,7 @@
       t.id = IDS.toast;
       document.body.appendChild(t);
     }
-    t.textContent = "Input hidden · scroll down or ⌃⇧H";
+    t.textContent = text || "Input hidden · scroll down or ⌃⇧H";
     t.classList.remove("cit-toast-show");
     void t.offsetHeight;
     t.classList.add("cit-toast-show");
@@ -179,7 +179,7 @@
     close.innerHTML = "✕";
     close.addEventListener("click", function (e) {
       e.stopPropagation();
-      p.remove();
+      closePanel();
     });
     header.appendChild(title);
     header.appendChild(close);
@@ -222,11 +222,13 @@
     document.body.appendChild(p);
     showTab("modes");
 
+    // Single close path so the outside-click listener never leaks.
+    function closePanel() {
+      p.remove();
+      document.removeEventListener("click", closeOnOutside, true);
+    }
     function closeOnOutside(e) {
-      if (!p.contains(e.target) && e.target.id !== IDS.settings) {
-        p.remove();
-        document.removeEventListener("click", closeOnOutside, true);
-      }
+      if (!p.contains(e.target) && e.target.id !== IDS.settings) closePanel();
     }
     setTimeout(function () {
       document.addEventListener("click", closeOnOutside, true);
@@ -262,8 +264,8 @@
     c.appendChild(toggleRow("Zen also hides input", "zenComposer"));
     c.appendChild(
       selectRow("Type while hidden", "typeAhead", [
+        { value: "auto", label: "Auto-reveal (instant)" },
         { value: "both", label: "Both" },
-        { value: "auto", label: "Auto-reveal" },
         { value: "buffer", label: "Buffer" },
         { value: "off", label: "Off" },
       ])
@@ -486,6 +488,9 @@
       var id = list[i].getAttribute("data-cit-mode");
       list[i].classList.toggle("cit-on", CALM.modes.isActive(id));
     }
+    // Keep the floating zen button in sync too (single source of truth).
+    var zb = document.getElementById(IDS.zen);
+    if (zb) zb.classList.toggle("cit-active", CALM.modes.isActive("zen"));
   }
 
   function buildPresets(host) {
