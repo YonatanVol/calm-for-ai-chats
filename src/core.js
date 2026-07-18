@@ -232,7 +232,44 @@
   }
 
   // ---- SPA navigation ----
+  // Full teardown. SPA navs re-render the page under us: any mode artifact left
+  // behind (inline display:none, injected styles, overlays, running intervals)
+  // becomes an un-removable ghost — this was the root cause of the "extension
+  // disappeared but still affects the page" bug on Gemini.
   function resetState() {
+    // 1. Remember which modes were on, then exit them PROPERLY (each exit
+    //    clears its own timers/styles/refs while they are still valid).
+    rt.pendingModes = Object.keys(rt.activeModes).filter(function (id) {
+      return rt.activeModes[id];
+    });
+    rt.pendingModes.forEach(function (id) {
+      try {
+        modes.exit(id);
+      } catch (_) {}
+    });
+
+    // 2. Hard-clean any residue in case an exit had stale refs.
+    ["cit-reader-style", "cit-privacy-style", "cit-night-overlay",
+     "cit-pomo-widget", "cit-pomo-overlay"].forEach(function (id) {
+      var e = document.getElementById(id);
+      if (e) e.remove();
+    });
+    ["cit-zen", "cit-reader", "cit-night", "cit-privacy", "cit-presentation"].forEach(
+      function (cls) {
+        document.documentElement.classList.remove(cls);
+      }
+    );
+    Object.keys(rt.modeTimers).forEach(function (k) {
+      if (rt.modeTimers[k]) {
+        clearInterval(rt.modeTimers[k]);
+        rt.modeTimers[k] = null;
+      }
+    });
+    var chips = document.getElementById("cit-chip-stack");
+    if (chips) chips.innerHTML = "";
+    if (ui.hideTypeChip) ui.hideTypeChip();
+
+    // 3. Composer / scroll / misc.
     clearTimeout(rt.accTimer);
     clearTimeout(rt.scrollLockTimer);
     clearTimeout(rt.toastTimer);
@@ -242,6 +279,7 @@
     rt.composerHidden = false;
     rt.scrollLocked = false;
     rt.draftSaved = false;
+    rt.pendingText = "";
     rt.initialized = false;
     rt.accUp = 0;
     rt.composerEl = null;
@@ -294,29 +332,50 @@
   );
 
   // ---- Init ----
+  // UI is created IMMEDIATELY (never leave the page button-less — routes like
+  // Gemini's /library have no composer at all). Composer discovery continues in
+  // the background and composer-dependent features light up when it lands.
+  // A generation token aborts stale attempt-loops from previous navigations.
   function init() {
-    var tries = 0;
-    (function attempt() {
+    var gen = ++rt.initGen;
+    rt.initialized = true;
+    ui.createUI();
+    discoverScroll();
+    modes.applyWidth();
+
+    // Re-enter modes that were active before the navigation (fresh DOM), then
+    // fall back to remember-state for full page loads.
+    var reentry = rt.pendingModes || [];
+    rt.pendingModes = null;
+    if (!reentry.length && S.rememberState) {
+      var st = CALM.loadState();
+      if (st.modes) {
+        reentry = Object.keys(st.modes).filter(function (id) {
+          return st.modes[id];
+        });
+      }
+    }
+    reentry.forEach(function (id) {
+      try {
+        modes.enter(id);
+      } catch (_) {}
+    });
+
+    (function attempt(tries) {
+      if (gen !== rt.initGen) return; // superseded by a newer navigation
       rt.composerEl = site.composer();
       if (!rt.composerEl) {
-        if (++tries > 40) return;
-        setTimeout(attempt, 500);
+        if (tries < 120) setTimeout(function () { attempt(tries + 1); }, 500);
         return;
       }
-      rt.initialized = true;
-      ui.createUI();
-      discoverScroll();
-      modes.applyWidth();
-      if (S.rememberState) {
-        var st = CALM.loadState();
-        if (st.modes) {
-          Object.keys(st.modes).forEach(function (id) {
-            if (st.modes[id]) modes.enter(id);
-          });
-        }
-        if (st.composerHidden && !rt.composerHidden) hideComposer();
-      }
-    })();
+      // Zen re-entered above may have wanted the composer hidden but no-oped
+      // because the composer didn't exist yet — honor it now.
+      var wantHidden =
+        (modes.isActive("zen") && S.zenComposer) ||
+        (S.rememberState && !!(CALM.loadState() || {}).composerHidden);
+      if (wantHidden && !rt.composerHidden) hideComposer();
+      ui.updateQuickNav();
+    })(0);
   }
 
   CALM.core = {
