@@ -3,10 +3,17 @@
   "name": "Calm — Reading Mode for AI Chats",
   "version": "2.1.0",
   "description": "Distraction-free reading for ChatGPT and Gemini: hide the input, Zen mode, reading width, and more.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt5tSGdWA72UgSety3iUG1SNo3MjuMAtI+iSX9YRIzoVJv347EtLySgzZ0gMVma+rK03ErOpEN5ffS1ZzdoDXaeRxkoa2mQ1jdJ+cawuku30aRoVXDNlcNoCK9Bzq6pI8t8Fe6B6BoF3zJ+aSi3m83AO7FFZYhzp9uc0N24OH9mBKLiblHQnYufKxrx5AtW5ueVTx+NtsxCn/TX6zR0mQLtYeusfLNLMxGXAxpwJJMaoW0uTlZ4FmPVSBKentM8tVtVBvdfnqKqemSYcN+RqOmc8STEPdBIbXum0XcFr6CowTLFPMnearNVSXgUldcCpKPPCIDYcT6GvPUs+RqJ2gDwIDAQAB",
+  "permissions": ["identity", "storage"],
+  "host_permissions": ["https://jcjvzwgxdvohdbkgdzwg.supabase.co/*"],
+  "background": {
+    "service_worker": "src/background.js"
+  },
   "content_scripts": [
     {
       "matches": ["https://chatgpt.com/*", "https://gemini.google.com/*"],
       "js": [
+        "src/config.js",
         "src/adapters.js",
         "src/state.js",
         "src/modes.js",
@@ -15,7 +22,9 @@
         "src/pomodoro.js",
         "src/ui.js",
         "src/core.js",
-        "src/typeahead.js"
+        "src/typeahead.js",
+        "src/auth.js",
+        "src/sync.js"
       ],
       "css": ["content.css"],
       "run_at": "document_idle"

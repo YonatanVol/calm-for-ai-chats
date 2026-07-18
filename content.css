@@ -754,3 +754,19 @@ html[data-theme="light"] .cit-about p {
     white-space: normal;
   }
 }
+
+/* ----------------------------------------
+   Account tab (cloud sync)
+---------------------------------------- */
+.cit-account {
+  padding: 4px 2px;
+}
+.cit-account-who {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.cit-account-err {
+  margin-top: 8px;
+  color: #e5484d;
+  font-size: 12px;
+}

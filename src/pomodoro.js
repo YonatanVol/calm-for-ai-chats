@@ -62,6 +62,10 @@
   }
   function nextPhase() {
     if (CALM.audio) CALM.audio.playChime();
+    // Log the block that just finished (best-effort; no-op when signed out).
+    if (CALM.sync && CALM.sync.logFocus && st.phase !== "idle") {
+      CALM.sync.logFocus(st.phase, Math.max(0, minsFor(st.phase) | 0));
+    }
     if (st.phase === "focus") {
       var longNow = st.cycle >= (S.pomoCycles | 0);
       enterPhase(longNow ? "long" : "break");
