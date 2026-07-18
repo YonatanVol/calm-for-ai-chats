@@ -13,7 +13,7 @@
   if (!CALM.site) return;
   var S = CALM.settings;
 
-  var st = { phase: "idle", remaining: 0, total: 0, cycle: 1, running: false, paused: false, timer: null };
+  var st = { phase: "idle", remaining: 0, total: 0, cycle: 1, running: false, paused: false, timer: null, enteredZen: false };
 
   function minsFor(phase) {
     return phase === "focus" ? S.pomoFocusMin : phase === "long" ? S.pomoLongBreakMin : S.pomoBreakMin;
@@ -37,7 +37,10 @@
     st.paused = false;
     enterPhase("focus");
     st.running = true;
-    if (S.pomoAutoZen && !CALM.modes.isActive("zen")) CALM.modes.enter("zen");
+    if (S.pomoAutoZen && !CALM.modes.isActive("zen")) {
+      st.enteredZen = true;
+      CALM.modes.enter("zen");
+    }
     buildWidget();
     render();
     st.timer = setInterval(tick, 1000);
@@ -50,6 +53,9 @@
     st.phase = "idle";
     removeOverlay();
     removeWidget();
+    // Leave no zen behind that WE turned on (user-enabled zen is untouched).
+    if (st.enteredZen && CALM.modes.isActive("zen")) CALM.modes.exit("zen");
+    st.enteredZen = false;
   }
   function tick() {
     if (!st.running || st.paused) return;
@@ -78,7 +84,10 @@
       }
       st.cycle++;
       enterPhase("focus");
-      if (S.pomoAutoZen && !CALM.modes.isActive("zen")) CALM.modes.enter("zen");
+      if (S.pomoAutoZen && !CALM.modes.isActive("zen")) {
+        st.enteredZen = true;
+        CALM.modes.enter("zen");
+      }
       removeOverlay();
     }
     render();

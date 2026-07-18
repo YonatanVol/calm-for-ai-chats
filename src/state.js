@@ -25,7 +25,8 @@
     sensitivity: 5, // 1 (needs big scroll) .. 10 (hair trigger)
     readingWidth: 0, // 0 = off; else px
     zenComposer: true, // zen also hides the composer
-    typeAhead: "both", // off | auto | buffer | both — typing while input hidden
+    typeAhead: "auto", // off | auto | buffer | both — typing while input hidden
+    settingsVersion: 3, // bump when a migration below needs to run
     // Mode parameters
     readerFontScale: 110, // % (80..160) — Reader mode
     readerLineHeight: 16, // ×0.1 => 1.6 — Reader mode
@@ -44,7 +45,20 @@
   function loadSettings() {
     try {
       var raw = localStorage.getItem(SETTINGS_KEY);
-      if (raw) return Object.assign({}, defaultSettings, JSON.parse(raw));
+      if (raw) {
+        var saved = JSON.parse(raw);
+        var merged = Object.assign({}, defaultSettings, saved);
+        // v3 migration: instant type-ahead becomes the default. Only users
+        // still on the old default ("both") are moved; explicit choices of
+        // "buffer"/"off" are respected.
+        if ((saved.settingsVersion | 0) < 3) {
+          if (saved.typeAhead === "both" || saved.typeAhead === undefined) {
+            merged.typeAhead = "auto";
+          }
+          merged.settingsVersion = 3;
+        }
+        return merged;
+      }
     } catch (_) {}
     return Object.assign({}, defaultSettings);
   }
@@ -110,6 +124,7 @@
     initialized: false,
     initGen: 0, // generation token: aborts stale init attempt-loops after nav
     pendingModes: null, // modes to re-enter fresh after a SPA navigation
+    presentationEnteredZen: false, // presentation auto-entered zen → exit it too
   };
 
   // Entitlement seam — all free in v1; Phase 7 resolves from Supabase/Stripe.
@@ -121,6 +136,14 @@
     readingWidth: "free",
     scrollSensitivity: "free",
     quickNav: "free",
+    "mode:zen": "free",
+    "mode:reader": "free",
+    "mode:night": "free",
+    "mode:privacy": "free",
+    "mode:presentation": "free",
+    "mode:autoscroll": "free",
+    "mode:pause": "free",
+    "mode:pomodoro": "free",
   };
   CALM.FEATURE_TIERS = FEATURE_TIERS;
   CALM.isPro = function () {

@@ -372,12 +372,12 @@ html[data-theme="light"] .cit-select option {
   transition: opacity 0.25s ease;
 }
 
-/* Presentation mode hides ALL Calm UI for clean capture/sharing. */
+/* Presentation mode hides ALL Calm UI for clean capture/sharing —
+   except the toast, which carries the "press Esc to exit" hint. */
 html.cit-presentation .cit-btn,
 html.cit-presentation #cit-settings-panel,
 html.cit-presentation #cit-type-chip,
-html.cit-presentation #cit-chip-stack,
-html.cit-presentation #cit-toast {
+html.cit-presentation #cit-chip-stack {
   display: none !important;
 }
 

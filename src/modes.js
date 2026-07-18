@@ -168,10 +168,15 @@
   // ---------- Presentation / Screenshot ----------
   function presentationEnter() {
     document.documentElement.classList.add("cit-presentation");
+    rt.presentationEnteredZen = !rt.activeModes.zen;
     if (!rt.activeModes.zen) modeEnter("zen");
+    // Presentation hides all Calm buttons — tell the user how to get out.
+    if (CALM.ui.showToast) CALM.ui.showToast("Presentation — press Esc to exit", true);
   }
   function presentationExit() {
     document.documentElement.classList.remove("cit-presentation");
+    if (rt.presentationEnteredZen && rt.activeModes.zen) modeExit("zen");
+    rt.presentationEnteredZen = false;
   }
 
   // ---------- Auto-scroll (teleprompter) ----------
@@ -250,7 +255,7 @@
   function modeEnter(id) {
     var m = MODES[id];
     if (!m || rt.activeModes[id]) return;
-    if (!CALM.entitled("zenMode")) return; // all modes free in v1
+    if (!CALM.entitled("mode:" + id)) return; // per-mode tier (all free in v1)
     rt.activeModes[id] = true;
     m.enter();
     setModeBtnActive(id, true);
