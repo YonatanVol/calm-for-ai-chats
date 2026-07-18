@@ -64,22 +64,33 @@
   }
 
   // ---------- Zen ----------
+  // Stylesheet-first: a <style> gated on html.cit-zen self-heals when the class
+  // is removed, no matter how the SPA re-rendered in between. The inline path
+  // (zenInline) is kept only for sites whose own !important rules can beat a
+  // stylesheet (ChatGPT); its cleanup strips BOTH saved refs and a fresh query,
+  // so stale references can never leave elements permanently hidden.
   function zenEnter() {
+    injectStyle("cit-zen-style", site.zenCss());
     rt.zenHidden = [];
-    site.zenTargets().forEach(function (el) {
-      el.style.setProperty("display", "none", "important");
-      rt.zenHidden.push(el);
-    });
+    if (site.zenInline) {
+      site.zenTargets().forEach(function (el) {
+        el.style.setProperty("display", "none", "important");
+        rt.zenHidden.push(el);
+      });
+    }
     document.documentElement.classList.add("cit-zen");
     rt.zenOn = true;
     if (S.zenComposer) CALM.core.hideComposer();
   }
   function zenExit() {
-    rt.zenHidden.forEach(function (el) {
-      el.style.removeProperty("display");
+    document.documentElement.classList.remove("cit-zen");
+    removeEl("cit-zen-style");
+    rt.zenHidden.concat(site.zenTargets()).forEach(function (el) {
+      try {
+        el.style.removeProperty("display");
+      } catch (_) {}
     });
     rt.zenHidden = [];
-    document.documentElement.classList.remove("cit-zen");
     rt.zenOn = false;
     if (S.zenComposer && rt.composerHidden) CALM.core.showComposer();
   }
