@@ -244,12 +244,46 @@
     c.appendChild(sliderRow("Auto-scroll speed", "autoScrollSpeed", 1, 10, 1));
     c.appendChild(sliderRow("Pause minutes", "pauseMinutes", 5, 60, 5));
     c.appendChild(divider("Pomodoro"));
-    c.appendChild(sliderRow("Focus minutes", "pomoFocusMin", 5, 60, 5));
+    c.appendChild(
+      selectRow(
+        "Timer preset",
+        "pomoPreset",
+        [
+          { value: "custom", label: "Custom" },
+          { value: "10/2", label: "Just 10 min (starter)" },
+          { value: "25/5", label: "Classic 25/5" },
+          { value: "52/17", label: "Deep 52/17" },
+          { value: "90/20", label: "Ultra 90/20" },
+        ],
+        function () {
+          var map = {
+            "10/2": [10, 2, 10],
+            "25/5": [25, 5, 15],
+            "52/17": [52, 17, 25],
+            "90/20": [90, 20, 30],
+          };
+          var v = map[S.pomoPreset];
+          if (v) {
+            S.pomoFocusMin = v[0];
+            S.pomoBreakMin = v[1];
+            S.pomoLongBreakMin = v[2];
+            CALM.saveSettings();
+            c.innerHTML = "";
+            buildModesTab(c); // re-render so the sliders show the new values
+          }
+        }
+      )
+    );
+    c.appendChild(sliderRow("Focus minutes", "pomoFocusMin", 5, 90, 1));
     c.appendChild(sliderRow("Break minutes", "pomoBreakMin", 1, 20, 1));
     c.appendChild(sliderRow("Long break minutes", "pomoLongBreakMin", 5, 30, 5));
     c.appendChild(sliderRow("Cycles before long break", "pomoCycles", 2, 8, 1));
     c.appendChild(toggleRow("Auto Zen during focus", "pomoAutoZen"));
     c.appendChild(toggleRow("Chime at phase end", "pomoSound"));
+    c.appendChild(toggleRow("Focus progress bar", "showTimeBar"));
+    c.appendChild(divider("Time awareness"));
+    c.appendChild(toggleRow("Time-on-page chip", "showTimeOnPage"));
+    c.appendChild(sliderRow("Hyperfocus nudge (min, 0=off)", "hyperfocusMin", 0, 180, 15));
   }
   function buildReadingTab(c) {
     c.appendChild(sliderRow("Reading width (0=off)", "readingWidth", 0, 1600, 20, CALM.modes.applyWidth));

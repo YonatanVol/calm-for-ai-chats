@@ -21,6 +21,7 @@
         "src/audio.js",
         "src/pomodoro.js",
         "src/ui.js",
+        "src/wellness.js",
         "src/core.js",
         "src/typeahead.js",
         "src/auth.js",

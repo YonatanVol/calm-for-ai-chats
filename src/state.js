@@ -36,6 +36,10 @@
     rulerHeight: 90, // reading-ruler band height in px (50..160)
     rulerDim: 45, // reading-ruler surround dim % (15..70)
     grayLevel: 85, // grayscale mode strength % (40..100)
+    showTimeOnPage: true, // "🕐 25m here" chip (from 5 minutes on)
+    hyperfocusMin: 60, // nudge every N minutes; 0 = off
+    showTimeBar: true, // thin focus-progress bar during Pomodoro blocks
+    pomoPreset: "custom", // custom | 25/5 | 52/17 | 90/20 | 10/2
     // Pomodoro
     pomoFocusMin: 25,
     pomoBreakMin: 5,
