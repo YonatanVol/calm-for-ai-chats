@@ -109,51 +109,180 @@
     if (c) c.remove();
   }
 
-  // ---- Buttons ----
-  function mkBtn(id, label, title, onClick) {
-    var b = document.createElement("button");
-    b.id = id;
-    b.type = "button";
-    b.className = "cit-btn";
-    b.setAttribute("aria-label", title);
-    b.setAttribute("title", title);
-    b.innerHTML = label;
-    b.addEventListener("click", onClick);
-    document.body.appendChild(b);
-    return b;
+  // ---- Drag engine (shared by dock, chips, widgets, panel) ----
+  // Pointer-based, 5px threshold so clicks still work, viewport-clamped,
+  // optional edge snap, position persisted per storageKey (device-local).
+  function makeDraggable(el, storageKey, opts) {
+    opts = opts || {};
+    var handle = opts.handle || el;
+    var sx, sy, ox, oy, dragging = false, moved = false;
+
+    function place(l, t) {
+      var w = el.offsetWidth || 40;
+      var h = el.offsetHeight || 40;
+      l = Math.max(8, Math.min((window.innerWidth || 1400) - w - 8, l));
+      t = Math.max(8, Math.min((window.innerHeight || 900) - h - 8, t));
+      el.style.left = l + "px";
+      el.style.top = t + "px";
+      el.style.right = "auto";
+      el.style.bottom = "auto";
+      el.style.transform = "none";
+      if (opts.onPlace) opts.onPlace(l, t);
+      return { left: l, top: t };
+    }
+    function restore() {
+      try {
+        var p = JSON.parse(localStorage.getItem(storageKey));
+        if (p && typeof p.left === "number") {
+          place(p.left, p.top);
+          return true;
+        }
+      } catch (_) {}
+      return false;
+    }
+    function onDown(e) {
+      if (e.button !== undefined && e.button !== 0) return;
+      dragging = true;
+      moved = false;
+      sx = e.clientX;
+      sy = e.clientY;
+      var r = el.getBoundingClientRect();
+      ox = r.left;
+      oy = r.top;
+      document.addEventListener("pointermove", onMove, true);
+      document.addEventListener("pointerup", onUp, true);
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      var dx = e.clientX - sx;
+      var dy = e.clientY - sy;
+      if (!moved && Math.abs(dx) + Math.abs(dy) < 5) return;
+      moved = true;
+      el.classList.add("cit-dragging");
+      place(ox + dx, oy + dy);
+    }
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      document.removeEventListener("pointermove", onMove, true);
+      document.removeEventListener("pointerup", onUp, true);
+      el.classList.remove("cit-dragging");
+      if (!moved) return;
+      var r = el.getBoundingClientRect();
+      var l = r.left;
+      var t = r.top;
+      if (opts.snap) {
+        var iw = window.innerWidth || 1400;
+        var dl = l;
+        var dr = iw - (l + r.width);
+        if (Math.min(dl, dr) < 48) l = dl < dr ? 12 : iw - r.width - 12;
+      }
+      var fin = place(l, t);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(fin));
+      } catch (_) {}
+      // swallow the click that follows a drag
+      function block(ev) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        document.removeEventListener("click", block, true);
+      }
+      document.addEventListener("click", block, true);
+      setTimeout(function () {
+        document.removeEventListener("click", block, true);
+      }, 0);
+    }
+    handle.addEventListener("pointerdown", onDown);
+    var restored = restore();
+    return { restore: restore, place: place, restored: restored };
   }
 
-  function createUI() {
-    [IDS.toggle, IDS.zen, IDS.settings, IDS.top, IDS.bottom].forEach(function (id) {
-      var e = document.getElementById(id);
-      if (e) e.remove();
+  // ---- Generic popover close ----
+  function closeOnOutsideOf(p, excludeIds) {
+    function close() {
+      p.remove();
+      document.removeEventListener("click", handler, true);
+      document.removeEventListener("keydown", onKey, true);
+    }
+    function handler(e) {
+      if (!p.contains(e.target) && excludeIds.indexOf(e.target.id) < 0) close();
+    }
+    function onKey(e) {
+      if (e.code === "Escape") close();
+    }
+    setTimeout(function () {
+      document.addEventListener("click", handler, true);
+      document.addEventListener("keydown", onKey, true);
+    }, 0);
+    return close;
+  }
+
+  // ---- Place a popover near the dock ----
+  function placeNearDock(p) {
+    var d = document.getElementById(IDS.dock);
+    if (!d || !d.getBoundingClientRect) return;
+    var r = d.getBoundingClientRect();
+    var ih = window.innerHeight || 900;
+    var iw = window.innerWidth || 1400;
+    var pw = p.offsetWidth || 260;
+    var ph = p.offsetHeight || 300;
+    var top = r.top > ih / 2 ? r.top - ph - 10 : r.bottom + 10;
+    var left = Math.max(8, Math.min(iw - pw - 8, r.right - pw));
+    p.style.top = Math.max(8, top) + "px";
+    p.style.left = left + "px";
+    p.style.right = "auto";
+    p.style.bottom = "auto";
+  }
+
+  // ---- Modes quick-popover ----
+  function toggleModesPop() {
+    var p = document.getElementById(IDS.modesPop);
+    if (p) {
+      p.remove();
+      return;
+    }
+    p = document.createElement("div");
+    p.id = IDS.modesPop;
+    ["zen", "reader", "ruler", "night", "gray", "motion", "privacy",
+     "presentation", "autoscroll", "pause", "pomodoro"].forEach(function (id) {
+      var m = CALM.modes.MODES[id];
+      if (!m) return;
+      var card = document.createElement("button");
+      card.type = "button";
+      card.className = "cit-mode-card" + (CALM.modes.isActive(id) ? " cit-on" : "");
+      card.setAttribute("data-cit-mode", id);
+      var ic = document.createElement("span");
+      ic.className = "cit-mode-ic";
+      ic.textContent = m.icon;
+      var lb = document.createElement("span");
+      lb.textContent = m.label;
+      card.appendChild(ic);
+      card.appendChild(lb);
+      card.addEventListener("click", function (e) {
+        e.stopPropagation();
+        CALM.modes.toggle(id);
+        card.classList.toggle("cit-on", CALM.modes.isActive(id));
+      });
+      p.appendChild(card);
     });
-
-    var toggle = mkBtn(
-      IDS.toggle,
-      '<span class="cit-icon">▼</span>',
-      "Toggle input (Ctrl+Shift+H)",
-      function () {
-        CALM.core.manualToggleComposer();
-      }
-    );
-    if (!S.showToggleButton) toggle.style.display = "none";
-
-    mkBtn(IDS.zen, "❏", "Zen mode (Ctrl+Shift+Z)", function () {
-      CALM.modes.toggleZen();
-    }).classList.toggle("cit-active", rt.zenOn);
-
-    mkBtn(IDS.settings, "⚙", "Calm settings", function (e) {
+    var all = document.createElement("button");
+    all.type = "button";
+    all.className = "cit-modes-all";
+    all.textContent = "All settings →";
+    all.addEventListener("click", function (e) {
       e.stopPropagation();
+      p.remove();
       toggleSettingsPanel();
     });
+    p.appendChild(all);
+    document.body.appendChild(p);
+    placeNearDock(p);
+    closeOnOutsideOf(p, [IDS.dock]);
+  }
 
-    mkBtn(IDS.top, "⤒", "Scroll to top", function () {
-      smoothScrollTo(0);
-    });
-    mkBtn(IDS.bottom, "⤓", "Scroll to bottom", function () {
-      smoothScrollTo(rt.scrollContainer ? rt.scrollContainer.scrollHeight : 0);
-    });
+  // ---- UI root: the dock owns all floating controls now ----
+  function createUI() {
+    if (CALM.dock) CALM.dock.build();
     updateQuickNav();
   }
 
@@ -221,6 +350,9 @@
     p.appendChild(content);
     document.body.appendChild(p);
     showTab("modes");
+    // Draggable by its header; springs from the dock when no saved position.
+    var drag = makeDraggable(p, "cit-panel-pos", { handle: header });
+    if (!drag.restored) placeNearDock(p);
 
     // Single close path so the outside-click listener never leaks.
     function closePanel() {
@@ -322,11 +454,52 @@
     c.appendChild(toggleRow("Hint when auto-hidden", "showHints"));
     c.appendChild(
       toggleRow("Intention prompt (🎯)", "intentionPrompt", function () {
-        var chip = document.getElementById("cit-intent-chip");
-        if (!S.intentionPrompt && chip) chip.remove();
-        if (S.intentionPrompt && CALM.intent) CALM.intent.renderChip();
+        if (CALM.intent) CALM.intent.renderChip();
       })
     );
+    c.appendChild(
+      selectRow(
+        "Goal display",
+        "intentChipMode",
+        [
+          { value: "dock", label: "In the dock" },
+          { value: "floating", label: "Floating chip" },
+          { value: "hidden", label: "Hidden" },
+        ],
+        function () {
+          if (CALM.intent) CALM.intent.renderChip();
+          if (CALM.dock) CALM.dock.refreshStatus();
+        }
+      )
+    );
+    c.appendChild(toggleRow("Dock auto-collapse", "dockAutoCollapse"));
+    var reset = document.createElement("button");
+    reset.type = "button";
+    reset.className = "cit-save-preset";
+    reset.textContent = "↺ Reset positions";
+    reset.addEventListener("click", function (e) {
+      e.stopPropagation();
+      ["cit-dock-pos", "cit-intent-pos", "cit-pomo-pos", "cit-panel-pos"].forEach(
+        function (k) {
+          try {
+            localStorage.removeItem(k);
+          } catch (_) {}
+        }
+      );
+      ["cit-dock", "cit-intent-chip", "cit-pomo-widget", IDS.panel].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+          el.style.left = "";
+          el.style.top = "";
+          el.style.right = "";
+          el.style.bottom = "";
+          el.style.transform = "";
+        }
+      });
+      if (CALM.dock) CALM.dock.build();
+      showToast("Positions reset", true);
+    });
+    c.appendChild(reset);
   }
   function buildPresetsTab(c) {
     var host = document.createElement("div");
@@ -598,6 +771,9 @@
     refreshModeButtons: refreshModeButtons,
     createUI: createUI,
     toggleSettingsPanel: toggleSettingsPanel,
+    toggleModesPop: toggleModesPop,
+    makeDraggable: makeDraggable,
+    placeNearDock: placeNearDock,
     toggleRow: toggleRow,
     sliderRow: sliderRow,
     selectRow: selectRow,

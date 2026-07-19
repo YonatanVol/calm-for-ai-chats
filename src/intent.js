@@ -32,7 +32,12 @@
     try {
       sessionStorage.setItem(
         SKEY,
-        JSON.stringify({ goal: st.goal, tasks: st.tasks, asked: st.asked })
+        JSON.stringify({
+          goal: st.goal,
+          tasks: st.tasks,
+          asked: st.asked,
+          dismissed: st.dismissed,
+        })
       );
     } catch (_) {}
   }
@@ -54,28 +59,60 @@
     goal: persisted.goal || "",
     tasks: persisted.tasks || [], // [{ t, done }]
     asked: !!persisted.asked,
+    dismissed: !!persisted.dismissed, // ✕ pressed → hidden for this session
   };
 
-  // ---------- Goal chip (top-center) ----------
+  // ---------- Goal chip ----------
+  // Shown ONLY in "floating" mode, when the feature is on and not dismissed.
+  // In "dock" mode (default) the goal lives inside the Calm dock pill instead;
+  // "hidden" keeps the goal saved with no visual. Draggable; position persists.
   function renderChip() {
     var c = document.getElementById("cit-intent-chip");
+    var show =
+      S.intentionPrompt && (S.intentChipMode || "dock") === "floating" && !st.dismissed;
+    if (!show) {
+      if (c) c.remove();
+      if (CALM.dock) CALM.dock.refreshStatus();
+      return;
+    }
     if (!c) {
       c = document.createElement("button");
       c.id = "cit-intent-chip";
       c.type = "button";
+      var txt = document.createElement("span");
+      txt.className = "cit-intent-chip-text";
+      var x = document.createElement("span");
+      x.className = "cit-intent-x";
+      x.textContent = "✕";
+      x.title = "Hide for this session";
+      x.addEventListener("click", function (e) {
+        e.stopPropagation();
+        st.dismissed = true;
+        save();
+        renderChip();
+      });
+      c.appendChild(txt);
+      c.appendChild(x);
       c.addEventListener("click", function (e) {
         e.stopPropagation();
         togglePop();
       });
       document.body.appendChild(c);
+      if (CALM.ui && CALM.ui.makeDraggable) {
+        CALM.ui.makeDraggable(c, "cit-intent-pos");
+      }
     }
     var open = st.tasks.filter(function (t) {
       return !t.done;
     }).length;
-    c.textContent = st.goal
-      ? "🎯 " + st.goal + (open ? "  ·  " + open + " left" : "")
-      : "🎯 Set intention";
+    var t = c.querySelector(".cit-intent-chip-text");
+    if (t) {
+      t.textContent = st.goal
+        ? "🎯 " + st.goal + (open ? "  ·  " + open + " left" : "")
+        : "🎯 Set intention";
+    }
     c.classList.toggle("cit-intent-empty", !st.goal);
+    if (CALM.dock) CALM.dock.refreshStatus();
   }
 
   // ---------- Focus panel ----------

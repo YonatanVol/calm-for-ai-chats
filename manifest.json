@@ -21,6 +21,7 @@
         "src/audio.js",
         "src/pomodoro.js",
         "src/ui.js",
+        "src/dock.js",
         "src/wellness.js",
         "src/intent.js",
         "src/core.js",
