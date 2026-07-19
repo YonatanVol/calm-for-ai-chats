@@ -36,6 +36,7 @@
     rulerHeight: 90, // reading-ruler band height in px (50..160)
     rulerDim: 45, // reading-ruler surround dim % (15..70)
     grayLevel: 85, // grayscale mode strength % (40..100)
+    intentionPrompt: true, // ask "what did you come to do?" once per tab
     showTimeOnPage: true, // "🕐 25m here" chip (from 5 minutes on)
     hyperfocusMin: 60, // nudge every N minutes; 0 = off
     showTimeBar: true, // thin focus-progress bar during Pomodoro blocks

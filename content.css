@@ -420,8 +420,189 @@ html[data-theme="light"] .cit-select option {
 html.cit-presentation .cit-btn,
 html.cit-presentation #cit-settings-panel,
 html.cit-presentation #cit-type-chip,
-html.cit-presentation #cit-chip-stack {
+html.cit-presentation #cit-chip-stack,
+html.cit-presentation #cit-intent-chip,
+html.cit-presentation #cit-intent-pop,
+html.cit-presentation #cit-timebar {
   display: none !important;
+}
+
+/* ----------------------------------------
+   Focus panel: intention chip + popover
+---------------------------------------- */
+#cit-intent-chip {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483000;
+  max-width: 46vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(32, 33, 42, 0.88);
+  color: #ececf1;
+  font-size: 12.5px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+#cit-intent-chip:hover {
+  background: rgba(32, 33, 42, 1);
+}
+#cit-intent-chip.cit-intent-empty {
+  color: rgba(236, 236, 241, 0.55);
+}
+
+#cit-intent-pop {
+  position: fixed;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483002;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  background: #2a2b36;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  animation: cit-panel-in 0.16s ease;
+}
+.cit-intent-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ececf1;
+  margin-bottom: 8px;
+}
+.cit-intent-subtitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(236, 236, 241, 0.45);
+  margin: 12px 0 6px;
+}
+.cit-intent-goal,
+.cit-intent-add,
+.cit-intent-park {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  color: #ececf1;
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+}
+.cit-intent-goal:focus,
+.cit-intent-add:focus,
+.cit-intent-park:focus {
+  border-color: #10a37f;
+}
+.cit-intent-add,
+.cit-intent-park {
+  margin-top: 6px;
+  font-size: 12.5px;
+}
+.cit-intent-tasks {
+  margin-top: 8px;
+}
+.cit-intent-task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  color: #ececf1;
+  font-size: 13px;
+}
+.cit-intent-task.cit-done span {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+.cit-intent-task span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cit-intent-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: #10a37f;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.cit-intent-del {
+  border: none;
+  background: transparent;
+  color: rgba(236, 236, 241, 0.35);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+.cit-intent-del:hover {
+  color: #ececf1;
+}
+.cit-intent-notes {
+  max-height: 120px;
+  overflow-y: auto;
+}
+.cit-intent-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  color: rgba(236, 236, 241, 0.8);
+  font-size: 12.5px;
+}
+.cit-intent-note span {
+  flex: 1;
+  min-width: 0;
+}
+
+html[class*="light"] #cit-intent-chip,
+html[data-theme="light"] #cit-intent-chip {
+  background: rgba(255, 255, 255, 0.92);
+  color: #343541;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+html[class*="light"] #cit-intent-pop,
+html[data-theme="light"] #cit-intent-pop {
+  background: #f7f7f8;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+html[class*="light"] .cit-intent-title,
+html[class*="light"] .cit-intent-task,
+html[data-theme="light"] .cit-intent-title,
+html[data-theme="light"] .cit-intent-task {
+  color: #343541;
+}
+html[class*="light"] .cit-intent-goal,
+html[class*="light"] .cit-intent-add,
+html[class*="light"] .cit-intent-park,
+html[data-theme="light"] .cit-intent-goal,
+html[data-theme="light"] .cit-intent-add,
+html[data-theme="light"] .cit-intent-park {
+  background: rgba(0, 0, 0, 0.05);
+  color: #343541;
+  border-color: rgba(0, 0, 0, 0.15);
 }
 
 #cit-chip-stack {
