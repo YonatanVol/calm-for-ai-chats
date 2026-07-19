@@ -151,7 +151,8 @@
   function isExcludedScroller(el) {
     return !!el.closest(
       "bard-sidenav, conversations-list, #stage-slideover-sidebar," +
-        " #stage-sidebar-tiny-bar, nav[aria-label], #cit-settings-panel"
+        " #stage-sidebar-tiny-bar, nav[aria-label], #cit-settings-panel," +
+        ' aside[class*="dframe-sidebar"], [class*="dframe-nav-scroll"]'
     );
   }
   function handleScrollEl(el) {
