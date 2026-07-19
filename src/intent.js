@@ -79,6 +79,10 @@
       c = document.createElement("button");
       c.id = "cit-intent-chip";
       c.type = "button";
+      var cic = document.createElement("span");
+      cic.className = "cit-row-ic";
+      if (CALM.icons) cic.innerHTML = CALM.icons.focus; // static markup
+      c.appendChild(cic);
       var txt = document.createElement("span");
       txt.className = "cit-intent-chip-text";
       var x = document.createElement("span");
@@ -108,8 +112,8 @@
     var t = c.querySelector(".cit-intent-chip-text");
     if (t) {
       t.textContent = st.goal
-        ? "🎯 " + st.goal + (open ? "  ·  " + open + " left" : "")
-        : "🎯 Set intention";
+        ? st.goal + (open ? "  ·  " + open + " left" : "")
+        : "Set intention";
     }
     c.classList.toggle("cit-intent-empty", !st.goal);
     if (CALM.dock) CALM.dock.refreshStatus();

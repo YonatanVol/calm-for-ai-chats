@@ -3,6 +3,40 @@
  * Proprietary and source-available; see LICENSE. Not open-source.
  */
 
+/* ================= Calm Maison — design tokens ================= */
+html {
+  --cit-surface: #211d19;          /* onyx-espresso panel */
+  --cit-glass: rgba(25, 22, 19, 0.9); /* warm espresso glass */
+  --cit-ink: #f2ebdd;              /* champagne ivory */
+  --cit-ink-dim: rgba(242, 235, 221, 0.6);
+  --cit-ink-faint: rgba(242, 235, 221, 0.38);
+  --cit-gold: #c6a15b;             /* brushed gold */
+  --cit-gold-bright: #d9bc7f;
+  --cit-gold-deep: #a8874a;
+  --cit-gold-soft: rgba(198, 161, 91, 0.16);
+  --cit-hairline: rgba(242, 235, 221, 0.09);
+  --cit-hairline-strong: rgba(242, 235, 221, 0.16);
+  --cit-hairline-gold: rgba(198, 161, 91, 0.32);
+  --cit-fill-soft: rgba(242, 235, 221, 0.05);
+  --cit-break: #9aa8b8;            /* muted steel for breaks */
+  --cit-night-tint: #ff9b3d;
+  --cit-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  --cit-serif: Georgia, "Iowan Old Style", "Times New Roman", ui-serif, serif;
+  --cit-ease: cubic-bezier(0.22, 1, 0.36, 1); /* expo-out: graceful, no bounce */
+}
+html[class*="light"], html[data-theme="light"] {
+  --cit-surface: #f6f1e7;          /* ivory paper */
+  --cit-glass: rgba(246, 241, 231, 0.94);
+  --cit-ink: #2a241d;              /* espresso text */
+  --cit-ink-dim: rgba(42, 36, 29, 0.62);
+  --cit-ink-faint: rgba(42, 36, 29, 0.4);
+  --cit-hairline: rgba(42, 36, 29, 0.1);
+  --cit-hairline-strong: rgba(42, 36, 29, 0.18);
+  --cit-hairline-gold: rgba(168, 135, 74, 0.45);
+  --cit-fill-soft: rgba(42, 36, 29, 0.05);
+  --cit-shadow: 0 18px 44px rgba(60, 48, 30, 0.22);
+}
+
 /* ----------------------------------------
    The Calm Dock — one draggable pill that
    expands into all controls with a spring.
@@ -36,9 +70,9 @@
   gap: 7px;
   padding: 8px 13px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(30, 31, 40, 0.88);
-  color: #ececf1;
+  border: 1px solid var(--cit-hairline-strong);
+  background: var(--cit-glass);
+  color: var(--cit-ink);
   cursor: grab;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -47,12 +81,12 @@
   line-height: 1;
 }
 .cit-dock-pill:hover {
-  background: rgba(30, 31, 40, 1);
+  background: var(--cit-glass);
   box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
 }
 .cit-dock-mark {
   font-size: 15px;
-  color: #10a37f;
+  color: var(--cit-gold);
 }
 .cit-dock-status {
   font-size: 12px;
@@ -60,7 +94,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: rgba(236, 236, 241, 0.85);
+  color: var(--cit-ink);
 }
 
 .cit-dock-items {
@@ -69,7 +103,7 @@
   gap: 8px;
   max-width: 0;
   overflow: hidden;
-  transition: max-width 0.32s cubic-bezier(0.34, 1.2, 0.64, 1);
+  transition: max-width 0.32s var(--cit-ease);
 }
 #cit-dock.cit-dock-open .cit-dock-items {
   max-width: 460px;
@@ -80,9 +114,9 @@
   height: 34px;
   flex-shrink: 0;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(52, 53, 65, 0.9);
-  color: #ececf1;
+  border: 1px solid var(--cit-hairline-strong);
+  background: var(--cit-glass);
+  color: var(--cit-ink);
   font-size: 14px;
   cursor: pointer;
   display: flex;
@@ -91,13 +125,13 @@
   padding: 0;
   line-height: 1;
   opacity: 0;
-  transform: scale(0.6) translateY(8px);
-  transition: opacity 0.22s ease, transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+  transform: translateY(10px);
+  transition: opacity 0.22s ease, transform 0.28s var(--cit-ease),
     background 0.15s ease;
 }
 #cit-dock.cit-dock-open .cit-dock-item {
   opacity: 1;
-  transform: scale(1) translateY(0);
+  transform: translateY(0);
 }
 /* staggered entrance */
 #cit-dock.cit-dock-open .cit-dock-item:nth-child(1) { transition-delay: 0.02s; }
@@ -110,15 +144,16 @@
 #cit-dock.cit-dock-open .cit-dock-item:nth-child(8) { transition-delay: 0.23s; }
 #cit-dock.cit-dock-open .cit-dock-item:nth-child(9) { transition-delay: 0.26s; }
 .cit-dock-item:hover {
-  background: rgba(70, 72, 88, 1);
-  transform: scale(1.12) translateY(-2px);
+  background: var(--cit-gold-soft);
+  border-color: var(--cit-hairline-gold);
+  transform: translateY(-2px);
 }
 .cit-dock-item:active {
-  transform: scale(0.94);
+  transform: translateY(0);
 }
 .cit-dock-item.cit-active {
-  background: #10a37f;
-  border-color: #10a37f;
+  background: var(--cit-gold);
+  border-color: var(--cit-gold);
   color: #fff;
 }
 
@@ -142,13 +177,13 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  background: #262732;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--cit-surface);
+  border: 1px solid var(--cit-hairline-strong);
   border-radius: 14px;
   padding: 10px;
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  animation: cit-spring-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: cit-spring-in 0.22s var(--cit-ease);
   transform-origin: bottom right;
 }
 .cit-mode-card {
@@ -157,9 +192,9 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   gap: 7px;
   padding: 8px 9px;
   border-radius: 9px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: #ececf1;
+  border: 1px solid var(--cit-hairline);
+  background: var(--cit-fill-soft);
+  color: var(--cit-ink);
   font-size: 12px;
   cursor: pointer;
   text-align: left;
@@ -169,12 +204,12 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   text-overflow: ellipsis;
 }
 .cit-mode-card:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: var(--cit-hairline);
   transform: translateY(-1px);
 }
 .cit-mode-card.cit-on {
-  background: rgba(16, 163, 127, 0.18);
-  border-color: #10a37f;
+  background: var(--cit-gold-soft);
+  border-color: var(--cit-gold);
 }
 .cit-mode-ic {
   font-size: 14px;
@@ -187,19 +222,18 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   border: none;
   border-radius: 9px;
   background: transparent;
-  color: rgba(236, 236, 241, 0.6);
+  color: var(--cit-ink-dim);
   font-size: 12px;
   cursor: pointer;
 }
 .cit-modes-all:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #ececf1;
+  background: var(--cit-fill-soft);
+  color: var(--cit-ink);
 }
 
 @keyframes cit-spring-in {
-  0% { opacity: 0; transform: scale(0.9); }
-  70% { opacity: 1; transform: scale(1.02); }
-  100% { opacity: 1; transform: scale(1); }
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 /* Drag affordances */
@@ -239,12 +273,12 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   z-index: 2147483002;
   padding: 8px 13px;
   border-radius: 999px;
-  background: rgba(20, 21, 28, 0.92);
-  color: #ececf1;
+  background: var(--cit-glass);
+  color: var(--cit-ink);
   font-size: 12.5px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--cit-hairline);
   opacity: 0;
   transform: translateY(6px);
   pointer-events: none;
@@ -267,13 +301,13 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   width: 290px;
   max-height: 80vh;
   overflow-y: auto;
-  background: #2a2b36;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--cit-surface);
+  border: 1px solid var(--cit-hairline-strong);
   border-radius: 14px;
   padding: 12px 16px 14px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  animation: cit-spring-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: cit-spring-in 0.22s var(--cit-ease);
   transform-origin: bottom right;
 }
 @keyframes cit-panel-in {
@@ -291,14 +325,14 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(236, 236, 241, 0.5);
+  color: var(--cit-ink-dim);
 }
 .cit-settings-close {
   width: 22px;
   height: 22px;
   border: none;
   background: transparent;
-  color: rgba(236, 236, 241, 0.45);
+  color: var(--cit-ink-dim);
   font-size: 13px;
   cursor: pointer;
   border-radius: 6px;
@@ -309,8 +343,8 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   transition: background 0.15s ease, color 0.15s ease;
 }
 .cit-settings-close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ececf1;
+  background: var(--cit-hairline);
+  color: var(--cit-ink);
 }
 .cit-settings-row {
   display: flex;
@@ -318,14 +352,14 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   justify-content: space-between;
   gap: 12px;
   padding: 9px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--cit-fill-soft);
 }
 .cit-settings-row:last-child {
   border-bottom: none;
 }
 .cit-settings-row > span {
   font-size: 13px;
-  color: #ececf1;
+  color: var(--cit-ink);
   user-select: none;
 }
 
@@ -335,7 +369,7 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   width: 38px;
   height: 22px;
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--cit-hairline-strong);
   cursor: pointer;
   flex-shrink: 0;
   border: none;
@@ -343,7 +377,7 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   transition: background 0.2s ease;
 }
 .cit-toggle-switch.cit-on {
-  background: #10a37f;
+  background: var(--cit-gold);
 }
 .cit-toggle-knob {
   position: absolute;
@@ -373,90 +407,17 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
 }
 .cit-slider-top span {
   font-size: 13px;
-  color: #ececf1;
+  color: var(--cit-ink);
 }
 .cit-slider-val {
-  color: #10a37f !important;
+  color: var(--cit-gold) !important;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
 .cit-slider {
   width: 100%;
-  accent-color: #10a37f;
+  accent-color: var(--cit-gold);
   cursor: pointer;
-}
-
-/* ----------------------------------------
-   Light mode
----------------------------------------- */
-html[class*="light"] .cit-dock-pill,
-html[data-theme="light"] .cit-dock-pill {
-  background: rgba(255, 255, 255, 0.92);
-  color: #343541;
-  border-color: rgba(0, 0, 0, 0.1);
-}
-html[class*="light"] .cit-dock-status,
-html[data-theme="light"] .cit-dock-status {
-  color: rgba(52, 53, 65, 0.85);
-}
-html[class*="light"] .cit-dock-item,
-html[data-theme="light"] .cit-dock-item {
-  background: rgba(255, 255, 255, 0.94);
-  color: #343541;
-  border-color: rgba(0, 0, 0, 0.1);
-}
-html[class*="light"] .cit-dock-item.cit-active,
-html[data-theme="light"] .cit-dock-item.cit-active {
-  background: #10a37f;
-  color: #fff;
-}
-html[class*="light"] #cit-modes-pop,
-html[data-theme="light"] #cit-modes-pop {
-  background: #f7f7f8;
-  border-color: rgba(0, 0, 0, 0.1);
-}
-html[class*="light"] .cit-mode-card,
-html[data-theme="light"] .cit-mode-card {
-  background: rgba(0, 0, 0, 0.04);
-  border-color: rgba(0, 0, 0, 0.08);
-  color: #343541;
-}
-html[class*="light"] .cit-btn,
-html[data-theme="light"] .cit-btn {
-  background: rgba(255, 255, 255, 0.9);
-  color: #343541;
-  border-color: rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14);
-}
-html[class*="light"] .cit-btn:hover,
-html[data-theme="light"] .cit-btn:hover {
-  background: #fff;
-}
-html[class*="light"] .cit-btn.cit-active,
-html[data-theme="light"] .cit-btn.cit-active {
-  background: #10a37f;
-  color: #fff;
-}
-html[class*="light"] #cit-settings-panel,
-html[data-theme="light"] #cit-settings-panel {
-  background: #f7f7f8;
-  border-color: rgba(0, 0, 0, 0.1);
-}
-html[class*="light"] .cit-settings-title,
-html[class*="light"] .cit-settings-row > span,
-html[class*="light"] .cit-slider-top span,
-html[data-theme="light"] .cit-settings-title,
-html[data-theme="light"] .cit-settings-row > span,
-html[data-theme="light"] .cit-slider-top span {
-  color: #343541;
-}
-html[class*="light"] .cit-settings-row,
-html[data-theme="light"] .cit-settings-row {
-  border-color: rgba(0, 0, 0, 0.07);
-}
-html[class*="light"] .cit-toggle-switch,
-html[data-theme="light"] .cit-toggle-switch {
-  background: rgba(0, 0, 0, 0.18);
 }
 
 /* ----------------------------------------
@@ -472,12 +433,12 @@ html[data-theme="light"] .cit-toggle-switch {
   gap: 6px;
   padding: 7px 12px;
   border-radius: 999px;
-  background: rgba(20, 21, 28, 0.94);
-  color: #ececf1;
+  background: var(--cit-glass);
+  color: var(--cit-ink);
   font-size: 12.5px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--cit-hairline);
   opacity: 0;
   transform: translateY(6px);
   pointer-events: none;
@@ -493,7 +454,7 @@ html[data-theme="light"] .cit-toggle-switch {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #10a37f;
+  background: var(--cit-gold);
   animation: cit-pulse 1s ease-in-out infinite;
   flex-shrink: 0;
 }
@@ -510,15 +471,15 @@ html[data-theme="light"] .cit-toggle-switch {
   margin-left: 4px;
   padding: 1px 6px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--cit-hairline-strong);
   font-size: 11px;
-  color: rgba(236, 236, 241, 0.7);
+  color: var(--cit-ink);
 }
 
 .cit-select {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ececf1;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--cit-hairline);
+  color: var(--cit-ink);
+  border: 1px solid var(--cit-hairline-strong);
   border-radius: 7px;
   padding: 4px 8px;
   font-size: 12.5px;
@@ -526,19 +487,8 @@ html[data-theme="light"] .cit-toggle-switch {
   outline: none;
 }
 .cit-select option {
-  background: #2a2b36;
-  color: #ececf1;
-}
-html[class*="light"] .cit-select,
-html[data-theme="light"] .cit-select {
-  background: rgba(0, 0, 0, 0.06);
-  color: #343541;
-  border-color: rgba(0, 0, 0, 0.15);
-}
-html[class*="light"] .cit-select option,
-html[data-theme="light"] .cit-select option {
-  background: #fff;
-  color: #343541;
+  background: var(--cit-surface);
+  color: var(--cit-ink);
 }
 
 /* ----------------------------------------
@@ -549,7 +499,7 @@ html[data-theme="light"] .cit-select option {
   inset: 0;
   z-index: 2147482000; /* below Calm's own UI so buttons stay bright */
   pointer-events: none;
-  background: #ff9b3d;
+  background: var(--cit-night-tint);
   mix-blend-mode: multiply;
   opacity: var(--cit-night-opacity, 0.35);
   transition: opacity 0.25s ease;
@@ -565,17 +515,17 @@ html[data-theme="light"] .cit-select option {
   right: 0;
   height: 3px;
   z-index: 2147483001;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--cit-hairline);
   pointer-events: none;
 }
 #cit-timebar .cit-timebar-fill {
   height: 100%;
   width: 0%;
-  background: #10a37f;
+  background: var(--cit-gold);
   transition: width 1s linear;
 }
 #cit-timebar.cit-timebar-break .cit-timebar-fill {
-  background: #6ca0f6;
+  background: var(--cit-break);
 }
 
 /* ----------------------------------------
@@ -594,8 +544,8 @@ html[data-theme="light"] .cit-select option {
   box-shadow:
     0 -100vh 0 100vh rgba(8, 10, 16, var(--cit-ruler-dim, 0.45)),
     0 100vh 0 100vh rgba(8, 10, 16, var(--cit-ruler-dim, 0.45));
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid var(--cit-hairline);
+  border-bottom: 1px solid var(--cit-hairline);
 }
 
 /* Presentation mode hides ALL Calm UI for clean capture/sharing —
@@ -626,9 +576,9 @@ html.cit-presentation #cit-timebar {
   white-space: nowrap;
   padding: 6px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(32, 33, 42, 0.88);
-  color: #ececf1;
+  border: 1px solid var(--cit-hairline-strong);
+  background: var(--cit-glass);
+  color: var(--cit-ink);
   font-size: 12.5px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   cursor: pointer;
@@ -638,10 +588,10 @@ html.cit-presentation #cit-timebar {
   transition: background 0.2s ease, transform 0.15s ease;
 }
 #cit-intent-chip:hover {
-  background: rgba(32, 33, 42, 1);
+  background: var(--cit-glass);
 }
 #cit-intent-chip.cit-intent-empty {
-  color: rgba(236, 236, 241, 0.55);
+  color: var(--cit-ink-dim);
 }
 #cit-intent-chip {
   display: inline-flex;
@@ -655,7 +605,7 @@ html.cit-presentation #cit-timebar {
 }
 .cit-intent-x {
   display: none;
-  color: rgba(236, 236, 241, 0.5);
+  color: var(--cit-ink-dim);
   font-size: 11px;
   padding: 1px 3px;
   border-radius: 5px;
@@ -665,7 +615,7 @@ html.cit-presentation #cit-timebar {
   display: inline;
 }
 .cit-intent-x:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--cit-hairline-strong);
   color: #fff;
 }
 
@@ -677,8 +627,8 @@ html.cit-presentation #cit-timebar {
   z-index: 2147483002;
   width: 340px;
   max-width: calc(100vw - 24px);
-  background: #2a2b36;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--cit-surface);
+  border: 1px solid var(--cit-hairline-strong);
   border-radius: 14px;
   padding: 14px 16px;
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
@@ -688,7 +638,7 @@ html.cit-presentation #cit-timebar {
 .cit-intent-title {
   font-size: 13.5px;
   font-weight: 700;
-  color: #ececf1;
+  color: var(--cit-ink);
   margin-bottom: 8px;
 }
 .cit-intent-subtitle {
@@ -696,7 +646,7 @@ html.cit-presentation #cit-timebar {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: rgba(236, 236, 241, 0.45);
+  color: var(--cit-ink-dim);
   margin: 12px 0 6px;
 }
 .cit-intent-goal,
@@ -704,10 +654,10 @@ html.cit-presentation #cit-timebar {
 .cit-intent-park {
   width: 100%;
   box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--cit-hairline);
+  border: 1px solid var(--cit-hairline-strong);
   border-radius: 9px;
-  color: #ececf1;
+  color: var(--cit-ink);
   font-size: 13px;
   padding: 8px 10px;
   outline: none;
@@ -715,7 +665,7 @@ html.cit-presentation #cit-timebar {
 .cit-intent-goal:focus,
 .cit-intent-add:focus,
 .cit-intent-park:focus {
-  border-color: #10a37f;
+  border-color: var(--cit-gold);
 }
 .cit-intent-add,
 .cit-intent-park {
@@ -730,7 +680,7 @@ html.cit-presentation #cit-timebar {
   align-items: center;
   gap: 8px;
   padding: 5px 0;
-  color: #ececf1;
+  color: var(--cit-ink);
   font-size: 13px;
 }
 .cit-intent-task.cit-done span {
@@ -750,7 +700,7 @@ html.cit-presentation #cit-timebar {
   border-radius: 5px;
   border: 1.5px solid rgba(255, 255, 255, 0.3);
   background: transparent;
-  color: #10a37f;
+  color: var(--cit-gold);
   font-size: 12px;
   line-height: 1;
   cursor: pointer;
@@ -760,14 +710,14 @@ html.cit-presentation #cit-timebar {
 .cit-intent-del {
   border: none;
   background: transparent;
-  color: rgba(236, 236, 241, 0.35);
+  color: var(--cit-ink-faint);
   font-size: 11px;
   cursor: pointer;
   padding: 2px 4px;
   flex-shrink: 0;
 }
 .cit-intent-del:hover {
-  color: #ececf1;
+  color: var(--cit-ink);
 }
 .cit-intent-notes {
   max-height: 120px;
@@ -778,40 +728,12 @@ html.cit-presentation #cit-timebar {
   align-items: center;
   gap: 8px;
   padding: 4px 0;
-  color: rgba(236, 236, 241, 0.8);
+  color: var(--cit-ink);
   font-size: 12.5px;
 }
 .cit-intent-note span {
   flex: 1;
   min-width: 0;
-}
-
-html[class*="light"] #cit-intent-chip,
-html[data-theme="light"] #cit-intent-chip {
-  background: rgba(255, 255, 255, 0.92);
-  color: #343541;
-  border-color: rgba(0, 0, 0, 0.1);
-}
-html[class*="light"] #cit-intent-pop,
-html[data-theme="light"] #cit-intent-pop {
-  background: #f7f7f8;
-  border-color: rgba(0, 0, 0, 0.1);
-}
-html[class*="light"] .cit-intent-title,
-html[class*="light"] .cit-intent-task,
-html[data-theme="light"] .cit-intent-title,
-html[data-theme="light"] .cit-intent-task {
-  color: #343541;
-}
-html[class*="light"] .cit-intent-goal,
-html[class*="light"] .cit-intent-add,
-html[class*="light"] .cit-intent-park,
-html[data-theme="light"] .cit-intent-goal,
-html[data-theme="light"] .cit-intent-add,
-html[data-theme="light"] .cit-intent-park {
-  background: rgba(0, 0, 0, 0.05);
-  color: #343541;
-  border-color: rgba(0, 0, 0, 0.15);
 }
 
 #cit-chip-stack {
@@ -828,7 +750,7 @@ html[data-theme="light"] .cit-intent-park {
 .cit-chip {
   padding: 7px 13px;
   border-radius: 999px;
-  background: rgba(16, 163, 127, 0.95);
+  background: var(--cit-gold);
   color: #fff;
   font-size: 12.5px;
   font-weight: 600;
@@ -847,15 +769,10 @@ html[data-theme="light"] .cit-intent-park {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(236, 236, 241, 0.4);
+  color: var(--cit-ink-dim);
   margin: 12px 0 2px;
   padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-html[class*="light"] .cit-settings-divider,
-html[data-theme="light"] .cit-settings-divider {
-  color: rgba(52, 53, 65, 0.45);
-  border-color: rgba(0, 0, 0, 0.08);
+  border-top: 1px solid var(--cit-hairline);
 }
 
 /* ----------------------------------------
@@ -871,8 +788,8 @@ html[data-theme="light"] .cit-settings-divider {
   gap: 10px;
   padding: 8px 14px 8px 8px;
   border-radius: 999px;
-  background: rgba(20, 21, 28, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--cit-glass);
+  border: 1px solid var(--cit-hairline-strong);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -903,22 +820,22 @@ html[data-theme="light"] .cit-settings-divider {
 .cit-pomo-meta .cit-pomo-label {
   font-size: 12.5px;
   font-weight: 600;
-  color: #ececf1;
+  color: var(--cit-ink);
 }
 .cit-pomo-meta .cit-pomo-expand {
   font-size: 10.5px;
-  color: rgba(236, 236, 241, 0.5);
+  color: var(--cit-ink-dim);
 }
 
 /* Ring */
 .cit-pomo-ring .cit-pomo-track {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.14);
+  stroke: var(--cit-hairline-strong);
   stroke-width: 5;
 }
 .cit-pomo-ring .cit-pomo-prog {
   fill: none;
-  stroke: #10a37f;
+  stroke: var(--cit-gold);
   stroke-width: 5;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.95s linear, stroke 0.4s ease;
@@ -939,7 +856,7 @@ html[data-theme="light"] .cit-settings-divider {
   justify-content: center;
   background: radial-gradient(
       1200px 800px at 50% 40%,
-      rgba(16, 163, 127, 0.12),
+      var(--cit-gold),
       transparent 60%
     ),
     rgba(12, 13, 18, 0.9);
@@ -972,7 +889,7 @@ html[data-theme="light"] .cit-settings-divider {
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(236, 236, 241, 0.65);
+  color: var(--cit-ink-dim);
 }
 .cit-pomo-ringwrap-lg {
   animation: cit-breathe 5s ease-in-out infinite;
@@ -993,10 +910,10 @@ html[data-theme="light"] .cit-settings-divider {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--cit-hairline-strong);
 }
 .cit-pomo-dots .cit-dot-on {
-  background: #10a37f;
+  background: var(--cit-gold);
 }
 .cit-pomo-break .cit-pomo-dots .cit-dot-on {
   background: #f59e0b;
@@ -1009,9 +926,9 @@ html[data-theme="light"] .cit-settings-divider {
   margin-top: 6px;
 }
 .cit-pomo-btn {
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  color: #ececf1;
+  border: 1px solid var(--cit-hairline-strong);
+  background: var(--cit-fill-soft);
+  color: var(--cit-ink);
   border-radius: 10px;
   padding: 9px 15px;
   font-size: 13px;
@@ -1019,7 +936,7 @@ html[data-theme="light"] .cit-settings-divider {
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 .cit-pomo-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--cit-hairline-strong);
 }
 .cit-pomo-close:hover {
   background: #b3261e;
@@ -1035,9 +952,9 @@ html[data-theme="light"] .cit-settings-divider {
   align-items: center;
 }
 .cit-mini-btn {
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.08);
-  color: #ececf1;
+  border: 1px solid var(--cit-hairline-strong);
+  background: var(--cit-hairline);
+  color: var(--cit-ink);
   border-radius: 7px;
   padding: 3px 10px;
   font-size: 12px;
@@ -1045,12 +962,12 @@ html[data-theme="light"] .cit-settings-divider {
   transition: background 0.15s ease;
 }
 .cit-mini-btn:hover {
-  background: #10a37f;
-  border-color: #10a37f;
+  background: var(--cit-gold);
+  border-color: var(--cit-gold);
 }
 .cit-mini-btn.cit-del {
   padding: 3px 7px;
-  color: rgba(236, 236, 241, 0.6);
+  color: var(--cit-ink-dim);
 }
 .cit-mini-btn.cit-del:hover {
   background: #b3261e;
@@ -1060,9 +977,9 @@ html[data-theme="light"] .cit-settings-divider {
 .cit-save-preset {
   width: 100%;
   margin-top: 8px;
-  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border: 1px dashed var(--cit-hairline-strong);
   background: transparent;
-  color: rgba(236, 236, 241, 0.7);
+  color: var(--cit-ink);
   border-radius: 9px;
   padding: 8px;
   font-size: 12.5px;
@@ -1070,19 +987,8 @@ html[data-theme="light"] .cit-settings-divider {
   transition: background 0.15s ease, color 0.15s ease;
 }
 .cit-save-preset:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #ececf1;
-}
-html[class*="light"] .cit-mini-btn,
-html[data-theme="light"] .cit-mini-btn {
-  background: rgba(0, 0, 0, 0.05);
-  color: #343541;
-  border-color: rgba(0, 0, 0, 0.15);
-}
-html[class*="light"] .cit-save-preset,
-html[data-theme="light"] .cit-save-preset {
-  color: rgba(52, 53, 65, 0.7);
-  border-color: rgba(0, 0, 0, 0.2);
+  background: var(--cit-fill-soft);
+  color: var(--cit-ink);
 }
 
 /* ----------------------------------------
@@ -1093,14 +999,14 @@ html[data-theme="light"] .cit-save-preset {
   gap: 2px;
   margin: 4px 0 10px;
   padding: 3px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--cit-fill-soft);
   border-radius: 10px;
 }
 .cit-tab {
   flex: 1;
   border: none;
   background: transparent;
-  color: rgba(236, 236, 241, 0.6);
+  color: var(--cit-ink-dim);
   font-size: 11.5px;
   font-weight: 600;
   padding: 6px 4px;
@@ -1109,10 +1015,10 @@ html[data-theme="light"] .cit-save-preset {
   transition: background 0.15s ease, color 0.15s ease;
 }
 .cit-tab:hover {
-  color: #ececf1;
+  color: var(--cit-ink);
 }
 .cit-tab.cit-tab-on {
-  background: rgba(16, 163, 127, 0.9);
+  background: var(--cit-gold);
   color: #fff;
 }
 .cit-tab-content {
@@ -1120,7 +1026,7 @@ html[data-theme="light"] .cit-save-preset {
 }
 .cit-about {
   padding: 6px 2px;
-  color: #ececf1;
+  color: var(--cit-ink);
 }
 .cit-about-name {
   font-size: 22px;
@@ -1129,42 +1035,26 @@ html[data-theme="light"] .cit-save-preset {
 }
 .cit-about-ver {
   font-size: 12px;
-  color: rgba(236, 236, 241, 0.5);
+  color: var(--cit-ink-dim);
   margin-bottom: 10px;
 }
 .cit-about p {
   font-size: 12.5px;
   line-height: 1.5;
   margin: 8px 0;
-  color: rgba(236, 236, 241, 0.8);
+  color: var(--cit-ink);
 }
 .cit-about .cit-about-dim {
-  color: rgba(236, 236, 241, 0.5);
+  color: var(--cit-ink-dim);
 }
 .cit-about .cit-about-pro {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(16, 163, 127, 0.15);
-  color: #10a37f;
+  background: var(--cit-gold);
+  color: var(--cit-gold);
   font-weight: 600;
   font-size: 12px;
-}
-html[class*="light"] .cit-tabbar,
-html[data-theme="light"] .cit-tabbar {
-  background: rgba(0, 0, 0, 0.05);
-}
-html[class*="light"] .cit-tab,
-html[data-theme="light"] .cit-tab {
-  color: rgba(52, 53, 65, 0.6);
-}
-html[class*="light"] .cit-about,
-html[data-theme="light"] .cit-about {
-  color: #343541;
-}
-html[class*="light"] .cit-about p,
-html[data-theme="light"] .cit-about p {
-  color: rgba(52, 53, 65, 0.8);
 }
 
 /* ----------------------------------------
@@ -1203,3 +1093,96 @@ html[data-theme="light"] .cit-about p {
   color: #e5484d;
   font-size: 12px;
 }
+
+/* ================= Calm Maison — finishing layer =================
+   Typography, gold hairlines, shimmer, and SVG sizing. Appended last so
+   the cascade lets these refine the component rules above. */
+
+/* SVG icon sizing */
+.cit-svg { width: 16px; height: 16px; display: block; }
+.cit-svg-mark { width: 20px; height: 20px; }
+.cit-mode-ic { display: inline-flex; }
+.cit-mode-ic .cit-svg { width: 15px; height: 15px; }
+.cit-row-ic { display: inline-flex; margin-right: 9px; color: var(--cit-gold); vertical-align: middle; }
+.cit-row-ic .cit-svg { width: 15px; height: 15px; }
+.cit-row-label { display: inline-flex; align-items: center; }
+.cit-dock-mark { display: inline-flex; }
+#cit-intent-chip .cit-row-ic { margin-right: 2px; }
+
+/* Gold hairline + deep shadow on every raised surface */
+.cit-dock-pill,
+.cit-dock-item,
+#cit-modes-pop,
+#cit-settings-panel,
+#cit-intent-pop,
+#cit-intent-chip,
+#cit-pomo-widget,
+.cit-pomo-card,
+.cit-chip,
+#cit-toast,
+#cit-type-chip {
+  box-shadow: inset 0 0 0 1px var(--cit-hairline-gold), var(--cit-shadow);
+  border-color: transparent;
+}
+.cit-dock-item { box-shadow: inset 0 0 0 1px var(--cit-hairline-gold), 0 6px 18px rgba(0, 0, 0, 0.35); }
+.cit-dock-item.cit-active {
+  background: linear-gradient(135deg, var(--cit-gold-bright), var(--cit-gold-deep));
+  color: #241d12;
+  box-shadow: inset 0 0 0 1px var(--cit-gold-bright), 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+/* Serif voice: titles, dock status, pomodoro numerals */
+.cit-settings-title {
+  font-family: var(--cit-serif);
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.03em;
+  color: var(--cit-ink);
+}
+.cit-dock-status { font-family: var(--cit-serif); font-style: italic; }
+.cit-pomo-time { font-family: var(--cit-serif) !important; letter-spacing: 0.05em; }
+.cit-pomo-prog { stroke: var(--cit-gold) !important; }
+.cit-intent-title { font-family: var(--cit-serif); font-size: 15px; }
+
+/* Uppercase spaced tabs with a gold active underline */
+.cit-tabbar { background: transparent; border-bottom: 1px solid var(--cit-hairline); border-radius: 0; padding: 0; gap: 0; }
+.cit-tab {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 9.5px;
+  padding: 9px 2px 8px;
+  border-radius: 0;
+}
+.cit-tab.cit-tab-on {
+  background: transparent;
+  color: var(--cit-gold);
+  box-shadow: inset 0 -1.5px 0 0 var(--cit-gold);
+}
+
+/* Panel breathing room + gold controls */
+#cit-settings-panel { padding: 16px 20px 18px; border-radius: 16px; }
+.cit-settings-row { padding: 11px 0; }
+.cit-slider { accent-color: var(--cit-gold); }
+.cit-toggle-switch.cit-on { background: linear-gradient(135deg, var(--cit-gold-bright), var(--cit-gold-deep)); }
+.cit-settings-divider { color: var(--cit-gold-deep); border-color: var(--cit-hairline-gold); letter-spacing: 0.14em; }
+.cit-slider-val { color: var(--cit-gold) !important; font-family: var(--cit-serif); }
+
+/* The slow gold shimmer (pill hover) */
+.cit-dock-pill { position: relative; overflow: hidden; }
+.cit-dock-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(105deg, transparent 42%, rgba(217, 188, 127, 0.16) 50%, transparent 58%);
+  background-size: 260% 100%;
+  background-position: 130% 0;
+  pointer-events: none;
+  transition: background-position 0.9s var(--cit-ease);
+}
+.cit-dock-pill:hover::after { background-position: -130% 0; }
+
+/* Timebar in gold */
+#cit-timebar .cit-timebar-fill { background: linear-gradient(90deg, var(--cit-gold-deep), var(--cit-gold-bright)); }
+#cit-timebar.cit-timebar-break .cit-timebar-fill { background: var(--cit-break); }
