@@ -179,6 +179,63 @@
         );
       },
     },
+    claude: {
+      id: "claude",
+      host: /(^|\.)claude\.ai$/,
+      // Live-probed 2026-07: input = [data-testid="chat-input"] (TipTap/
+      // ProseMirror), composer = its enclosing <fieldset>, sidebar =
+      // aside.dframe-sidebar, header = header.dframe-header, assistant prose =
+      // .font-claude-response, conversation scroller = scrollable ancestor of
+      // a message (sidebar has its own .dframe-nav-scroll — excluded in core).
+      composer: function () {
+        var input = this.promptInput();
+        return firstOf([
+          input && input.closest("fieldset"),
+          input && input.closest("form"),
+        ]);
+      },
+      promptInput: function () {
+        return firstOf([
+          q('[data-testid="chat-input"]'),
+          q('div.ProseMirror[contenteditable="true"]'),
+          q('[contenteditable="true"]'),
+        ]);
+      },
+      scrollRoot: function () {
+        return firstOf([
+          scrollableAncestor(q('[data-testid="user-message"]')),
+          scrollableAncestor(q(".font-claude-response")),
+          largestScroller(),
+        ]);
+      },
+      zenInline: false, // stylesheet-only: React re-renders, same as Gemini
+      zenTargets: function () {
+        return [
+          q('aside[class*="dframe-sidebar"]'),
+          q('header[class*="dframe-header"]'),
+        ].filter(Boolean);
+      },
+      zenCss: function () {
+        return (
+          'html.cit-zen aside[class*="dframe-sidebar"],' +
+          'html.cit-zen header[class*="dframe-header"]' +
+          "{display:none !important;}"
+        );
+      },
+      readerTargets: function () {
+        return '.font-claude-response, [data-testid="user-message"]';
+      },
+      privacyTargets: function () {
+        return 'aside a[href^="/chat/"]';
+      },
+      widthCss: function () {
+        return (
+          'html.cit-width [data-testid="user-message"],' +
+          "html.cit-width .font-claude-response" +
+          "{max-width: var(--cit-reading-width) !important;}"
+        );
+      },
+    },
   };
 
   function pickAdapter() {
