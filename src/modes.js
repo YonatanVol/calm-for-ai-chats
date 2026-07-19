@@ -222,6 +222,79 @@
     if (CALM.ui.hideChip) CALM.ui.hideChip("pause");
   }
 
+  // ---------- Reading ruler (ADHD attention anchor) ----------
+  // A fixed band that follows the cursor; giant box-shadows dim everything
+  // above/below it. Pure overlay — zero site-DOM mutation.
+  function rulerVars() {
+    document.documentElement.style.setProperty(
+      "--cit-ruler-h",
+      (S.rulerHeight | 0) + "px"
+    );
+    document.documentElement.style.setProperty(
+      "--cit-ruler-dim",
+      String((S.rulerDim | 0) / 100)
+    );
+  }
+  function rulerMove(e) {
+    var o = document.getElementById("cit-ruler");
+    if (o) o.style.top = e.clientY - (S.rulerHeight | 0) / 2 + "px";
+  }
+  function rulerEnter() {
+    if (!document.getElementById("cit-ruler")) {
+      var o = document.createElement("div");
+      o.id = "cit-ruler";
+      document.body.appendChild(o);
+    }
+    rulerVars();
+    rt.rulerHandler = rulerMove;
+    document.addEventListener("mousemove", rt.rulerHandler, { passive: true });
+  }
+  function rulerExit() {
+    removeEl("cit-ruler");
+    if (rt.rulerHandler) {
+      document.removeEventListener("mousemove", rt.rulerHandler);
+      rt.rulerHandler = null;
+    }
+  }
+
+  // ---------- Grayscale (stimulation regulation) ----------
+  // Drains the dopamine-bait colors from the site; Calm's own UI is excluded.
+  function grayVars() {
+    document.documentElement.style.setProperty(
+      "--cit-gray",
+      String((S.grayLevel | 0) / 100)
+    );
+  }
+  function grayEnter() {
+    injectStyle(
+      "cit-gray-style",
+      'html.cit-gray body > *:not([id^="cit-"])' +
+        "{filter:grayscale(var(--cit-gray,0.85)) !important;}"
+    );
+    grayVars();
+    document.documentElement.classList.add("cit-gray");
+  }
+  function grayExit() {
+    document.documentElement.classList.remove("cit-gray");
+    removeEl("cit-gray-style");
+  }
+
+  // ---------- Reduce motion (kill site animations/transitions) ----------
+  function motionEnter() {
+    injectStyle(
+      "cit-motion-style",
+      'html.cit-motion *:not([id*="cit-"]):not([class*="cit-"]),' +
+        'html.cit-motion *:not([id*="cit-"]):not([class*="cit-"])::before,' +
+        'html.cit-motion *:not([id*="cit-"]):not([class*="cit-"])::after' +
+        "{animation-duration:0.001s !important;transition-duration:0.001s !important;}"
+    );
+    document.documentElement.classList.add("cit-motion");
+  }
+  function motionExit() {
+    document.documentElement.classList.remove("cit-motion");
+    removeEl("cit-motion-style");
+  }
+
   // ---------- Pomodoro (implemented in src/pomodoro.js, Phase 2) ----------
   function pomodoroEnter() {
     if (CALM.pomodoro) CALM.pomodoro.start();
@@ -240,6 +313,9 @@
     autoscroll: { label: "Auto-scroll", icon: "↧", enter: autoscrollEnter, exit: autoscrollExit },
     pause: { label: "Pause", icon: "⏸", enter: pauseEnter, exit: pauseExit },
     pomodoro: { label: "Pomodoro", icon: "◴", enter: pomodoroEnter, exit: pomodoroExit },
+    ruler: { label: "Reading ruler", icon: "▬", enter: rulerEnter, exit: rulerExit, vars: rulerVars },
+    gray: { label: "Grayscale", icon: "◐", enter: grayEnter, exit: grayExit, vars: grayVars },
+    motion: { label: "Reduce motion", icon: "◇", enter: motionEnter, exit: motionExit },
   };
 
   function setModeBtnActive(id, on) {
