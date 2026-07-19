@@ -46,6 +46,15 @@ Supabase Auth, Spotify, and Stripe manage credentials directly.
 2. I add Stripe Checkout + a webhook (Vercel function) that flips
    `subscriptions.status` in Supabase; `isPro()` then reads from there.
 
+## Extension signing key (stable ID)
+The manifest's `"key"` field is the PUBLIC key that keeps the extension ID stable
+(required so the Google-sign-in redirect URL never changes). Its PRIVATE half
+lives at `~/.calm-keys/calm-extension-key.pem` (0600) — **outside** this folder,
+because Chrome embeds any `.pem` found in the directory when packing, and this
+repo is public. Never move it back here; `*.pem` is gitignored as a second guard.
+It is only needed if you ever pack a `.crx` manually — the Web Store manages its
+own keys.
+
 ## Privacy note (changes with accounts)
 Conversations are still never read or sent. Once signed in, your **email, focus
 stats, settings, and Spotify token** live in your Supabase row under RLS. The
