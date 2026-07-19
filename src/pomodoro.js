@@ -42,6 +42,7 @@
       CALM.modes.enter("zen");
     }
     buildWidget();
+    buildTimeBar();
     render();
     st.timer = setInterval(tick, 1000);
   }
@@ -53,6 +54,7 @@
     st.phase = "idle";
     removeOverlay();
     removeWidget();
+    removeTimeBar();
     // Leave no zen behind that WE turned on (user-enabled zen is untouched).
     if (st.enteredZen && CALM.modes.isActive("zen")) CALM.modes.exit("zen");
     st.enteredZen = false;
@@ -160,6 +162,28 @@
       var pb = o.querySelector(".cit-pomo-pause");
       if (pb) pb.textContent = st.paused ? "▶ Resume" : "❚❚ Pause";
     }
+    renderTimeBar();
+  }
+
+  // ---------- Visual time bar (time as a shape, not a number) ----------
+  function buildTimeBar() {
+    removeTimeBar();
+    if (!S.showTimeBar) return;
+    var b = document.createElement("div");
+    b.id = "cit-timebar";
+    b.innerHTML = '<div class="cit-timebar-fill"></div>';
+    document.body.appendChild(b);
+  }
+  function removeTimeBar() {
+    var b = document.getElementById("cit-timebar");
+    if (b) b.remove();
+  }
+  function renderTimeBar() {
+    var b = document.getElementById("cit-timebar");
+    if (!b) return;
+    var fill = b.querySelector(".cit-timebar-fill");
+    if (fill) fill.style.width = (st.total ? (1 - st.remaining / st.total) * 100 : 0) + "%";
+    b.classList.toggle("cit-timebar-break", isBreak());
   }
 
   // ---------- Widget (compact) ----------

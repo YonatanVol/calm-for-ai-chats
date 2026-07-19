@@ -373,6 +373,29 @@ html[data-theme="light"] .cit-select option {
 }
 
 /* ----------------------------------------
+   Focus time bar — time as a shape.
+---------------------------------------- */
+#cit-timebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 2147483001;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+#cit-timebar .cit-timebar-fill {
+  height: 100%;
+  width: 0%;
+  background: #10a37f;
+  transition: width 1s linear;
+}
+#cit-timebar.cit-timebar-break .cit-timebar-fill {
+  background: #6ca0f6;
+}
+
+/* ----------------------------------------
    Reading ruler (ADHD attention anchor):
    a cursor-following band; the huge box-
    shadows dim everything above and below.
