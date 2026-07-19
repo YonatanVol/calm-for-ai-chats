@@ -251,7 +251,7 @@
     // 2. Hard-clean any residue in case an exit had stale refs.
     ["cit-zen-style", "cit-reader-style", "cit-privacy-style", "cit-night-overlay",
      "cit-pomo-widget", "cit-pomo-overlay", "cit-ruler", "cit-gray-style",
-     "cit-motion-style", "cit-timebar"].forEach(function (id) {
+     "cit-motion-style", "cit-timebar", "cit-modes-pop"].forEach(function (id) {
       var e = document.getElementById(id);
       if (e) e.remove();
     });

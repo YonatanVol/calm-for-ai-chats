@@ -196,6 +196,9 @@
       '<div class="cit-pomo-meta"><span class="cit-pomo-label"></span><span class="cit-pomo-expand">expand ⤢</span></div>';
     w.addEventListener("click", showOverlay);
     document.body.appendChild(w);
+    if (CALM.ui && CALM.ui.makeDraggable) {
+      CALM.ui.makeDraggable(w, "cit-pomo-pos");
+    }
   }
   function removeWidget() {
     var w = document.getElementById("cit-pomo-widget");

@@ -37,6 +37,8 @@
     rulerDim: 45, // reading-ruler surround dim % (15..70)
     grayLevel: 85, // grayscale mode strength % (40..100)
     intentionPrompt: true, // ask "what did you come to do?" once per tab
+    intentChipMode: "dock", // dock | floating | hidden — where the 🎯 goal shows
+    dockAutoCollapse: true, // dock folds back to the pill after 6s idle
     showTimeOnPage: true, // "🕐 25m here" chip (from 5 minutes on)
     hyperfocusMin: 60, // nudge every N minutes; 0 = off
     showTimeBar: true, // thin focus-progress bar during Pomodoro blocks
@@ -105,6 +107,8 @@
     bottom: "cit-nav-bottom",
     widthStyle: "cit-width-style",
     typeChip: "cit-type-chip",
+    dock: "cit-dock",
+    modesPop: "cit-modes-pop",
   };
 
   // Shared MUTABLE runtime state — every module reads/writes this one object.
