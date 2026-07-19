@@ -33,6 +33,9 @@
     nightLevel: 35, // overlay opacity % (10..70) — Night/Dim
     autoScrollSpeed: 3, // px per tick (1..10) — Auto-scroll
     pauseMinutes: 15, // snooze duration (5..60) — Pause
+    rulerHeight: 90, // reading-ruler band height in px (50..160)
+    rulerDim: 45, // reading-ruler surround dim % (15..70)
+    grayLevel: 85, // grayscale mode strength % (40..100)
     // Pomodoro
     pomoFocusMin: 25,
     pomoBreakMin: 5,
@@ -125,6 +128,7 @@
     initGen: 0, // generation token: aborts stale init attempt-loops after nav
     pendingModes: null, // modes to re-enter fresh after a SPA navigation
     presentationEnteredZen: false, // presentation auto-entered zen → exit it too
+    rulerHandler: null, // mousemove listener for the reading ruler
   };
 
   // Entitlement seam — all free in v1; Phase 7 resolves from Supabase/Stripe.
@@ -144,6 +148,9 @@
     "mode:autoscroll": "free",
     "mode:pause": "free",
     "mode:pomodoro": "free",
+    "mode:ruler": "free",
+    "mode:gray": "free",
+    "mode:motion": "free",
   };
   CALM.FEATURE_TIERS = FEATURE_TIERS;
   CALM.isPro = function () {

@@ -372,6 +372,26 @@ html[data-theme="light"] .cit-select option {
   transition: opacity 0.25s ease;
 }
 
+/* ----------------------------------------
+   Reading ruler (ADHD attention anchor):
+   a cursor-following band; the huge box-
+   shadows dim everything above and below.
+---------------------------------------- */
+#cit-ruler {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 40vh;
+  height: var(--cit-ruler-h, 90px);
+  z-index: 2147481500; /* above site content, below Calm buttons */
+  pointer-events: none;
+  box-shadow:
+    0 -100vh 0 100vh rgba(8, 10, 16, var(--cit-ruler-dim, 0.45)),
+    0 100vh 0 100vh rgba(8, 10, 16, var(--cit-ruler-dim, 0.45));
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
 /* Presentation mode hides ALL Calm UI for clean capture/sharing —
    except the toast, which carries the "press Esc to exit" hint. */
 html.cit-presentation .cit-btn,

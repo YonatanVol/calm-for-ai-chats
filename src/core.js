@@ -250,15 +250,19 @@
 
     // 2. Hard-clean any residue in case an exit had stale refs.
     ["cit-zen-style", "cit-reader-style", "cit-privacy-style", "cit-night-overlay",
-     "cit-pomo-widget", "cit-pomo-overlay"].forEach(function (id) {
+     "cit-pomo-widget", "cit-pomo-overlay", "cit-ruler", "cit-gray-style",
+     "cit-motion-style"].forEach(function (id) {
       var e = document.getElementById(id);
       if (e) e.remove();
     });
-    ["cit-zen", "cit-reader", "cit-night", "cit-privacy", "cit-presentation"].forEach(
-      function (cls) {
-        document.documentElement.classList.remove(cls);
-      }
-    );
+    ["cit-zen", "cit-reader", "cit-night", "cit-privacy", "cit-presentation",
+     "cit-gray", "cit-motion"].forEach(function (cls) {
+      document.documentElement.classList.remove(cls);
+    });
+    if (rt.rulerHandler) {
+      document.removeEventListener("mousemove", rt.rulerHandler);
+      rt.rulerHandler = null;
+    }
     Object.keys(rt.modeTimers).forEach(function (k) {
       if (rt.modeTimers[k]) {
         clearInterval(rt.modeTimers[k]);
