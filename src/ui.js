@@ -320,6 +320,13 @@
       })
     );
     c.appendChild(toggleRow("Hint when auto-hidden", "showHints"));
+    c.appendChild(
+      toggleRow("Intention prompt (🎯)", "intentionPrompt", function () {
+        var chip = document.getElementById("cit-intent-chip");
+        if (!S.intentionPrompt && chip) chip.remove();
+        if (S.intentionPrompt && CALM.intent) CALM.intent.renderChip();
+      })
+    );
   }
   function buildPresetsTab(c) {
     var host = document.createElement("div");
