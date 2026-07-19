@@ -22,13 +22,13 @@
     var parts = [];
     var goal = CALM.intent && CALM.intent.state && CALM.intent.state.goal;
     if (S.intentChipMode === "dock" && S.intentionPrompt && goal) {
-      parts.push("🎯 " + (goal.length > 22 ? goal.slice(0, 22) + "…" : goal));
+      parts.push(goal.length > 24 ? goal.slice(0, 24) + "…" : goal);
     }
     var ps = CALM.pomodoro && CALM.pomodoro.state;
     if (ps && ps.running) {
       var m = Math.floor(ps.remaining / 60);
       var s = ps.remaining % 60;
-      parts.push("◴ " + m + ":" + (s < 10 ? "0" + s : s));
+      parts.push(m + ":" + (s < 10 ? "0" + s : s));
     }
     return parts.join("  ·  ");
   }
@@ -97,12 +97,13 @@
     var d = document.createElement("div");
     d.id = IDS.dock;
 
+    var IC = CALM.icons;
     var pill = document.createElement("button");
     pill.type = "button";
     pill.className = "cit-dock-pill";
     pill.setAttribute("aria-label", "Calm");
     pill.innerHTML =
-      '<span class="cit-dock-mark">❏</span><span class="cit-dock-status"></span>';
+      '<span class="cit-dock-mark">' + IC.mark + '</span><span class="cit-dock-status"></span>';
     pill.addEventListener("click", function (e) {
       e.stopPropagation();
       toggleOpen();
@@ -112,49 +113,49 @@
     var row = document.createElement("div");
     row.className = "cit-dock-items";
     row.appendChild(
-      item('<span class="cit-icon">▼</span>', "Toggle input (⌃⇧H)", function () {
+      item('<span class="cit-icon">' + IC.input + "</span>", "Toggle input (⌃⇧H)", function () {
         CALM.core.manualToggleComposer();
       }, IDS.toggle)
     );
     row.appendChild(
-      item("❏", "Zen (⌃⇧Z)", function () {
+      item(IC.zen, "Zen (⌃⇧Z)", function () {
         CALM.modes.toggleZen();
       }, IDS.zen)
     );
     row.appendChild(
-      item("▦", "Modes", function () {
+      item(IC.modes, "Modes", function () {
         CALM.ui.toggleModesPop();
       })
     );
     row.appendChild(
-      item("◴", "Pomodoro", function () {
+      item(IC.pomodoro, "Pomodoro", function () {
         CALM.modes.toggle("pomodoro");
         refreshStatus();
       })
     );
     row.appendChild(
-      item("🎯", "Focus panel (⌃⇧K)", function () {
+      item(IC.focus, "Focus panel (⌃⇧K)", function () {
         if (CALM.intent) CALM.intent.toggle(false);
       })
     );
     row.appendChild(
-      item("⤒", "Scroll to top", function () {
+      item(IC.top, "Scroll to top", function () {
         CALM.ui.smoothScrollTo(0);
       }, IDS.top)
     );
     row.appendChild(
-      item("⤓", "Scroll to bottom", function () {
+      item(IC.bottom, "Scroll to bottom", function () {
         CALM.ui.smoothScrollTo(
           rt.scrollContainer ? rt.scrollContainer.scrollHeight : 0
         );
       }, IDS.bottom)
     );
     row.appendChild(
-      item("⚙", "Settings", function () {
+      item(IC.settings, "Settings", function () {
         CALM.ui.toggleSettingsPanel();
       }, IDS.settings)
     );
-    row.appendChild(item("‹", "Collapse", collapse));
+    row.appendChild(item(IC.collapse, "Collapse", collapse));
     d.appendChild(row);
 
     document.body.appendChild(d);

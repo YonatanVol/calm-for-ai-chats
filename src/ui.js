@@ -253,7 +253,9 @@
       card.setAttribute("data-cit-mode", id);
       var ic = document.createElement("span");
       ic.className = "cit-mode-ic";
-      ic.textContent = m.icon;
+      // Static SVG markup from our own icon set — never user content.
+      if (CALM.icons && CALM.icons.mode[id]) ic.innerHTML = CALM.icons.mode[id];
+      else ic.textContent = m.icon;
       var lb = document.createElement("span");
       lb.textContent = m.label;
       card.appendChild(ic);
@@ -305,7 +307,7 @@
     close.type = "button";
     close.className = "cit-settings-close";
     close.setAttribute("aria-label", "Close");
-    close.innerHTML = "✕";
+    close.innerHTML = CALM.icons ? CALM.icons.close : "✕";
     close.addEventListener("click", function (e) {
       e.stopPropagation();
       closePanel();
@@ -680,7 +682,18 @@
     var r = document.createElement("div");
     r.className = "cit-settings-row";
     var span = document.createElement("span");
-    span.textContent = m.icon + "  " + m.label;
+    span.className = "cit-row-label";
+    if (CALM.icons && CALM.icons.mode[id]) {
+      var ric = document.createElement("span");
+      ric.className = "cit-row-ic";
+      ric.innerHTML = CALM.icons.mode[id]; // static markup from our icon set
+      span.appendChild(ric);
+      var rlb = document.createElement("span");
+      rlb.textContent = m.label;
+      span.appendChild(rlb);
+    } else {
+      span.textContent = m.icon + "  " + m.label;
+    }
     var sw = document.createElement("button");
     sw.type = "button";
     sw.className = "cit-toggle-switch" + (CALM.modes.isActive(id) ? " cit-on" : "");
