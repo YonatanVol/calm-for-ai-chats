@@ -39,6 +39,7 @@
     intentionPrompt: true, // ask "what did you come to do?" once per tab
     intentChipMode: "dock", // dock | floating | hidden — where the 🎯 goal shows
     dockAutoCollapse: true, // dock folds back to the pill after 6s idle
+    dockQuiet: true, // pill fades while typing; wakes on pointer approach
     showTimeOnPage: true, // "🕐 25m here" chip (from 5 minutes on)
     hyperfocusMin: 60, // nudge every N minutes; 0 = off
     showTimeBar: true, // thin focus-progress bar during Pomodoro blocks
@@ -109,6 +110,7 @@
     typeChip: "cit-type-chip",
     dock: "cit-dock",
     modesPop: "cit-modes-pop",
+    bloom: "cit-bloom",
   };
 
   // Shared MUTABLE runtime state — every module reads/writes this one object.
