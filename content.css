@@ -21,6 +21,14 @@ html {
   --cit-break: #9aa8b8;            /* muted steel for breaks */
   --cit-night-tint: #ff9b3d;
   --cit-on-gold: #241d12;          /* readable espresso on gold surfaces */
+  --cit-gold-ink: #d9bc7f;         /* gold that stays legible as text/icon */
+  --cit-tray-a: #232019;           /* lacquer tray: lit top … */
+  --cit-tray-b: #17140f;           /* … to shadowed base */
+  --cit-tile-a: rgba(242, 235, 221, 0.062);
+  --cit-tile-b: rgba(242, 235, 221, 0.018);
+  --cit-tile-lip: rgba(242, 235, 221, 0.075); /* polished top edge of a key */
+  --cit-tile-edge: rgba(242, 235, 221, 0.055);
+  --cit-tile-label: rgba(242, 235, 221, 0.42);
   --cit-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
   --cit-serif: Georgia, "Iowan Old Style", "Times New Roman", ui-serif, serif;
   --cit-ease: cubic-bezier(0.22, 1, 0.36, 1); /* expo-out: graceful, no bounce */
@@ -40,6 +48,14 @@ html[class*="light"], html[data-theme="light"] {
   --cit-hairline-gold: rgba(168, 135, 74, 0.45);
   --cit-fill-soft: rgba(42, 36, 29, 0.05);
   --cit-shadow: 0 18px 44px rgba(60, 48, 30, 0.22);
+  --cit-gold-ink: #8f7133;
+  --cit-tray-a: #fdfaf3;
+  --cit-tray-b: #f0e9dc;
+  --cit-tile-a: rgba(255, 255, 255, 0.85);
+  --cit-tile-b: rgba(42, 36, 29, 0.028);
+  --cit-tile-lip: rgba(255, 255, 255, 0.95);
+  --cit-tile-edge: rgba(42, 36, 29, 0.085);
+  --cit-tile-label: rgba(42, 36, 29, 0.55);
 }
 
 /* ----------------------------------------
@@ -75,86 +91,166 @@ html[class*="light"], html[data-theme="light"] {
    of whichever corner the dock occupies — off-screen is impossible. */
 #cit-bloom {
   position: absolute;
-  width: 236px;
+  width: 244px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 7px;
-  padding: 10px;
-  border-radius: 18px;
-  background: var(--cit-glass);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: inset 0 0 0 1px var(--cit-hairline-gold), var(--cit-shadow);
+  gap: 6px;
+  padding: 11px;
+  border-radius: 21px;
+  /* A lacquered tray: warm light caught at the top lip, gold breathing up
+     from the base, deep espresso between. */
+  background:
+    radial-gradient(120% 72% at 50% -8%, rgba(198, 161, 91, 0.12), transparent 62%),
+    linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
+  box-shadow:
+    inset 0 1px 0 var(--cit-tile-lip),
+    inset 0 0 0 1px var(--cit-hairline-gold),
+    0 28px 64px rgba(0, 0, 0, 0.6),
+    0 3px 10px rgba(0, 0, 0, 0.36);
   opacity: 0;
-  transform: scale(0.94);
+  transform: scale(0.96);
   pointer-events: none;
-  transition: opacity 0.3s var(--cit-spring), transform 0.42s var(--cit-spring);
+  transition: opacity 0.26s var(--cit-spring), transform 0.4s var(--cit-spring);
 }
-#cit-dock.cit-corner-br #cit-bloom { right: 0; bottom: calc(100% + 12px); transform-origin: bottom right; }
-#cit-dock.cit-corner-bl #cit-bloom { left: 0; bottom: calc(100% + 12px); transform-origin: bottom left; }
-#cit-dock.cit-corner-tr #cit-bloom { right: 0; top: calc(100% + 12px); transform-origin: top right; }
-#cit-dock.cit-corner-tl #cit-bloom { left: 0; top: calc(100% + 12px); transform-origin: top left; }
+#cit-dock.cit-corner-br #cit-bloom { right: 0; bottom: calc(100% + 11px); transform-origin: bottom right; }
+#cit-dock.cit-corner-bl #cit-bloom { left: 0; bottom: calc(100% + 11px); transform-origin: bottom left; }
+#cit-dock.cit-corner-tr #cit-bloom { right: 0; top: calc(100% + 11px); transform-origin: top right; }
+#cit-dock.cit-corner-tl #cit-bloom { left: 0; top: calc(100% + 11px); transform-origin: top left; }
 #cit-dock.cit-dock-open #cit-bloom {
   opacity: 1;
   transform: scale(1);
   pointer-events: auto;
 }
 
+/* The engraved lid — maison name, or live status when there is any. */
+.cit-bloom-head {
+  grid-column: 1 / -1;
+  padding: 2px 0 9px;
+  margin-bottom: 1px;
+  border-bottom: 1px solid var(--cit-hairline);
+  text-align: center;
+  font-family: var(--cit-serif);
+  font-size: 10px;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em; /* re-centre against the trailing letter-space */
+  text-transform: uppercase;
+  color: var(--cit-ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cit-bloom-head.cit-head-live {
+  letter-spacing: 0.12em;
+  text-indent: 0.12em;
+  color: var(--cit-gold-ink);
+  text-transform: none;
+  font-size: 11.5px;
+}
+
 .cit-tile {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  height: 62px;
+  gap: 6px;
+  height: 64px;
   border: none;
-  border-radius: 12px;
-  background: var(--cit-fill-soft);
-  box-shadow: inset 0 0 0 1px var(--cit-hairline);
+  border-radius: 14px;
+  /* A key on a panel: lit lip, soft body, seated in its own hairline. */
+  background: linear-gradient(163deg, var(--cit-tile-a), var(--cit-tile-b));
+  box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-tile-edge);
   color: var(--cit-ink);
   cursor: pointer;
   padding: 0;
   opacity: 0;
-  transform: translateY(8px) scale(0.92);
-  transition: opacity 0.3s var(--cit-spring), transform 0.4s var(--cit-spring),
-    background 0.18s ease, box-shadow 0.18s ease;
+  transform: translateY(7px) scale(0.94);
+  transition: opacity 0.26s var(--cit-spring), transform 0.36s var(--cit-spring),
+    box-shadow 0.22s ease;
 }
 #cit-dock.cit-dock-open .cit-tile {
   opacity: 1;
   transform: none;
 }
+/* Gold rises from the base of the key on hover — a glow, not a flat wash. */
+.cit-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(78% 66% at 50% 116%, rgba(198, 161, 91, 0.34), transparent 72%);
+  opacity: 0;
+  transition: opacity 0.26s var(--cit-ease);
+  pointer-events: none;
+}
+.cit-tile:hover::before {
+  opacity: 1;
+}
 .cit-tile:hover {
-  background: var(--cit-gold-soft);
-  box-shadow: inset 0 0 0 1px var(--cit-hairline-gold);
+  box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-gold);
 }
 .cit-tile:active {
-  transform: scale(0.96);
+  transform: scale(0.965);
+}
+.cit-tile:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--cit-gold);
 }
 .cit-tile.cit-active {
-  background: linear-gradient(135deg, var(--cit-gold-bright), var(--cit-gold-deep));
+  background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
   color: var(--cit-on-gold);
-  box-shadow: inset 0 0 0 1px var(--cit-gold-bright);
+  box-shadow: inset 0 1px 0 rgba(255, 252, 245, 0.4),
+    inset 0 0 0 1px var(--cit-gold-bright), 0 4px 14px rgba(198, 161, 91, 0.26);
+}
+.cit-tile.cit-active::before {
+  opacity: 0;
 }
 .cit-tile.cit-tile-dim {
-  opacity: 0.35 !important;
+  opacity: 0.3 !important;
   pointer-events: none;
 }
 .cit-tile-ic {
+  position: relative;
   display: inline-flex;
+  opacity: 0.92;
+  transition: transform 0.34s var(--cit-spring), color 0.2s ease, opacity 0.2s ease;
 }
 .cit-tile-ic .cit-svg {
-  width: 17px;
-  height: 17px;
+  width: 19px;
+  height: 19px;
+}
+.cit-tile:hover .cit-tile-ic {
+  transform: translateY(-1.5px);
+  color: var(--cit-gold-ink);
+  opacity: 1;
 }
 .cit-tile-label {
-  font-size: 8.5px;
+  position: relative;
+  font-size: 8px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.15em;
+  text-indent: 0.15em;
+  color: var(--cit-tile-label);
+  transition: color 0.2s ease;
+}
+.cit-tile:hover .cit-tile-label {
   color: var(--cit-ink-dim);
 }
-.cit-tile.cit-active .cit-tile-label {
+/* Third row is plumbing — present, never competing. */
+.cit-tile-quiet .cit-tile-ic {
+  opacity: 0.66;
+}
+.cit-tile-quiet .cit-tile-ic .cit-svg {
+  width: 16px;
+  height: 16px;
+}
+.cit-tile.cit-active .cit-tile-ic,
+.cit-tile.cit-active .cit-tile-label,
+.cit-tile.cit-active:hover .cit-tile-ic,
+.cit-tile.cit-active:hover .cit-tile-label {
   color: var(--cit-on-gold);
+  opacity: 1;
 }
 
 .cit-dock-pill {
@@ -177,9 +273,18 @@ html[class*="light"], html[data-theme="light"] {
   background: var(--cit-glass);
   box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
 }
+/* The seal answers when the tray is open. */
+#cit-dock.cit-dock-open .cit-dock-pill {
+  border-color: var(--cit-hairline-gold);
+  box-shadow: 0 0 0 3px rgba(198, 161, 91, 0.1), 0 8px 26px rgba(0, 0, 0, 0.5);
+}
+#cit-dock.cit-dock-open .cit-dock-mark {
+  color: var(--cit-gold-bright);
+}
 .cit-dock-mark {
   font-size: 15px;
   color: var(--cit-gold);
+  transition: color 0.25s var(--cit-ease);
 }
 .cit-dock-status {
   font-size: 12px;

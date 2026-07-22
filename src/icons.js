@@ -36,8 +36,8 @@
     focus: svg('<circle cx="12" cy="12" r="9"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>'),
     top: svg('<path d="M6 11l6-6 6 6M12 5v14"/>'),
     bottom: svg('<path d="M6 13l6 6 6-6M12 19V5"/>'),
-    // A key — the castle's settings.
-    settings: svg('<circle cx="8" cy="8.5" r="4.2"/><path d="M11 11.5L20 20.5M16.2 16.7l2.2-2.2M13.4 13.9l2-2"/>'),
+    // Three rails and their knobs — controls, not a search glass.
+    settings: svg('<path d="M4 6.5h16M4 12h16M4 17.5h16"/><circle cx="9.5" cy="6.5" r="2.1"/><circle cx="15" cy="12" r="2.1"/><circle cx="8" cy="17.5" r="2.1"/>'),
     collapse: svg('<path d="M14 6l-6 6 6 6"/>'),
     close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
     reader: svg('<path d="M4 6h16M4 10h16M4 14h10M4 18h7"/>'),

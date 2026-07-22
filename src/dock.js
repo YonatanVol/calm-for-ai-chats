@@ -84,12 +84,12 @@
     if (!bloom) return;
     var originRow = corner.indexOf("t") >= 0 ? 0 : 2;
     var originCol = corner.indexOf("l") >= 0 ? 0 : 2;
-    var tiles = bloom.children;
+    var tiles = bloom.querySelectorAll(".cit-tile");
     for (var i = 0; i < tiles.length && i < 9; i++) {
       var row = Math.floor(i / 3);
       var col = i % 3;
       var dist = Math.max(Math.abs(row - originRow), Math.abs(col - originCol));
-      tiles[i].style.transitionDelay = dist * 0.05 + "s";
+      tiles[i].style.transitionDelay = dist * 0.038 + "s";
     }
   }
 
@@ -111,11 +111,18 @@
   function refreshStatus() {
     var d = document.getElementById(IDS.dock);
     if (!d) return;
-    var el = d.querySelector(".cit-dock-status");
-    if (!el) return;
     var t = statusText();
-    el.textContent = t;
-    el.style.display = t ? "" : "none";
+    var el = d.querySelector(".cit-dock-status");
+    if (el) {
+      el.textContent = t;
+      el.style.display = t ? "" : "none";
+    }
+    // The tray's engraved lid: the maison name until there's something to say.
+    var head = d.querySelector(".cit-bloom-head");
+    if (head) {
+      head.textContent = t || "CALM";
+      head.classList.toggle("cit-head-live", !!t);
+    }
   }
 
   // ---------- Open / collapse ----------
@@ -143,10 +150,10 @@
   }
 
   // ---------- Tiles ----------
-  function tile(icon, label, onClick, id) {
+  function tile(icon, label, onClick, id, quiet) {
     var b = document.createElement("button");
     b.type = "button";
-    b.className = "cit-tile";
+    b.className = "cit-tile" + (quiet ? " cit-tile-quiet" : "");
     if (id) b.id = id;
     b.title = label;
     b.setAttribute("aria-label", label);
@@ -191,6 +198,13 @@
     var bloom = document.createElement("div");
     bloom.id = IDS.bloom;
     bloom.setAttribute("role", "menu");
+
+    // Engraved lid: the maison name, replaced by live status when there is any.
+    var head = document.createElement("div");
+    head.className = "cit-bloom-head";
+    bloom.appendChild(head);
+
+    // Row 1 — what you came for. Row 2 — the session. Row 3 — the plumbing.
     bloom.appendChild(
       tile('<span class="cit-icon">' + IC.input + "</span>", "Input", function () {
         CALM.core.manualToggleComposer();
@@ -199,26 +213,30 @@
     bloom.appendChild(tile(IC.zen, "Zen", function () {
       CALM.modes.toggleZen();
     }, IDS.zen));
-    bloom.appendChild(tile(IC.modes, "Modes", function () {
-      CALM.ui.toggleModesPop();
-    }));
-    bloom.appendChild(tile(IC.pomodoro, "Timer", function () {
-      CALM.modes.toggle("pomodoro");
-      refreshStatus();
-    }));
     bloom.appendChild(tile(IC.focus, "Focus", function () {
       if (CALM.intent) CALM.intent.toggle(false);
     }));
+
+    bloom.appendChild(tile(IC.pomodoro, "Timer", function () {
+      CALM.modes.toggle("pomodoro");
+      refreshStatus();
+    }, "cit-tile-pomodoro"));
+    bloom.appendChild(tile(IC.pause, "Pause", function () {
+      CALM.modes.toggle("pause");
+    }, "cit-tile-pause"));
+    bloom.appendChild(tile(IC.modes, "Modes", function () {
+      CALM.ui.toggleModesPop();
+    }));
+
     bloom.appendChild(tile(IC.top, "Top", function () {
       CALM.ui.smoothScrollTo(0);
-    }, IDS.top));
+    }, IDS.top, true));
     bloom.appendChild(tile(IC.bottom, "End", function () {
       CALM.ui.smoothScrollTo(rt.scrollContainer ? rt.scrollContainer.scrollHeight : 0);
-    }, IDS.bottom));
+    }, IDS.bottom, true));
     bloom.appendChild(tile(IC.settings, "Settings", function () {
       CALM.ui.toggleSettingsPanel();
-    }, IDS.settings));
-    bloom.appendChild(tile(IC.collapse, "Close", collapse));
+    }, IDS.settings, true));
     d.appendChild(bloom);
 
     document.body.appendChild(d);
@@ -275,7 +293,8 @@
     { passive: true }
   );
 
-  // Outside click folds the bloom.
+  // Outside click folds the bloom. (Close is not a tile — the pill, a click
+  // away, and Esc all dismiss it; a dedicated CLOSE cell was just furniture.)
   document.addEventListener(
     "click",
     function (e) {
@@ -286,6 +305,11 @@
     },
     true
   );
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    var d = document.getElementById(IDS.dock);
+    if (d && d.classList.contains("cit-dock-open")) collapse();
+  });
 
   setInterval(refreshStatus, 1000);
 

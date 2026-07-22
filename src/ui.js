@@ -771,6 +771,15 @@
     // Keep the floating zen button in sync too (single source of truth).
     var zb = document.getElementById(IDS.zen);
     if (zb) zb.classList.toggle("cit-active", CALM.modes.isActive("zen"));
+    // Bloom tiles light up gold while their mode is running.
+    [["cit-tile-pomodoro", "pomodoro"], ["cit-tile-pause", "pause"]].forEach(
+      function (pair) {
+        var el = document.getElementById(pair[0]);
+        if (el) el.classList.toggle("cit-active", CALM.modes.isActive(pair[1]));
+      }
+    );
+    var tb = document.getElementById(IDS.toggle);
+    if (tb) tb.classList.toggle("cit-active", !!rt.composerHidden);
   }
 
   function buildPresets(host) {
