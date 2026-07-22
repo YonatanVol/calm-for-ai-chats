@@ -20,6 +20,7 @@ html {
   --cit-fill-soft: rgba(242, 235, 221, 0.05);
   --cit-break: #9aa8b8;            /* muted steel for breaks */
   --cit-night-tint: #ff9b3d;
+  --cit-on-gold: #241d12;          /* readable espresso on gold surfaces */
   --cit-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
   --cit-serif: Georgia, "Iowan Old Style", "Times New Roman", ui-serif, serif;
   --cit-ease: cubic-bezier(0.22, 1, 0.36, 1); /* expo-out: graceful, no bounce */
@@ -154,7 +155,7 @@ html[class*="light"], html[data-theme="light"] {
 .cit-dock-item.cit-active {
   background: var(--cit-gold);
   border-color: var(--cit-gold);
-  color: #fff;
+  color: var(--cit-ink);
 }
 
 #cit-toggle-btn .cit-icon {
@@ -557,7 +558,11 @@ html.cit-presentation #cit-type-chip,
 html.cit-presentation #cit-chip-stack,
 html.cit-presentation #cit-intent-chip,
 html.cit-presentation #cit-intent-pop,
-html.cit-presentation #cit-timebar {
+html.cit-presentation #cit-timebar,
+html.cit-presentation #cit-pomo-widget,
+html.cit-presentation #cit-pomo-overlay,
+html.cit-presentation #cit-ruler,
+html.cit-presentation #cit-night-overlay {
   display: none !important;
 }
 
@@ -616,7 +621,7 @@ html.cit-presentation #cit-timebar {
 }
 .cit-intent-x:hover {
   background: var(--cit-hairline-strong);
-  color: #fff;
+  color: var(--cit-ink);
 }
 
 #cit-intent-pop {
@@ -698,7 +703,7 @@ html.cit-presentation #cit-timebar {
   width: 18px;
   height: 18px;
   border-radius: 5px;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border: 1.5px solid var(--cit-hairline-strong);
   background: transparent;
   color: var(--cit-gold);
   font-size: 12px;
@@ -751,7 +756,7 @@ html.cit-presentation #cit-timebar {
   padding: 7px 13px;
   border-radius: 999px;
   background: var(--cit-gold);
-  color: #fff;
+  color: var(--cit-ink);
   font-size: 12.5px;
   font-weight: 600;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -807,7 +812,7 @@ html.cit-presentation #cit-timebar {
   position: absolute;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  color: #fff;
+  color: var(--cit-ink);
 }
 #cit-pomo-widget .cit-pomo-time {
   font-size: 12px;
@@ -972,7 +977,7 @@ html.cit-presentation #cit-timebar {
 .cit-mini-btn.cit-del:hover {
   background: #b3261e;
   border-color: #b3261e;
-  color: #fff;
+  color: var(--cit-ink);
 }
 .cit-save-preset {
   width: 100%;
@@ -1019,7 +1024,7 @@ html.cit-presentation #cit-timebar {
 }
 .cit-tab.cit-tab-on {
   background: var(--cit-gold);
-  color: #fff;
+  color: var(--cit-ink);
 }
 .cit-tab-content {
   min-height: 60px;
@@ -1052,7 +1057,7 @@ html.cit-presentation #cit-timebar {
   padding: 4px 10px;
   border-radius: 999px;
   background: var(--cit-gold);
-  color: var(--cit-gold);
+  color: var(--cit-on-gold);
   font-weight: 600;
   font-size: 12px;
 }
@@ -1061,11 +1066,6 @@ html.cit-presentation #cit-timebar {
    Responsive
 ---------------------------------------- */
 @media (max-width: 480px) {
-  .cit-btn {
-    right: 12px;
-    width: 32px;
-    height: 32px;
-  }
   #cit-settings-panel {
     right: 8px;
     width: calc(100vw - 16px);
@@ -1127,7 +1127,7 @@ html.cit-presentation #cit-timebar {
 .cit-dock-item { box-shadow: inset 0 0 0 1px var(--cit-hairline-gold), 0 6px 18px rgba(0, 0, 0, 0.35); }
 .cit-dock-item.cit-active {
   background: linear-gradient(135deg, var(--cit-gold-bright), var(--cit-gold-deep));
-  color: #241d12;
+  color: var(--cit-on-gold);
   box-shadow: inset 0 0 0 1px var(--cit-gold-bright), 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 

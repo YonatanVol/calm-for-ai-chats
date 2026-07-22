@@ -149,8 +149,16 @@
       var r = el.getBoundingClientRect();
       ox = r.left;
       oy = r.top;
+      // Capture the pointer so a missed pointerup (touch/pen cancel, element
+      // detached mid-drag) can never strand the document listeners.
+      try {
+        if (e.pointerId != null && handle.setPointerCapture) {
+          handle.setPointerCapture(e.pointerId);
+        }
+      } catch (_) {}
       document.addEventListener("pointermove", onMove, true);
       document.addEventListener("pointerup", onUp, true);
+      document.addEventListener("pointercancel", onUp, true);
     }
     function onMove(e) {
       if (!dragging) return;
@@ -166,6 +174,7 @@
       dragging = false;
       document.removeEventListener("pointermove", onMove, true);
       document.removeEventListener("pointerup", onUp, true);
+      document.removeEventListener("pointercancel", onUp, true);
       el.classList.remove("cit-dragging");
       if (!moved) return;
       var r = el.getBoundingClientRect();
@@ -197,12 +206,34 @@
     return { restore: restore, place: place, restored: restored };
   }
 
+  // ---- Popover registry ----
+  // Every floating popover registers its close(); navigation teardown calls
+  // closeAllPopovers() so elements AND their document listeners go together —
+  // no ghost panels or orphaned handlers after a SPA nav.
+  var popovers = [];
+  function registerPopover(closeFn) {
+    popovers.push(closeFn);
+  }
+  function unregisterPopover(closeFn) {
+    var i = popovers.indexOf(closeFn);
+    if (i >= 0) popovers.splice(i, 1);
+  }
+  function closeAllPopovers() {
+    popovers.slice().forEach(function (c) {
+      try {
+        c();
+      } catch (_) {}
+    });
+    popovers.length = 0;
+  }
+
   // ---- Generic popover close ----
   function closeOnOutsideOf(p, excludeIds) {
     function close() {
       p.remove();
       document.removeEventListener("click", handler, true);
       document.removeEventListener("keydown", onKey, true);
+      unregisterPopover(close);
     }
     function handler(e) {
       if (!p.contains(e.target) && excludeIds.indexOf(e.target.id) < 0) close();
@@ -210,6 +241,7 @@
     function onKey(e) {
       if (e.code === "Escape") close();
     }
+    registerPopover(close);
     setTimeout(function () {
       document.addEventListener("click", handler, true);
       document.addEventListener("keydown", onKey, true);
@@ -360,10 +392,12 @@
     function closePanel() {
       p.remove();
       document.removeEventListener("click", closeOnOutside, true);
+      unregisterPopover(closePanel);
     }
     function closeOnOutside(e) {
       if (!p.contains(e.target) && e.target.id !== IDS.settings) closePanel();
     }
+    registerPopover(closePanel);
     setTimeout(function () {
       document.addEventListener("click", closeOnOutside, true);
     }, 0);
@@ -782,6 +816,9 @@
     showChip: showChip,
     hideChip: hideChip,
     refreshModeButtons: refreshModeButtons,
+    registerPopover: registerPopover,
+    unregisterPopover: unregisterPopover,
+    closeAllPopovers: closeAllPopovers,
     createUI: createUI,
     toggleSettingsPanel: toggleSettingsPanel,
     toggleModesPop: toggleModesPop,

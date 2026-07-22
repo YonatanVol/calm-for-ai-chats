@@ -1,30 +1,41 @@
 # Privacy Policy — Calm (Reading Mode for AI Chats)
 
-_Last updated: 2026_
+_Last updated: July 2026_
 
-**Calm collects nothing. Sends nothing. Stores only your own settings, on your own device.**
+Calm is local-first. **Your conversations are never read, stored, or transmitted.**
+Signing in is optional; until you do, nothing leaves your browser.
 
-## What Calm does NOT do
-- It does **not** collect, transmit, or sell any personal data.
-- It makes **no network requests** and contacts **no servers**.
-- It does **not** read, store, or transmit the content of your conversations.
-- It includes **no analytics, tracking, or third‑party code**.
-- It requests **no browser permissions** in its manifest.
+## What Calm never does
+- It never reads, stores, or transmits the **content of your conversations**.
+- It contains **no analytics, no trackers, no ads, and no third-party code**.
+- It never sells or shares data with anyone.
 
-## What Calm stores locally
-- **UI preferences** (e.g. reading width, sensitivity, which toggles are on) are
-  saved with your browser's `localStorage`, on your device only.
-- **Unsent draft text**, while you have the input hidden, is held briefly in your
-  browser's `sessionStorage` so it can be restored when you show the input again.
-  This clears when the tab closes. It is never sent anywhere.
+## What stays on your device (always)
+- **UI preferences** (modes, sliders, dock position) — `localStorage`.
+- **Unsent draft text** while the input is hidden — `sessionStorage` (cleared when
+  the tab closes).
+- **Focus-panel data**: your intention and micro-tasks are per-tab
+  (`sessionStorage`); **parked thoughts persist on your device** (`localStorage`)
+  until you delete them.
 
-## Where it runs
-Calm runs only on `chatgpt.com` and `gemini.google.com`, and only to adjust the
-on‑screen layout (hide the input, Zen mode, reading width, etc.).
+## Optional account & sync (only if you sign in)
+Calm offers Google sign-in (via Chrome's `identity` permission) backed by Supabase.
+If — and only if — you sign in:
+- Your **email**, **settings**, **custom presets**, and **focus-session stats**
+  (timestamps/durations — never conversation content) are stored in your own row
+  of our Supabase database, protected by row-level security (only your
+  authenticated account can read or write your row).
+- Your session token is kept in `chrome.storage.local` on your device.
+- Signing out stops all network activity; the extension remains fully functional
+  offline and signed-out.
+
+## Permissions, plainly
+- `identity` — Google sign-in popup (only when you click "Sign in").
+- `storage` — keeps your session on your device.
+- Host access to our Supabase URL — sync traffic for signed-in users only.
+- Content-script access to `chatgpt.com`, `gemini.google.com`, `claude.ai` —
+  to adjust the on-screen layout. No other sites.
 
 ## Contact
-Questions? Open an issue at
+Questions or deletion requests: open an issue at
 https://github.com/YonatanVol/calm-for-ai-chats
-
-Because Calm processes no data off your device, there is nothing for us to
-access, share, or breach.

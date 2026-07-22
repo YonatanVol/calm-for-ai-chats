@@ -12,6 +12,7 @@
   var CALM = (window.CALM = window.CALM || {});
   if (!CALM.site) return;
   var S = CALM.settings;
+  var rt = CALM.rt;
 
   var st = { phase: "idle", remaining: 0, total: 0, cycle: 1, running: false, paused: false, timer: null, enteredZen: false };
 
@@ -30,27 +31,57 @@
   }
 
   // ---------- Timer ----------
-  function start() {
+  // Stats honesty: we log ELAPSED minutes (skip logs what actually happened,
+  // manual End logs the partial block) — never the configured duration.
+  function elapsedMin() {
+    return Math.round((st.total - st.remaining) / 60);
+  }
+  function logElapsed() {
+    var m = elapsedMin();
+    if (m >= 1 && st.phase !== "idle" && CALM.sync && CALM.sync.logFocus) {
+      CALM.sync.logFocus(st.phase, m);
+    }
+  }
+
+  // `resume` (optional) restores a block that a SPA navigation tore down —
+  // phase/remaining/cycle/paused/enteredZen continue exactly where they were.
+  function start(resume) {
     if (st.running) return;
     if (CALM.audio) CALM.audio.unlock(); // unlock audio on the starting gesture
-    st.cycle = 1;
-    st.paused = false;
-    enterPhase("focus");
-    st.running = true;
-    if (S.pomoAutoZen && !CALM.modes.isActive("zen")) {
-      st.enteredZen = true;
-      CALM.modes.enter("zen");
+    if (resume && resume.phase && resume.phase !== "idle") {
+      st.phase = resume.phase;
+      st.total = Math.max(1, minsFor(st.phase) | 0) * 60;
+      st.remaining = Math.max(0, Math.min(st.total, resume.remaining | 0));
+      st.cycle = Math.max(1, resume.cycle | 0);
+      st.paused = !!resume.paused;
+      st.enteredZen = !!resume.enteredZen;
+    } else {
+      st.cycle = 1;
+      st.paused = false;
+      st.enteredZen = false;
+      enterPhase("focus");
+      // Adopt zen only if WE are the one turning it on (user zen stays theirs).
+      if (S.pomoAutoZen && !CALM.modes.isActive("zen")) {
+        st.enteredZen = true;
+        CALM.modes.enter("zen");
+      }
     }
+    st.running = true;
     buildWidget();
     buildTimeBar();
     render();
     st.timer = setInterval(tick, 1000);
+    rt.modeTimers.pomodoro = st.timer; // visible to the generic nav sweep
   }
   function stop() {
     if (!st.running && st.phase === "idle") return;
+    // Log the partial block on a real user End — but not during nav teardown
+    // (the block is snapshotted and resumed there; logging would double-count).
+    if (!rt.tearingDown) logElapsed();
     st.running = false;
     clearInterval(st.timer);
     st.timer = null;
+    rt.modeTimers.pomodoro = null;
     st.phase = "idle";
     removeOverlay();
     removeWidget();
@@ -61,23 +92,26 @@
   }
   function tick() {
     if (!st.running || st.paused) return;
+    st.remaining--;
     if (st.remaining <= 0) {
+      st.remaining = 0;
+      render();
       nextPhase();
       return;
     }
-    st.remaining--;
     render();
   }
   function nextPhase() {
     if (CALM.audio) CALM.audio.playChime();
-    // Log the block that just finished (best-effort; no-op when signed out).
-    if (CALM.sync && CALM.sync.logFocus && st.phase !== "idle") {
-      CALM.sync.logFocus(st.phase, Math.max(0, minsFor(st.phase) | 0));
-    }
+    logElapsed(); // best-effort; no-op when signed out or <1 min elapsed
     if (st.phase === "focus") {
       var longNow = st.cycle >= (S.pomoCycles | 0);
       enterPhase(longNow ? "long" : "break");
-      if (S.pomoAutoZen && CALM.modes.isActive("zen")) CALM.modes.exit("zen"); // reveal on break
+      // Reveal on break — but only exit the zen WE enabled (ownership fix).
+      if (st.enteredZen && CALM.modes.isActive("zen")) {
+        CALM.modes.exit("zen");
+        st.enteredZen = false;
+      }
       showOverlay(); // surface the break
     } else {
       if (st.phase === "long") {

@@ -266,12 +266,15 @@
     document.body.appendChild(p);
     (focusPark ? park : goal).focus();
 
-    function closeOnOutside(e) {
-      if (!p.contains(e.target) && e.target.id !== "cit-intent-chip") {
-        p.remove();
-        document.removeEventListener("click", closeOnOutside, true);
-      }
+    function closePop() {
+      p.remove();
+      document.removeEventListener("click", closeOnOutside, true);
+      if (CALM.ui.unregisterPopover) CALM.ui.unregisterPopover(closePop);
     }
+    function closeOnOutside(e) {
+      if (!p.contains(e.target) && e.target.id !== "cit-intent-chip") closePop();
+    }
+    if (CALM.ui.registerPopover) CALM.ui.registerPopover(closePop);
     setTimeout(function () {
       document.addEventListener("click", closeOnOutside, true);
     }, 0);
