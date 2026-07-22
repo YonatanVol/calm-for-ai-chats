@@ -24,6 +24,10 @@ html {
   --cit-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
   --cit-serif: Georgia, "Iowan Old Style", "Times New Roman", ui-serif, serif;
   --cit-ease: cubic-bezier(0.22, 1, 0.36, 1); /* expo-out: graceful, no bounce */
+  --cit-spring: linear(
+    0, 0.212, 0.442, 0.641, 0.796, 0.904, 0.967,
+    1.003 55%, 1.015 65%, 1.012 75%, 1.005 85%, 1
+  ); /* gentle spring: 1.5% overshoot max */
 }
 html[class*="light"], html[data-theme="light"] {
   --cit-surface: #f6f1e7;          /* ivory paper */
@@ -39,30 +43,118 @@ html[class*="light"], html[data-theme="light"] {
 }
 
 /* ----------------------------------------
-   The Calm Dock — one draggable pill that
-   expands into all controls with a spring.
+   The Bloom engine — a corner-anchored pill
+   whose 3×3 control tile always opens INWARD.
+   Motion is compositor-only (opacity/transform,
+   spring curve); no layout animation anywhere.
 ---------------------------------------- */
 #cit-dock {
   position: fixed;
   bottom: 20px;
   right: 20px;
   z-index: 2147483000;
-  display: flex;
-  flex-direction: row-reverse; /* pill on the right, items open leftward */
-  align-items: center;
-  gap: 8px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   user-select: none;
   -webkit-user-select: none;
-}
-#cit-dock.cit-dock-leftish {
-  flex-direction: row; /* dragged to the left half: items open rightward */
 }
 #cit-dock.cit-dragging {
   transition: none !important;
 }
 #cit-dock.cit-dragging .cit-dock-pill {
   cursor: grabbing;
+}
+#cit-dock.cit-quiet {
+  opacity: 0.35;
+  transition: opacity 0.45s var(--cit-ease);
+}
+#cit-dock {
+  transition: opacity 0.3s var(--cit-ease);
+}
+
+/* The bloom tile: absolutely positioned INSIDE the dock, on the inward side
+   of whichever corner the dock occupies — off-screen is impossible. */
+#cit-bloom {
+  position: absolute;
+  width: 236px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  padding: 10px;
+  border-radius: 18px;
+  background: var(--cit-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px var(--cit-hairline-gold), var(--cit-shadow);
+  opacity: 0;
+  transform: scale(0.94);
+  pointer-events: none;
+  transition: opacity 0.3s var(--cit-spring), transform 0.42s var(--cit-spring);
+}
+#cit-dock.cit-corner-br #cit-bloom { right: 0; bottom: calc(100% + 12px); transform-origin: bottom right; }
+#cit-dock.cit-corner-bl #cit-bloom { left: 0; bottom: calc(100% + 12px); transform-origin: bottom left; }
+#cit-dock.cit-corner-tr #cit-bloom { right: 0; top: calc(100% + 12px); transform-origin: top right; }
+#cit-dock.cit-corner-tl #cit-bloom { left: 0; top: calc(100% + 12px); transform-origin: top left; }
+#cit-dock.cit-dock-open #cit-bloom {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.cit-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 62px;
+  border: none;
+  border-radius: 12px;
+  background: var(--cit-fill-soft);
+  box-shadow: inset 0 0 0 1px var(--cit-hairline);
+  color: var(--cit-ink);
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transform: translateY(8px) scale(0.92);
+  transition: opacity 0.3s var(--cit-spring), transform 0.4s var(--cit-spring),
+    background 0.18s ease, box-shadow 0.18s ease;
+}
+#cit-dock.cit-dock-open .cit-tile {
+  opacity: 1;
+  transform: none;
+}
+.cit-tile:hover {
+  background: var(--cit-gold-soft);
+  box-shadow: inset 0 0 0 1px var(--cit-hairline-gold);
+}
+.cit-tile:active {
+  transform: scale(0.96);
+}
+.cit-tile.cit-active {
+  background: linear-gradient(135deg, var(--cit-gold-bright), var(--cit-gold-deep));
+  color: var(--cit-on-gold);
+  box-shadow: inset 0 0 0 1px var(--cit-gold-bright);
+}
+.cit-tile.cit-tile-dim {
+  opacity: 0.35 !important;
+  pointer-events: none;
+}
+.cit-tile-ic {
+  display: inline-flex;
+}
+.cit-tile-ic .cit-svg {
+  width: 17px;
+  height: 17px;
+}
+.cit-tile-label {
+  font-size: 8.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--cit-ink-dim);
+}
+.cit-tile.cit-active .cit-tile-label {
+  color: var(--cit-on-gold);
 }
 
 .cit-dock-pill {
@@ -95,66 +187,6 @@ html[class*="light"], html[data-theme="light"] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--cit-ink);
-}
-
-.cit-dock-items {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 0;
-  overflow: hidden;
-  transition: max-width 0.32s var(--cit-ease);
-}
-#cit-dock.cit-dock-open .cit-dock-items {
-  max-width: 460px;
-  overflow: visible;
-}
-.cit-dock-item {
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  border: 1px solid var(--cit-hairline-strong);
-  background: var(--cit-glass);
-  color: var(--cit-ink);
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  line-height: 1;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.22s ease, transform 0.28s var(--cit-ease),
-    background 0.15s ease;
-}
-#cit-dock.cit-dock-open .cit-dock-item {
-  opacity: 1;
-  transform: translateY(0);
-}
-/* staggered entrance */
-#cit-dock.cit-dock-open .cit-dock-item:nth-child(1) { transition-delay: 0.02s; }
-#cit-dock.cit-dock-open .cit-dock-item:nth-child(2) { transition-delay: 0.05s; }
-#cit-dock.cit-dock-open .cit-dock-item:nth-child(3) { transition-delay: 0.08s; }
-#cit-dock.cit-dock-open .cit-dock-item:nth-child(4) { transition-delay: 0.11s; }
-#cit-dock.cit-dock-open .cit-dock-item:nth-child(5) { transition-delay: 0.14s; }
-#cit-dock.cit-dock-open .cit-dock-item:nth-child(6) { transition-delay: 0.17s; }
-#cit-dock.cit-dock-open .cit-dock-item:nth-child(7) { transition-delay: 0.2s; }
-#cit-dock.cit-dock-open .cit-dock-item:nth-child(8) { transition-delay: 0.23s; }
-#cit-dock.cit-dock-open .cit-dock-item:nth-child(9) { transition-delay: 0.26s; }
-.cit-dock-item:hover {
-  background: var(--cit-gold-soft);
-  border-color: var(--cit-hairline-gold);
-  transform: translateY(-2px);
-}
-.cit-dock-item:active {
-  transform: translateY(0);
-}
-.cit-dock-item.cit-active {
-  background: var(--cit-gold);
-  border-color: var(--cit-gold);
   color: var(--cit-ink);
 }
 
@@ -254,8 +286,8 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
 
 /* Reduced motion: kill Calm's own animations too */
 @media (prefers-reduced-motion: reduce) {
-  #cit-dock .cit-dock-item,
-  #cit-dock .cit-dock-items,
+  #cit-dock .cit-tile,
+  #cit-bloom,
   #cit-modes-pop,
   #cit-settings-panel,
   #cit-intent-pop {
@@ -1111,7 +1143,6 @@ html.cit-presentation #cit-night-overlay {
 
 /* Gold hairline + deep shadow on every raised surface */
 .cit-dock-pill,
-.cit-dock-item,
 #cit-modes-pop,
 #cit-settings-panel,
 #cit-intent-pop,
@@ -1123,12 +1154,6 @@ html.cit-presentation #cit-night-overlay {
 #cit-type-chip {
   box-shadow: inset 0 0 0 1px var(--cit-hairline-gold), var(--cit-shadow);
   border-color: transparent;
-}
-.cit-dock-item { box-shadow: inset 0 0 0 1px var(--cit-hairline-gold), 0 6px 18px rgba(0, 0, 0, 0.35); }
-.cit-dock-item.cit-active {
-  background: linear-gradient(135deg, var(--cit-gold-bright), var(--cit-gold-deep));
-  color: var(--cit-on-gold);
-  box-shadow: inset 0 0 0 1px var(--cit-gold-bright), 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 
 /* Serif voice: titles, dock status, pomodoro numerals */

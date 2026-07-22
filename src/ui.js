@@ -50,7 +50,13 @@
       !!rt.scrollContainer;
     [IDS.top, IDS.bottom].forEach(function (id) {
       var b = document.getElementById(id);
-      if (b) b.style.display = show ? "flex" : "none";
+      if (!b) return;
+      if (b.classList.contains("cit-tile")) {
+        // Bloom grid: dim instead of hide, so the 3×3 never gets holes.
+        b.classList.toggle("cit-tile-dim", !show);
+      } else {
+        b.style.display = show ? "flex" : "none";
+      }
     });
   }
   function smoothScrollTo(top) {
@@ -178,18 +184,23 @@
       el.classList.remove("cit-dragging");
       if (!moved) return;
       var r = el.getBoundingClientRect();
-      var l = r.left;
-      var t = r.top;
-      if (opts.snap) {
-        var iw = window.innerWidth || 1400;
-        var dl = l;
-        var dr = iw - (l + r.width);
-        if (Math.min(dl, dr) < 48) l = dl < dr ? 12 : iw - r.width - 12;
+      if (opts.onDrop) {
+        // Caller owns final placement + persistence (dock corner-anchoring).
+        opts.onDrop({ left: r.left, top: r.top, width: r.width, height: r.height });
+      } else {
+        var l = r.left;
+        var t = r.top;
+        if (opts.snap) {
+          var iw = window.innerWidth || 1400;
+          var dl = l;
+          var dr = iw - (l + r.width);
+          if (Math.min(dl, dr) < 48) l = dl < dr ? 12 : iw - r.width - 12;
+        }
+        var fin = place(l, t);
+        try {
+          if (storageKey) localStorage.setItem(storageKey, JSON.stringify(fin));
+        } catch (_) {}
       }
-      var fin = place(l, t);
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(fin));
-      } catch (_) {}
       // swallow the click that follows a drag
       function block(ev) {
         ev.stopPropagation();
@@ -202,7 +213,7 @@
       }, 0);
     }
     handle.addEventListener("pointerdown", onDown);
-    var restored = restore();
+    var restored = opts.onDrop ? false : restore();
     return { restore: restore, place: place, restored: restored };
   }
 
@@ -249,7 +260,7 @@
     return close;
   }
 
-  // ---- Place a popover near the dock ----
+  // ---- Place a popover near the dock (flip-aware, always on-screen) ----
   function placeNearDock(p) {
     var d = document.getElementById(IDS.dock);
     if (!d || !d.getBoundingClientRect) return;
@@ -258,9 +269,15 @@
     var iw = window.innerWidth || 1400;
     var pw = p.offsetWidth || 260;
     var ph = p.offsetHeight || 300;
-    var top = r.top > ih / 2 ? r.top - ph - 10 : r.bottom + 10;
-    var left = Math.max(8, Math.min(iw - pw - 8, r.right - pw));
-    p.style.top = Math.max(8, top) + "px";
+    // Prefer opening inward from the dock's vertical half; flip if it would
+    // leave the viewport; clamp as the last resort.
+    var top = r.top > ih / 2 ? r.top - ph - 12 : r.bottom + 12;
+    if (top < 8) top = r.bottom + 12; // flip below
+    if (top + ph > ih - 8) top = Math.max(8, r.top - ph - 12); // flip above
+    top = Math.max(8, Math.min(ih - ph - 8, top));
+    var left = r.left + r.width / 2 < iw / 2 ? r.left : r.right - pw;
+    left = Math.max(8, Math.min(iw - pw - 8, left));
+    p.style.top = top + "px";
     p.style.left = left + "px";
     p.style.right = "auto";
     p.style.bottom = "auto";
