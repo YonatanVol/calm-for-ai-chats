@@ -21,9 +21,12 @@ import argparse
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import zipfile
+
+sys.dont_write_bytecode = True  # never drop __pycache__ into the extension folder
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 EXTENSION_FILES = ["manifest.json", "src", "content.css", "icons"]
@@ -33,11 +36,44 @@ def c(code, text):
     return f"\033[{code}m{text}\033[0m" if sys.stdout.isatty() else text
 
 
+def sweep():
+    """Delete regenerable build byproducts Chrome refuses to load.
+
+    Chrome rejects any folder containing a name starting with "_", and Python
+    drops __pycache__/ next to any script it byte-compiles here. Both that and
+    .DS_Store are caches, so removing them is safe and self-healing — but only
+    after confirming the directory holds nothing but .pyc files. Anything else
+    (a stray .pem, a real _-prefixed file) is reported, never auto-deleted.
+    """
+    removed = []
+    for base, dirs, files in os.walk(ROOT, topdown=True):
+        if ".git" in base:
+            dirs[:] = []
+            continue
+        for d in list(dirs):
+            if d != "__pycache__":
+                continue
+            full = os.path.join(base, d)
+            contents = os.listdir(full)
+            if all(n.endswith(".pyc") for n in contents):  # cache only — safe
+                shutil.rmtree(full)
+                dirs.remove(d)
+                removed.append(os.path.relpath(full, ROOT))
+        for name in list(files):
+            if name == ".DS_Store":
+                os.remove(os.path.join(base, name))
+                removed.append(os.path.relpath(os.path.join(base, name), ROOT))
+    for r in removed:
+        print(c("33", f"  swept {r}"))
+    return removed
+
+
 def validate():
     missing = [p for p in EXTENSION_FILES if not os.path.exists(os.path.join(ROOT, p))]
     if missing:
         print(c("31", f"✗ Missing required files: {', '.join(missing)}"))
         sys.exit(1)
+    sweep()
     bad = []
     for base, dirs, files in os.walk(ROOT):
         if ".git" in base:
@@ -49,6 +85,7 @@ def validate():
         print(c("31", "✗ Chrome will refuse this folder — remove these first:"))
         for b in bad:
             print("   " + b)
+        print(c("33", "  (.pem is your private signing key — move it out, don't delete it.)"))
         sys.exit(1)
     with open(os.path.join(ROOT, "manifest.json"), encoding="utf-8") as f:
         m = json.load(f)
