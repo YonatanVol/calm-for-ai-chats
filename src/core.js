@@ -238,6 +238,28 @@
   // becomes an un-removable ghost — this was the root cause of the "extension
   // disappeared but still affects the page" bug on Gemini.
   function resetState() {
+    rt.tearingDown = true;
+
+    // 0. Snapshot stateful timers so navigation does NOT reset them: a
+    //    Pomodoro 20 minutes into a block resumes at 20 minutes, and a Pause
+    //    keeps its original end time (it must not re-arm a fresh countdown).
+    var ps = CALM.pomodoro && CALM.pomodoro.state;
+    rt.resumePomodoro =
+      ps && ps.running
+        ? {
+            phase: ps.phase,
+            remaining: ps.remaining,
+            cycle: ps.cycle,
+            paused: ps.paused,
+            enteredZen: ps.enteredZen,
+          }
+        : null;
+    rt.resumePauseEnd = rt.pauseEndTs || null;
+
+    // 0b. Close every open popover through its own close() (removes the
+    //     element AND its document listeners — no ghost panels after nav).
+    if (ui.closeAllPopovers) ui.closeAllPopovers();
+
     // 1. Remember which modes were on, then exit them PROPERLY (each exit
     //    clears its own timers/styles/refs while they are still valid).
     rt.pendingModes = Object.keys(rt.activeModes).filter(function (id) {
@@ -289,7 +311,13 @@
     rt.accUp = 0;
     rt.composerEl = null;
     rt.scrollContainer = null;
+    // Calm-owned singletons that popover-close doesn't cover.
+    ["cit-settings-panel", "cit-intent-pop", "cit-intent-chip"].forEach(function (id) {
+      var e = document.getElementById(id);
+      if (e) e.remove();
+    });
     stopRetry();
+    rt.tearingDown = false;
   }
   function startNavObserver() {
     if (rt.navObserver) rt.navObserver.disconnect();
@@ -365,6 +393,11 @@
         modes.enter(id);
       } catch (_) {}
     });
+    // Consume unclaimed timer snapshots (mode wasn't re-entered after all).
+    rt.resumePomodoro = null;
+    rt.resumePauseEnd = null;
+    // Floating goal chip is a body-level singleton — re-render it after nav.
+    if (CALM.intent && CALM.intent.renderChip) CALM.intent.renderChip();
 
     (function attempt(tries) {
       if (gen !== rt.initGen) return; // superseded by a newer navigation

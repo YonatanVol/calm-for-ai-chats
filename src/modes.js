@@ -199,7 +199,14 @@
   function pauseEnter() {
     rt.paused = true;
     stopTimer("pause");
-    var end = Date.now() + Math.max(1, S.pauseMinutes | 0) * 60000;
+    // Resume the original end time across SPA navs — a nav must never re-arm
+    // a fresh countdown (that could suspend auto-hide indefinitely).
+    var end =
+      rt.resumePauseEnd && rt.resumePauseEnd > Date.now()
+        ? rt.resumePauseEnd
+        : Date.now() + Math.max(1, S.pauseMinutes | 0) * 60000;
+    rt.resumePauseEnd = null;
+    rt.pauseEndTs = end;
     tickPause(end);
     rt.modeTimers.pause = setInterval(function () {
       if (Date.now() >= end) modeExit("pause");
@@ -218,6 +225,7 @@
   }
   function pauseExit() {
     rt.paused = false;
+    rt.pauseEndTs = null;
     stopTimer("pause");
     if (CALM.ui.hideChip) CALM.ui.hideChip("pause");
   }
@@ -297,7 +305,11 @@
 
   // ---------- Pomodoro (implemented in src/pomodoro.js, Phase 2) ----------
   function pomodoroEnter() {
-    if (CALM.pomodoro) CALM.pomodoro.start();
+    if (CALM.pomodoro) {
+      var resume = rt.resumePomodoro;
+      rt.resumePomodoro = null;
+      CALM.pomodoro.start(resume || undefined);
+    }
   }
   function pomodoroExit() {
     if (CALM.pomodoro) CALM.pomodoro.stop();

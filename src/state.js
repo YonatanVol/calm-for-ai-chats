@@ -138,6 +138,10 @@
     pendingModes: null, // modes to re-enter fresh after a SPA navigation
     presentationEnteredZen: false, // presentation auto-entered zen → exit it too
     rulerHandler: null, // mousemove listener for the reading ruler
+    tearingDown: false, // true during resetState (suppresses partial-block logs)
+    pauseEndTs: null, // active Pause end time (survives navs via resumePauseEnd)
+    resumePauseEnd: null, // nav snapshot: Pause end time to resume
+    resumePomodoro: null, // nav snapshot: {phase,remaining,cycle,paused,enteredZen}
   };
 
   // Entitlement seam — all free in v1; Phase 7 resolves from Supabase/Stripe.
