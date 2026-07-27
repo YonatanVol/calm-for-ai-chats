@@ -5,57 +5,64 @@
 
 /* ================= Calm Maison — design tokens ================= */
 html {
-  --cit-surface: #211d19;          /* onyx-espresso panel */
-  --cit-glass: rgba(25, 22, 19, 0.9); /* warm espresso glass */
-  --cit-ink: #f2ebdd;              /* champagne ivory */
-  --cit-ink-dim: rgba(242, 235, 221, 0.6);
-  --cit-ink-faint: rgba(242, 235, 221, 0.38);
-  --cit-gold: #c6a15b;             /* brushed gold */
-  --cit-gold-bright: #d9bc7f;
-  --cit-gold-deep: #a8874a;
-  --cit-gold-soft: rgba(198, 161, 91, 0.16);
-  --cit-hairline: rgba(242, 235, 221, 0.09);
-  --cit-hairline-strong: rgba(242, 235, 221, 0.16);
-  --cit-hairline-gold: rgba(198, 161, 91, 0.32);
-  --cit-fill-soft: rgba(242, 235, 221, 0.05);
+  --cit-surface: #1c1d20;          /* graphite panel */
+  --cit-glass: rgba(26, 27, 30, 0.88); /* graphite glass */
+  --cit-ink: #ececee;              /* soft near-white */
+  --cit-ink-dim: rgba(236, 236, 238, 0.56);
+  --cit-ink-faint: rgba(236, 236, 238, 0.32);
+  --cit-gold: #c7c8cc;             /* quiet neutral emphasis (was gold) */
+  --cit-gold-bright: #ececed;      /* raised active fill — lit end */
+  --cit-gold-deep: #cfd0d3;        /* raised active fill — low end */
+  --cit-gold-soft: rgba(255, 255, 255, 0.07);
+  --cit-hairline: rgba(255, 255, 255, 0.08);
+  --cit-hairline-strong: rgba(255, 255, 255, 0.15);
+  --cit-hairline-gold: rgba(255, 255, 255, 0.18);
+  --cit-fill-soft: rgba(255, 255, 255, 0.045);
   --cit-break: #9aa8b8;            /* muted steel for breaks */
   --cit-night-tint: #ff9b3d;
-  --cit-on-gold: #241d12;          /* readable espresso on gold surfaces */
-  --cit-gold-ink: #d9bc7f;         /* gold that stays legible as text/icon */
-  --cit-tray-a: #232019;           /* lacquer tray: lit top … */
-  --cit-tray-b: #17140f;           /* … to shadowed base */
-  --cit-tile-a: rgba(242, 235, 221, 0.062);
-  --cit-tile-b: rgba(242, 235, 221, 0.018);
-  --cit-tile-lip: rgba(242, 235, 221, 0.075); /* polished top edge of a key */
-  --cit-tile-edge: rgba(242, 235, 221, 0.055);
-  --cit-tile-label: rgba(242, 235, 221, 0.42);
+  --cit-on-gold: #1b1c1f;          /* dark ink on the raised active fill */
+  --cit-gold-ink: #dcdce0;         /* neutral emphasis text/icon */
+  --cit-ring: rgba(255, 255, 255, 0.16);
+  --cit-tray-a: #212226;           /* tray: lit top … */
+  --cit-tray-b: #16171a;           /* … to shadowed base */
+  --cit-tile-a: rgba(255, 255, 255, 0.05);
+  --cit-tile-b: rgba(255, 255, 255, 0.014);
+  --cit-tile-lip: rgba(255, 255, 255, 0.07);
+  --cit-tile-edge: rgba(255, 255, 255, 0.05);
+  --cit-tile-label: rgba(236, 236, 238, 0.4);
   --cit-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
   --cit-serif: Georgia, "Iowan Old Style", "Times New Roman", ui-serif, serif;
   --cit-ease: cubic-bezier(0.22, 1, 0.36, 1); /* expo-out: graceful, no bounce */
   --cit-spring: linear(
-    0, 0.212, 0.442, 0.641, 0.796, 0.904, 0.967,
-    1.003 55%, 1.015 65%, 1.012 75%, 1.005 85%, 1
-  ); /* gentle spring: 1.5% overshoot max */
+    0, 0.19, 0.4, 0.61, 0.77, 0.885, 0.955, 0.99,
+    1.004 82%, 1.001 92%, 1
+  ); /* near-critically damped: 0.4% overshoot, smooth settle */
 }
 html[class*="light"], html[data-theme="light"] {
-  --cit-surface: #f6f1e7;          /* ivory paper */
-  --cit-glass: rgba(246, 241, 231, 0.94);
-  --cit-ink: #2a241d;              /* espresso text */
-  --cit-ink-dim: rgba(42, 36, 29, 0.62);
-  --cit-ink-faint: rgba(42, 36, 29, 0.4);
-  --cit-hairline: rgba(42, 36, 29, 0.1);
-  --cit-hairline-strong: rgba(42, 36, 29, 0.18);
-  --cit-hairline-gold: rgba(168, 135, 74, 0.45);
-  --cit-fill-soft: rgba(42, 36, 29, 0.05);
-  --cit-shadow: 0 18px 44px rgba(60, 48, 30, 0.22);
-  --cit-gold-ink: #8f7133;
-  --cit-tray-a: #fdfaf3;
-  --cit-tray-b: #f0e9dc;
-  --cit-tile-a: rgba(255, 255, 255, 0.85);
-  --cit-tile-b: rgba(42, 36, 29, 0.028);
+  --cit-surface: #f4f4f6;          /* soft paper */
+  --cit-glass: rgba(244, 244, 246, 0.9);
+  --cit-ink: #1c1d20;              /* graphite text */
+  --cit-ink-dim: rgba(28, 29, 32, 0.6);
+  --cit-ink-faint: rgba(28, 29, 32, 0.38);
+  --cit-gold: #48494e;             /* quiet neutral emphasis */
+  --cit-gold-bright: #303134;      /* dark active fill — lit end */
+  --cit-gold-deep: #232427;        /* dark active fill — low end */
+  --cit-gold-soft: rgba(28, 29, 32, 0.05);
+  --cit-hairline: rgba(28, 29, 32, 0.1);
+  --cit-hairline-strong: rgba(28, 29, 32, 0.17);
+  --cit-hairline-gold: rgba(28, 29, 32, 0.2);
+  --cit-fill-soft: rgba(28, 29, 32, 0.045);
+  --cit-shadow: 0 18px 44px rgba(20, 22, 28, 0.16);
+  --cit-on-gold: #f4f4f6;          /* light ink on the dark active fill */
+  --cit-gold-ink: #303134;
+  --cit-ring: rgba(28, 29, 32, 0.2);
+  --cit-tray-a: #fbfbfc;
+  --cit-tray-b: #eeeef1;
+  --cit-tile-a: rgba(255, 255, 255, 0.9);
+  --cit-tile-b: rgba(28, 29, 32, 0.022);
   --cit-tile-lip: rgba(255, 255, 255, 0.95);
-  --cit-tile-edge: rgba(42, 36, 29, 0.085);
-  --cit-tile-label: rgba(42, 36, 29, 0.55);
+  --cit-tile-edge: rgba(28, 29, 32, 0.08);
+  --cit-tile-label: rgba(28, 29, 32, 0.52);
 }
 
 /* ----------------------------------------
@@ -100,7 +107,7 @@ html[class*="light"], html[data-theme="light"] {
   /* A lacquered tray: warm light caught at the top lip, gold breathing up
      from the base, deep espresso between. */
   background:
-    radial-gradient(120% 72% at 50% -8%, rgba(198, 161, 91, 0.12), transparent 62%),
+    radial-gradient(120% 72% at 50% -8%, rgba(255, 255, 255, 0.05), transparent 62%),
     linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
   box-shadow:
     inset 0 1px 0 var(--cit-tile-lip),
@@ -178,7 +185,7 @@ html[class*="light"], html[data-theme="light"] {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(78% 66% at 50% 116%, rgba(198, 161, 91, 0.34), transparent 72%);
+  background: radial-gradient(82% 72% at 50% 0%, rgba(255, 255, 255, 0.06), transparent 74%);
   opacity: 0;
   transition: opacity 0.26s var(--cit-ease);
   pointer-events: none;
@@ -199,8 +206,8 @@ html[class*="light"], html[data-theme="light"] {
 .cit-tile.cit-active {
   background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
   color: var(--cit-on-gold);
-  box-shadow: inset 0 1px 0 rgba(255, 252, 245, 0.4),
-    inset 0 0 0 1px var(--cit-gold-bright), 0 4px 14px rgba(198, 161, 91, 0.26);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 0 0 1px var(--cit-hairline-gold), 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 .cit-tile.cit-active::before {
   opacity: 0;
@@ -276,7 +283,7 @@ html[class*="light"], html[data-theme="light"] {
 /* The seal answers when the tray is open. */
 #cit-dock.cit-dock-open .cit-dock-pill {
   border-color: var(--cit-hairline-gold);
-  box-shadow: 0 0 0 3px rgba(198, 161, 91, 0.1), 0 8px 26px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 3px var(--cit-ring), 0 8px 26px rgba(0, 0, 0, 0.5);
 }
 #cit-dock.cit-dock-open .cit-dock-mark {
   color: var(--cit-gold-bright);
@@ -771,7 +778,7 @@ html.cit-presentation #cit-night-overlay {
   max-width: calc(100vw - 24px);
   /* Same lacquer as the bloom tray — one family of objects. */
   background:
-    radial-gradient(120% 62% at 50% -8%, rgba(198, 161, 91, 0.12), transparent 62%),
+    radial-gradient(120% 62% at 50% -8%, rgba(255, 255, 255, 0.05), transparent 62%),
     linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
   border: none;
   border-radius: 18px;
@@ -879,7 +886,7 @@ html.cit-presentation #cit-night-overlay {
 .cit-intent-add:focus,
 .cit-intent-park:focus {
   box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-gold),
-    0 0 0 3px rgba(198, 161, 91, 0.13);
+    0 0 0 3px var(--cit-ring);
 }
 
 .cit-intent-tasks { margin-bottom: 6px; }
@@ -985,12 +992,12 @@ html.cit-presentation #cit-night-overlay {
   letter-spacing: 0.06em;
   color: var(--cit-on-gold);
   background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
-  box-shadow: inset 0 1px 0 rgba(255, 252, 245, 0.4), 0 4px 14px rgba(198, 161, 91, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 4px 14px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   transition: transform 0.16s var(--cit-spring), box-shadow 0.2s ease;
 }
 .cit-intent-begin:hover {
-  box-shadow: inset 0 1px 0 rgba(255, 252, 245, 0.5), 0 6px 18px rgba(198, 161, 91, 0.34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 6px 18px rgba(0, 0, 0, 0.28);
 }
 .cit-intent-begin:active { transform: scale(0.97); }
 
@@ -1385,7 +1392,7 @@ html.cit-presentation #cit-night-overlay {
   letter-spacing: 0.03em;
   color: var(--cit-ink);
 }
-.cit-dock-status { font-family: var(--cit-serif); font-style: italic; }
+.cit-dock-status { font-family: var(--cit-serif); }
 .cit-pomo-time { font-family: var(--cit-serif) !important; letter-spacing: 0.05em; }
 .cit-pomo-prog { stroke: var(--cit-gold) !important; }
 
