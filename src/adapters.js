@@ -97,6 +97,8 @@
         );
       },
       // Reader typography target (message prose).
+      // Assistant-response blocks for the Focus Reader (last one wins).
+      responseSel: "[data-message-author-role=\"assistant\"] .markdown",
       readerTargets: function () {
         return ".markdown, [class*='prose'], [data-message-author-role] .markdown";
       },
@@ -163,6 +165,8 @@
           "{display:none !important;}"
         );
       },
+      // Assistant-response blocks for the Focus Reader (last one wins).
+      responseSel: "message-content, .model-response-text",
       readerTargets: function () {
         return "message-content, .markdown, .model-response-text";
       },
@@ -222,6 +226,8 @@
           "{display:none !important;}"
         );
       },
+      // Assistant-response blocks for the Focus Reader (last one wins).
+      responseSel: ".font-claude-response",
       readerTargets: function () {
         return '.font-claude-response, [data-testid="user-message"]';
       },

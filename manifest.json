@@ -30,6 +30,7 @@
         "src/presets.js",
         "src/audio.js",
         "src/pomodoro.js",
+        "src/reader.js",
         "src/ui.js",
         "src/dock.js",
         "src/wellness.js",

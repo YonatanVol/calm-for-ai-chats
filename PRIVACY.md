@@ -2,11 +2,16 @@
 
 _Last updated: July 2026_
 
-Calm is local-first. **Your conversations are never read, stored, or transmitted.**
+Calm is local-first. **Your conversations are never stored or transmitted.**
 Signing in is optional; until you do, nothing leaves your browser.
 
 ## What Calm never does
-- It never reads, stores, or transmits the **content of your conversations**.
+- It never stores or transmits the **content of your conversations**. The one
+  place Calm touches conversation text at all is the **Focus Reader**, which —
+  only when you open it — re-renders the latest response inside your own tab
+  for easier reading. That copy lives in the page's memory only and is
+  discarded the moment the pane closes. It is never persisted, logged, or sent
+  anywhere.
 - It contains **no analytics, no trackers, no ads, and no third-party code**.
 - It never sells or shares data with anyone.
 

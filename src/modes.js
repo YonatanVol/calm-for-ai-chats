@@ -319,6 +319,12 @@
   var MODES = {
     zen: { label: "Zen", icon: "❏", enter: zenEnter, exit: zenExit },
     reader: { label: "Reader", icon: "A", enter: readerEnter, exit: readerExit, vars: readerVars },
+    focusreader: {
+      label: "Focus Reader",
+      icon: "\u2750",
+      enter: function () { if (CALM.reader) CALM.reader.open(); },
+      exit: function () { if (CALM.reader) CALM.reader.close(); },
+    },
     night: { label: "Night", icon: "☾", enter: nightEnter, exit: nightExit, vars: nightVars },
     privacy: { label: "Privacy", icon: "⦿", enter: privacyEnter, exit: privacyExit },
     presentation: { label: "Present", icon: "▣", enter: presentationEnter, exit: presentationExit },

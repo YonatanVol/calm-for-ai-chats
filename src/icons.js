@@ -41,6 +41,9 @@
     collapse: svg('<path d="M14 6l-6 6 6 6"/>'),
     close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
     reader: svg('<path d="M4 6h16M4 10h16M4 14h10M4 18h7"/>'),
+    // An open book — the Focus Reader.
+    book: svg('<path d="M12 6.5C10 4.9 7.3 4 4 4v14.5c3.3 0 6 .9 8 2.5 2-1.6 4.7-2.5 8-2.5V4c-3.3 0-6 .9-8 2.5z"/><path d="M12 6.5V21"/>'),
+    refresh: svg('<path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 3v4h-4"/>'),
     ruler: svg('<path d="M3 9h18M3 15h18" /><path d="M7 9v2M12 9v2M17 9v2" stroke-width="1"/>'),
     night: svg('<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>'),
     gray: svg('<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M12 3.5a8.5 8.5 0 0 1 0 17" fill="currentColor" fill-opacity="0.25" stroke="none"/>'),
@@ -55,6 +58,7 @@
   I.mode = {
     zen: I.zen,
     reader: I.reader,
+    focusreader: I.book,
     ruler: I.ruler,
     night: I.night,
     gray: I.gray,

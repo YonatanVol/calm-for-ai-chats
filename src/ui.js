@@ -292,7 +292,7 @@
     }
     p = document.createElement("div");
     p.id = IDS.modesPop;
-    ["zen", "reader", "ruler", "night", "gray", "motion", "privacy",
+    ["focusreader", "zen", "reader", "ruler", "night", "gray", "motion", "privacy",
      "presentation", "autoscroll", "pause", "pomodoro"].forEach(function (id) {
       var m = CALM.modes.MODES[id];
       if (!m) return;
@@ -421,7 +421,7 @@
   }
 
   function buildModesTab(c) {
-    ["zen", "reader", "ruler", "night", "gray", "motion", "privacy",
+    ["focusreader", "zen", "reader", "ruler", "night", "gray", "motion", "privacy",
      "presentation", "autoscroll", "pause", "pomodoro"].forEach(function (id) {
       c.appendChild(modeRow(id));
     });

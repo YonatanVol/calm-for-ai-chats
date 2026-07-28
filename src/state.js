@@ -36,6 +36,12 @@
     rulerHeight: 90, // reading-ruler band height in px (50..160)
     rulerDim: 45, // reading-ruler surround dim % (15..70)
     grayLevel: 85, // grayscale mode strength % (40..100)
+    // Focus Reader (the Calm-owned reading pane)
+    frBionic: true, // bold word-starts (fixation anchors)
+    frFixation: 40, // % of each word bolded (20..60)
+    frSize: 18, // reading text size in px (15..26)
+    frEase: false, // dyslexia-friendly spacing + sans
+    frSpotlight: false, // dim all blocks except the current one
     intentionPrompt: true, // ask "what did you come to do?" once per tab
     intentChipMode: "dock", // dock | floating | hidden — where the 🎯 goal shows
     dockAutoCollapse: true, // dock folds back to the pill after 6s idle
@@ -111,6 +117,7 @@
     dock: "cit-dock",
     modesPop: "cit-modes-pop",
     bloom: "cit-bloom",
+    readerPane: "cit-reader-pane",
   };
 
   // Shared MUTABLE runtime state — every module reads/writes this one object.
@@ -157,6 +164,7 @@
     quickNav: "free",
     "mode:zen": "free",
     "mode:reader": "free",
+    "mode:focusreader": "free",
     "mode:night": "free",
     "mode:privacy": "free",
     "mode:presentation": "free",

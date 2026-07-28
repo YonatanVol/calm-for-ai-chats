@@ -13,7 +13,7 @@ var ROOT = path.join(__dirname, "..");
 
 var MODULES = [
   "config", "icons", "adapters", "state", "modes", "presets", "audio",
-  "pomodoro", "ui", "dock", "wellness", "intent", "core", "typeahead",
+  "pomodoro", "reader", "ui", "dock", "wellness", "intent", "core", "typeahead",
   "auth", "sync",
 ].map(function (n) { return path.join(ROOT, "src", n + ".js"); });
 
@@ -392,6 +392,48 @@ section("Intention card");
   open();
   w.nav("https://chatgpt.com/c/next");
   check("registry closes intent card on SPA nav", !w.bodyEls["cit-intent-pop"]);
+})();
+
+/* ---------------- Focus Reader ---------------- */
+section("Focus Reader");
+(function () {
+  var w = buildWorld("chatgpt.com", {});
+  var C = w.C;
+  check("mode registered with icon + tier",
+    !!C.modes.MODES.focusreader && !!C.icons.mode.focusreader &&
+    C.FEATURE_TIERS["mode:focusreader"] === "free");
+  check("adapter has responseSel", typeof C.site.responseSel === "string" && C.site.responseSel.length > 0);
+
+  C.modes.enter("focusreader");
+  var pane = w.bodyEls["cit-reader-pane"];
+  check("pane opens with bar + body",
+    !!pane && !!pane.querySelector(".cit-fr-bar") && !!pane.querySelector(".cit-fr-body"));
+  check("empty page shows empty state (no crash)",
+    !!pane.querySelector(".cit-fr-empty"));
+  var keysBefore = (w.docLs.keydown || []).length;
+  check("keydown listener installed", keysBefore >= 1);
+
+  // Esc exits the mode and removes the pane + listener
+  (w.docLs.keydown || []).slice().forEach(function (f) {
+    f({ key: "Escape", stopPropagation: function () {}, preventDefault: function () {} });
+  });
+  check("Esc exits mode, removes pane",
+    !w.bodyEls["cit-reader-pane"] && !C.modes.isActive("focusreader"));
+  check("keydown listener removed on close",
+    (w.docLs.keydown || []).length < keysBefore);
+
+  // bionic math
+  var bc = C.reader._boldCount;
+  check("bionic bold-count math",
+    bc(1, 0.4) === 1 && bc(4, 0.4) === 2 && bc(8, 0.5) === 4 &&
+    bc(2, 0.9) === 1 && bc(10, 0.2) === 2);
+
+  // nav teardown: active mode exits cleanly and re-enters on the new page
+  C.modes.enter("focusreader");
+  w.nav("https://chatgpt.com/c/next");
+  check("nav rebuild keeps Focus Reader mode alive",
+    C.modes.isActive("focusreader") && !!w.bodyEls["cit-reader-pane"]);
+  C.modes.exit("focusreader");
 })();
 
 /* ---------------- verdict ---------------- */
