@@ -386,14 +386,7 @@ html[class*="light"], html[data-theme="light"] {
   color: var(--cit-ink);
 }
 
-#cit-toggle-btn .cit-icon {
-  display: inline-block;
-  transition: transform 0.3s ease;
-}
-body.cit-composer-hidden #cit-toggle-btn .cit-icon {
-  transform: rotate(180deg);
-}
-
+body.cit-composer-hidden 
 
 
 /* Drag affordances */
@@ -428,7 +421,7 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   position: fixed;
   bottom: 92px;
   right: 62px;
-  z-index: 2147483002;
+  z-index: 2147482900; /* below the Focus Reader */
   padding: 8px 13px;
   border-radius: 999px;
   background: var(--cit-glass);
@@ -963,7 +956,7 @@ html.cit-presentation #cit-night-overlay {
   position: fixed;
   right: 20px;
   bottom: 224px;
-  z-index: 2147483002;
+  z-index: 2147482900; /* below the Focus Reader: a nag must never cover it */
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1612,3 +1605,7 @@ html.cit-presentation #cit-night-overlay {
 @media (prefers-reduced-motion: reduce) {
   #cit-palette { animation: none; }
 }
+
+/* An input tile the user has switched off: still present so the row keeps its
+   three columns, but visibly inert. */
+.cit-qt.cit-qt-dim { opacity: 0.3; pointer-events: none; }

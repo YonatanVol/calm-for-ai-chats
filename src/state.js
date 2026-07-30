@@ -106,11 +106,9 @@
   };
 
   CALM.IDS = {
-    toggle: "cit-toggle-btn",
-    zen: "cit-zen-btn",
+    toggle: "cit-input-tile",
+    zen: "cit-zen-tile",
     toast: "cit-toast",
-    top: "cit-nav-top",
-    bottom: "cit-nav-bottom",
     widthStyle: "cit-width-style",
     typeChip: "cit-type-chip",
     dock: "cit-dock",

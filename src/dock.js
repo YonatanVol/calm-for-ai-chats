@@ -199,11 +199,10 @@
     },
     true
   );
-  document.addEventListener("keydown", function (e) {
-    if (e.key !== "Escape") return;
-    var d = document.getElementById(IDS.dock);
-    if (d && d.classList.contains("cit-dock-open")) collapse();
-  });
+  // Escape is owned by one shared handler in src/ui.js. The Console pushes a
+  // closer onto that stack while it is open (see console.js), so a single
+  // listener dismisses whatever is topmost instead of four modules each
+  // binding their own.
 
   setInterval(refreshStatus, 1000);
 

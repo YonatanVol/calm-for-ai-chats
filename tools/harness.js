@@ -11,10 +11,13 @@ var fs = require("fs");
 var path = require("path");
 var ROOT = path.join(__dirname, "..");
 
-var MODULES = [
-  "icons", "adapters", "state", "modes", "presets", "audio",
-  "pomodoro", "reader", "ui", "console", "dock", "palette", "wellness", "intent", "core", "typeahead",
-].map(function (n) { return path.join(ROOT, "src", n + ".js"); });
+// The module list is READ FROM THE MANIFEST, not duplicated here: load order
+// is load-bearing (reader.js needs CALM.ui, dock.js needs CALM.console), and a
+// hand-kept copy would drift the moment a script is added or reordered.
+var MANIFEST = JSON.parse(fs.readFileSync(path.join(ROOT, "manifest.json"), "utf8"));
+var MODULES = MANIFEST.content_scripts[0].js.map(function (rel) {
+  return path.join(ROOT, rel);
+});
 
 var passed = 0, failed = 0;
 function check(name, ok, detail) {
@@ -94,7 +97,16 @@ function buildWorld(hostname, opts) {
       setPointerCapture: noop,
     };
     Object.defineProperty(el, "innerHTML", {
-      set: function (v) { el.__html = v; },
+      // Real DOM discards children when innerHTML is assigned. The stub used
+      // to keep them, so a re-render appended instead of replacing and tests
+      // silently inspected stale nodes.
+      set: function (v) {
+        el.children.forEach(function (c) {
+          if (c.__id) delete world.bodyEls[c.__id];
+        });
+        el.children = [];
+        el.__html = v;
+      },
       get: function () { return el.__html || ""; },
     });
     return el;
@@ -193,10 +205,11 @@ section("Static");
   check("no host_permissions (no network reachable)",
     !(mf.host_permissions || []).length, JSON.stringify(mf.host_permissions));
   check("no background service worker", !mf.background);
-  check("harness module list matches the manifest exactly",
-    JSON.stringify(mf.content_scripts[0].js) ===
-      JSON.stringify(MODULES.map(function (f) { return "src/" + path.basename(f); })),
-    JSON.stringify(mf.content_scripts[0].js));
+  check("every manifest script exists on disk",
+    MODULES.every(function (f) { return fs.existsSync(f); }));
+  check("reader.js loads after ui.js (it registers with the popover registry)",
+    mf.content_scripts[0].js.indexOf("src/reader.js") >
+      mf.content_scripts[0].js.indexOf("src/ui.js"));
   var srcFiles = fs.readdirSync(path.join(ROOT, "src"));
   check("auth/sync/config/background files are gone",
     !srcFiles.some(function (f) {
@@ -344,7 +357,7 @@ section("Console");
   // Open / close
   C.console.open();
   var wasOpen = dock.classList.contains("cit-dock-open");
-  (w.docLs.keydown || []).forEach(function (f) { f({ key: "Escape" }); });
+  (w.docLs.keydown || []).forEach(function (f) { f({ key: "Escape", stopPropagation: function () {}, preventDefault: function () {} }); });
   check("pill opens it, Esc closes it",
     wasOpen && !dock.classList.contains("cit-dock-open"));
 
@@ -421,6 +434,62 @@ section("Mode registry");
   M.applyReaderType();
   check("returning to default turns it off",
     !global.document.documentElement.classList.contains("cit-reader"));
+})();
+
+/* ---------------- Polish: the audit's confirmed defects ---------------- */
+section("Polish");
+(function () {
+  var w = buildWorld("chatgpt.com", {});
+  var C = w.C;
+
+  // showToggleButton used to be applied by the settings handler with
+  // display:none, which punched a hole in the grid AND was undone by the next
+  // rebuild. It is now honoured at build time, and dims.
+  C.settings.showToggleButton = false;
+  C.console.render();
+  var con = w.bodyEls["cit-console"];
+  var tiles = con.querySelectorAll(".cit-qt");
+  check("hidden input tile dims and keeps its column",
+    tiles.length === 3 && tiles[0].classList.contains("cit-qt-dim"));
+  C.dock.build(); // survives a rebuild
+  check("the setting survives a rebuild",
+    w.bodyEls["cit-console"].querySelectorAll(".cit-qt")[0].classList.contains("cit-qt-dim"));
+  C.settings.showToggleButton = true;
+  C.console.render();
+
+  // Presets used to snapshot 10 of 37 settings and silently drop the rest.
+  C.settings.grayLevel = 55;
+  C.settings.frSize = 22;
+  C.presets.saveCurrent("t");
+  var saved = C.presets.list().filter(function (p) { return p.name === "t"; })[0];
+  check("a preset now captures every user-facing setting",
+    saved && saved.settings.grayLevel === 55 && saved.settings.frSize === 22 &&
+      Object.keys(saved.settings).length >= Object.keys(C.defaultSettings).length - 1,
+    saved ? Object.keys(saved.settings).length + " keys" : "not saved");
+  C.presets.del("t");
+
+  // dockQuiet had no control anywhere in the UI.
+  var adv = w.makeEl("div");
+  C.ui.buildAdvancedSections(adv);
+  var labels = adv.querySelectorAll(".cit-settings-row").map(function (r) {
+    return r.children[0] ? r.children[0].textContent : "";
+  });
+  check("dockQuiet is reachable from Advanced",
+    labels.some(function (l) { return /fade the pill/i.test(l); }), labels.length + " rows");
+
+  // One Escape listener, newest-first: the reader must win over the Console.
+  C.console.open();
+  C.modes.enter("focusreader");
+  var esc = function () {
+    (w.docLs.keydown || []).forEach(function (f) {
+      f({ key: "Escape", stopPropagation: function () {}, preventDefault: function () {} });
+    });
+  };
+  esc();
+  check("Escape closes the topmost surface first (reader, not the Console)",
+    !w.bodyEls["cit-reader-pane"] && C.console.isOpen());
+  esc();
+  check("a second Escape then closes the Console", !C.console.isOpen());
 })();
 
 /* ---------------- Command palette ---------------- */
