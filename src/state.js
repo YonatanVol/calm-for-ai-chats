@@ -108,16 +108,13 @@
   CALM.IDS = {
     toggle: "cit-toggle-btn",
     zen: "cit-zen-btn",
-    settings: "cit-settings-btn",
-    panel: "cit-settings-panel",
     toast: "cit-toast",
     top: "cit-nav-top",
     bottom: "cit-nav-bottom",
     widthStyle: "cit-width-style",
     typeChip: "cit-type-chip",
     dock: "cit-dock",
-    modesPop: "cit-modes-pop",
-    bloom: "cit-bloom",
+    console: "cit-console",
     readerPane: "cit-reader-pane",
   };
 

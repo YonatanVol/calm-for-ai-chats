@@ -151,7 +151,7 @@
   function isExcludedScroller(el) {
     return !!el.closest(
       "bard-sidenav, conversations-list, #stage-slideover-sidebar," +
-        " #stage-sidebar-tiny-bar, nav[aria-label], #cit-settings-panel," +
+        " #stage-sidebar-tiny-bar, nav[aria-label], #cit-console," +
         ' aside[class*="dframe-sidebar"], [class*="dframe-nav-scroll"]'
     );
   }
@@ -274,7 +274,7 @@
     // 2. Hard-clean any residue in case an exit had stale refs.
     ["cit-zen-style", "cit-reader-style", "cit-privacy-style", "cit-night-overlay",
      "cit-pomo-widget", "cit-pomo-overlay", "cit-ruler", "cit-gray-style",
-     "cit-motion-style", "cit-timebar", "cit-modes-pop"].forEach(function (id) {
+     "cit-motion-style", "cit-timebar"].forEach(function (id) {
       var e = document.getElementById(id);
       if (e) e.remove();
     });
@@ -312,7 +312,7 @@
     rt.composerEl = null;
     rt.scrollContainer = null;
     // Calm-owned singletons that popover-close doesn't cover.
-    ["cit-settings-panel", "cit-intent-pop", "cit-intent-chip"].forEach(function (id) {
+    ["cit-reader-pane", "cit-intent-pop", "cit-intent-chip"].forEach(function (id) {
       var e = document.getElementById(id);
       if (e) e.remove();
     });

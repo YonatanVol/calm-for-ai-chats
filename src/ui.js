@@ -42,23 +42,11 @@
   }
 
   // ---- Quick nav ----
-  function updateQuickNav() {
-    var show =
-      S.showQuickNav &&
-      CALM.entitled("quickNav") &&
-      rt.composerHidden &&
-      !!rt.scrollContainer;
-    [IDS.top, IDS.bottom].forEach(function (id) {
-      var b = document.getElementById(id);
-      if (!b) return;
-      if (b.classList.contains("cit-tile")) {
-        // Bloom grid: dim instead of hide, so the 3×3 never gets holes.
-        b.classList.toggle("cit-tile-dim", !show);
-      } else {
-        b.style.display = show ? "flex" : "none";
-      }
-    });
-  }
+  // Quick-nav lived on the old bloom tiles. The Console exposes scrolling
+  // through the palette instead, so there is nothing to show or hide here;
+  // the export stays because core.js calls it on every composer change.
+  function updateQuickNav() {}
+
   function smoothScrollTo(top) {
     if (!rt.scrollContainer) return;
     try {
@@ -260,168 +248,32 @@
     return close;
   }
 
-  // ---- Place a popover near the dock (flip-aware, always on-screen) ----
-  function placeNearDock(p) {
-    var d = document.getElementById(IDS.dock);
-    if (!d || !d.getBoundingClientRect) return;
-    var r = d.getBoundingClientRect();
-    var ih = window.innerHeight || 900;
-    var iw = window.innerWidth || 1400;
-    var pw = p.offsetWidth || 260;
-    var ph = p.offsetHeight || 300;
-    // Prefer opening inward from the dock's vertical half; flip if it would
-    // leave the viewport; clamp as the last resort.
-    var top = r.top > ih / 2 ? r.top - ph - 12 : r.bottom + 12;
-    if (top < 8) top = r.bottom + 12; // flip below
-    if (top + ph > ih - 8) top = Math.max(8, r.top - ph - 12); // flip above
-    top = Math.max(8, Math.min(ih - ph - 8, top));
-    var left = r.left + r.width / 2 < iw / 2 ? r.left : r.right - pw;
-    left = Math.max(8, Math.min(iw - pw - 8, left));
-    p.style.top = top + "px";
-    p.style.left = left + "px";
-    p.style.right = "auto";
-    p.style.bottom = "auto";
-  }
-
-  // ---- Modes quick-popover ----
-  function toggleModesPop() {
-    var p = document.getElementById(IDS.modesPop);
-    if (p) {
-      p.remove();
-      return;
-    }
-    p = document.createElement("div");
-    p.id = IDS.modesPop;
-    CALM.modes.bySurface("tile").forEach(function (id) {
-      var m = CALM.modes.MODES[id];
-      if (!m) return;
-      var card = document.createElement("button");
-      card.type = "button";
-      card.className = "cit-mode-card" + (CALM.modes.isActive(id) ? " cit-on" : "");
-      card.setAttribute("data-cit-mode", id);
-      var ic = document.createElement("span");
-      ic.className = "cit-mode-ic";
-      // Static SVG markup from our own icon set — never user content.
-      if (CALM.icons && CALM.icons.mode[id]) ic.innerHTML = CALM.icons.mode[id];
-      else ic.textContent = m.icon;
-      var lb = document.createElement("span");
-      lb.textContent = m.label;
-      card.appendChild(ic);
-      card.appendChild(lb);
-      card.addEventListener("click", function (e) {
-        e.stopPropagation();
-        CALM.modes.toggle(id);
-        card.classList.toggle("cit-on", CALM.modes.isActive(id));
-      });
-      p.appendChild(card);
-    });
-    var all = document.createElement("button");
-    all.type = "button";
-    all.className = "cit-modes-all";
-    all.textContent = "All settings →";
-    all.addEventListener("click", function (e) {
-      e.stopPropagation();
-      p.remove();
-      toggleSettingsPanel();
-    });
-    p.appendChild(all);
-    document.body.appendChild(p);
-    placeNearDock(p);
-    closeOnOutsideOf(p, [IDS.dock]);
-  }
-
-  // ---- UI root: the dock owns all floating controls now ----
+  // The Console (src/console.js) is the only menu now: the modes popover and
+  // the tabbed settings panel are gone, and the section builders below render
+  // into its Advanced drawer instead of into tabs.
   function createUI() {
     if (CALM.dock) CALM.dock.build();
-    updateQuickNav();
   }
 
-  // ---- Settings panel ----
-  function toggleSettingsPanel() {
-    var p = document.getElementById(IDS.panel);
-    if (p) {
-      p.remove();
-      return;
-    }
-    p = document.createElement("div");
-    p.id = IDS.panel;
-
-    var header = document.createElement("div");
-    header.className = "cit-settings-header";
-    var title = document.createElement("div");
-    title.className = "cit-settings-title";
-    title.textContent = "Calm";
-    var close = document.createElement("button");
-    close.type = "button";
-    close.className = "cit-settings-close";
-    close.setAttribute("aria-label", "Close");
-    close.innerHTML = CALM.icons ? CALM.icons.close : "✕";
-    close.addEventListener("click", function (e) {
-      e.stopPropagation();
-      closePanel();
+  // ---- Advanced drawer: every long-tail control, grouped ----
+  function buildAdvancedSections(c) {
+    c.appendChild(divider("Modes"));
+    CALM.modes.ids().forEach(function (id) {
+      if (CALM.modes.MODES[id].surface === "tile") return; // already up front
+      c.appendChild(modeRow(id));
     });
-    header.appendChild(title);
-    header.appendChild(close);
-    p.appendChild(header);
-
-    var tabbar = document.createElement("div");
-    tabbar.className = "cit-tabbar";
-    var content = document.createElement("div");
-    content.className = "cit-tab-content";
-    var TABS = [
-      { id: "modes", label: "Modes", build: buildModesTab },
-      { id: "reading", label: "Reading", build: buildReadingTab },
-      { id: "behavior", label: "Behavior", build: buildBehaviorTab },
-      { id: "presets", label: "Presets", build: buildPresetsTab },
-      { id: "about", label: "About", build: buildAboutTab },
-    ];
-    function showTab(id) {
-      content.innerHTML = "";
-      var btns = tabbar.querySelectorAll(".cit-tab");
-      for (var i = 0; i < btns.length; i++) {
-        btns[i].classList.toggle("cit-tab-on", btns[i].getAttribute("data-tab") === id);
-      }
-      for (var j = 0; j < TABS.length; j++) if (TABS[j].id === id) TABS[j].build(content);
-    }
-    TABS.forEach(function (t) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "cit-tab";
-      b.textContent = t.label;
-      b.setAttribute("data-tab", t.id);
-      b.addEventListener("click", function (e) {
-        e.stopPropagation();
-        showTab(t.id);
-      });
-      tabbar.appendChild(b);
-    });
-    p.appendChild(tabbar);
-    p.appendChild(content);
-    document.body.appendChild(p);
-    showTab("modes");
-    // Draggable by its header; springs from the dock when no saved position.
-    var drag = makeDraggable(p, "cit-panel-pos", { handle: header });
-    if (!drag.restored) placeNearDock(p);
-
-    // Single close path so the outside-click listener never leaks.
-    function closePanel() {
-      p.remove();
-      document.removeEventListener("click", closeOnOutside, true);
-      unregisterPopover(closePanel);
-    }
-    function closeOnOutside(e) {
-      if (!p.contains(e.target) && e.target.id !== IDS.settings) closePanel();
-    }
-    registerPopover(closePanel);
-    setTimeout(function () {
-      document.addEventListener("click", closeOnOutside, true);
-    }, 0);
+    buildModesTab(c);
+    c.appendChild(divider("Reading"));
+    buildReadingTab(c);
+    c.appendChild(divider("Behavior"));
+    buildBehaviorTab(c);
+    c.appendChild(divider("Presets"));
+    buildPresetsTab(c);
+    c.appendChild(divider("About"));
+    buildAboutTab(c);
   }
 
   function buildModesTab(c) {
-    CALM.modes.ids().forEach(function (id) {
-      c.appendChild(modeRow(id));
-    });
     c.appendChild(divider("Mode settings"));
     c.appendChild(sliderRow("Auto-scroll speed", "autoScrollSpeed", 1, 10, 1));
     c.appendChild(sliderRow("Pause minutes", "pauseMinutes", 5, 60, 5));
@@ -529,14 +381,14 @@
     reset.textContent = "↺ Reset positions";
     reset.addEventListener("click", function (e) {
       e.stopPropagation();
-      ["cit-dock-pos", "cit-intent-pos", "cit-pomo-pos", "cit-panel-pos"].forEach(
+      ["cit-dock-pos", "cit-intent-pos", "cit-pomo-pos"].forEach(
         function (k) {
           try {
             localStorage.removeItem(k);
           } catch (_) {}
         }
       );
-      ["cit-dock", "cit-intent-chip", "cit-pomo-widget", IDS.panel].forEach(function (id) {
+      ["cit-dock", "cit-intent-chip", "cit-pomo-widget"].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) {
           el.style.left = "";
@@ -694,20 +546,10 @@
     var list = document.querySelectorAll("[data-cit-mode]");
     for (var i = 0; i < list.length; i++) {
       var id = list[i].getAttribute("data-cit-mode");
-      list[i].classList.toggle("cit-on", CALM.modes.isActive(id));
+      var on = CALM.modes.isActive(id);
+      list[i].classList.toggle("cit-on", on);
+      list[i].classList.toggle("cit-active", on);
     }
-    // Keep the floating zen button in sync too (single source of truth).
-    var zb = document.getElementById(IDS.zen);
-    if (zb) zb.classList.toggle("cit-active", CALM.modes.isActive("zen"));
-    // Bloom tiles light up gold while their mode is running.
-    [["cit-tile-pomodoro", "pomodoro"], ["cit-tile-pause", "pause"]].forEach(
-      function (pair) {
-        var el = document.getElementById(pair[0]);
-        if (el) el.classList.toggle("cit-active", CALM.modes.isActive(pair[1]));
-      }
-    );
-    var tb = document.getElementById(IDS.toggle);
-    if (tb) tb.classList.toggle("cit-active", !!rt.composerHidden);
   }
 
   function buildPresets(host) {
@@ -774,10 +616,8 @@
     unregisterPopover: unregisterPopover,
     closeAllPopovers: closeAllPopovers,
     createUI: createUI,
-    toggleSettingsPanel: toggleSettingsPanel,
-    toggleModesPop: toggleModesPop,
+    buildAdvancedSections: buildAdvancedSections,
     makeDraggable: makeDraggable,
-    placeNearDock: placeNearDock,
     toggleRow: toggleRow,
     sliderRow: sliderRow,
     selectRow: selectRow,
