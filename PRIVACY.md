@@ -2,8 +2,9 @@
 
 _Last updated: July 2026_
 
-Calm is local-first. **Your conversations are never stored or transmitted.**
-Signing in is optional; until you do, nothing leaves your browser.
+Calm has **no permissions, no account, and makes no network requests**. There is
+no server to send anything to. Everything the extension does happens inside your
+own browser tab.
 
 ## What Calm never does
 - It never stores or transmits the **content of your conversations**. The one
@@ -13,33 +14,31 @@ Signing in is optional; until you do, nothing leaves your browser.
   discarded the moment the pane closes. It is never persisted, logged, or sent
   anywhere.
 - It contains **no analytics, no trackers, no ads, and no third-party code**.
-- It never sells or shares data with anyone.
+- It makes **no network requests of any kind** — the extension declares no host
+  permissions, so it is technically incapable of contacting a server.
+- It never sells or shares data with anyone, because it never collects any.
 
 ## What stays on your device (always)
-- **UI preferences** (modes, sliders, dock position) — `localStorage`.
-- **Unsent draft text** while the input is hidden — `sessionStorage` (cleared when
-  the tab closes).
-- **Focus-panel data**: your intention and micro-tasks are per-tab
-  (`sessionStorage`); **parked thoughts persist on your device** (`localStorage`)
-  until you delete them.
+- **UI preferences** (modes, sliders, menu position) — `localStorage`.
+- **Unsent draft text** while the input is hidden — `sessionStorage` (cleared
+  when the tab closes).
+- **Focus-panel data**: your intention and first steps are per-tab
+  (`sessionStorage`); **parked thoughts persist on your device**
+  (`localStorage`) until you delete them.
+- **Focus-session log**: the duration of completed Pomodoro blocks, kept
+  locally and capped at the last 500 entries. Never conversation content, never
+  transmitted.
 
-## Optional account & sync (only if you sign in)
-Calm offers Google sign-in (via Chrome's `identity` permission) backed by Supabase.
-If — and only if — you sign in:
-- Your **email**, **settings**, **custom presets**, and **focus-session stats**
-  (timestamps/durations — never conversation content) are stored in your own row
-  of our Supabase database, protected by row-level security (only your
-  authenticated account can read or write your row).
-- Your session token is kept in `chrome.storage.local` on your device.
-- Signing out stops all network activity; the extension remains fully functional
-  offline and signed-out.
+Clearing your browser data for a site removes all of it. There is no copy
+anywhere else.
 
 ## Permissions, plainly
-- `identity` — Google sign-in popup (only when you click "Sign in").
-- `storage` — keeps your session on your device.
-- Host access to our Supabase URL — sync traffic for signed-in users only.
-- Content-script access to `chatgpt.com`, `gemini.google.com`, `claude.ai` —
-  to adjust the on-screen layout. No other sites.
+Calm requests **no Chrome permissions at all**. Its manifest declares an empty
+permission list and no host permissions.
+
+The only access it has is the content script itself, which runs on
+`chatgpt.com`, `gemini.google.com` and `claude.ai` to adjust the on-screen
+layout. No other sites.
 
 ## Contact
 Questions or deletion requests: open an issue at

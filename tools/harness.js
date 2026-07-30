@@ -12,9 +12,8 @@ var path = require("path");
 var ROOT = path.join(__dirname, "..");
 
 var MODULES = [
-  "config", "icons", "adapters", "state", "modes", "presets", "audio",
+  "icons", "adapters", "state", "modes", "presets", "audio",
   "pomodoro", "reader", "ui", "dock", "wellness", "intent", "core", "typeahead",
-  "auth", "sync",
 ].map(function (n) { return path.join(ROOT, "src", n + ".js"); });
 
 var passed = 0, failed = 0;
@@ -189,9 +188,26 @@ section("Static");
     warm ? warm.slice(0, 3).join(",") : "");
   var mf = JSON.parse(fs.readFileSync(path.join(ROOT, "manifest.json"), "utf8"));
   check("manifest v3 parses", mf.manifest_version === 3);
-  check("manifest permissions unchanged (identity+storage only)",
-    JSON.stringify((mf.permissions || []).slice().sort()) === JSON.stringify(["identity", "storage"]),
-    JSON.stringify(mf.permissions));
+  check("manifest declares ZERO permissions",
+    !(mf.permissions || []).length, JSON.stringify(mf.permissions));
+  check("no host_permissions (no network reachable)",
+    !(mf.host_permissions || []).length, JSON.stringify(mf.host_permissions));
+  check("no background service worker", !mf.background);
+  check("harness module list matches the manifest exactly",
+    JSON.stringify(mf.content_scripts[0].js) ===
+      JSON.stringify(MODULES.map(function (f) { return "src/" + path.basename(f); })),
+    JSON.stringify(mf.content_scripts[0].js));
+  var srcFiles = fs.readdirSync(path.join(ROOT, "src"));
+  check("auth/sync/config/background files are gone",
+    !srcFiles.some(function (f) {
+      return ["auth.js", "sync.js", "config.js", "background.js"].indexOf(f) >= 0;
+    }), srcFiles.join(","));
+  var leaks = [];
+  srcFiles.forEach(function (f) {
+    var t = fs.readFileSync(path.join(ROOT, "src", f), "utf8");
+    if (/CALM\.config|CALM\.auth\b|CALM\.sync\b|supabase/i.test(t)) leaks.push(f);
+  });
+  check("no source file references auth/sync/Supabase", !leaks.length, leaks.join(","));
   var offenders = [];
   (function walk(dir) {
     fs.readdirSync(dir).forEach(function (name) {
@@ -225,7 +241,7 @@ section("Lifecycle");
 (function () {
   var w = buildWorld("chatgpt.com", { lenient: true });
   var C = w.C, P = C.pomodoro, logged = [];
-  C.sync.logFocus = function (kind, min) { logged.push({ kind: kind, min: min }); };
+  C.stats.log = function (kind, min) { logged.push({ kind: kind, min: min }); };
   if (C.audio) C.audio.playChime = function () {};
 
   C.modes.enter("pomodoro");
@@ -392,6 +408,19 @@ section("Intention card");
   open();
   w.nav("https://chatgpt.com/c/next");
   check("registry closes intent card on SPA nav", !w.bodyEls["cit-intent-pop"]);
+})();
+
+/* ---------------- Intention: never self-opens ---------------- */
+section("No auto-open");
+(function () {
+  var w = buildWorld("chatgpt.com", {});
+  // Modules have fully evaluated (incl. every timer the stub fires inline).
+  check("intention card does NOT open by itself on load",
+    !w.bodyEls["cit-intent-pop"]);
+  check("it still opens on demand",
+    (w.C.intent.toggle(false), !!w.bodyEls["cit-intent-pop"]));
+  var handlers = (w.docLs.keydown || []).length;
+  check("Ctrl/Cmd+Shift+K parking shortcut still bound", handlers >= 1);
 })();
 
 /* ---------------- Focus Reader ---------------- */
