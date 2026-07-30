@@ -2,13 +2,14 @@
  * Copyright © 2026 Yonatan Volsky. All rights reserved.
  * Proprietary and source-available; see LICENSE. Not open-source.
  *
- * The Bloom engine. One Maison pill anchored to a CORNER (not an absolute
- * left/top), so it stays glued through window resizes and its 3×3 control
- * tile always blooms INWARD — opening off-screen is geometrically impossible.
- * Motion is compositor-only (opacity/transform with a spring curve); tiles
- * stagger radially outward from the pill's corner like a flower opening.
- * Position persists per device as {corner, dx, dy} (v2; v1 {left,top}
- * migrates automatically). Quiet mode fades the pill while you type.
+ * The pill and its anchoring. One pill anchored to a CORNER (not an absolute
+ * left/top), so it stays glued through window resizes and the Console always
+ * opens INWARD — off-screen is geometrically impossible. Position persists
+ * per device as {corner, dx, dy} (v2; v1 {left,top} migrates automatically).
+ * Quiet mode fades the pill while you type.
+ *
+ * The pill's contents are the Console (src/console.js); this module owns only
+ * where it sits and how it is dragged.
  */
 (function () {
   "use strict";
@@ -19,7 +20,6 @@
   var IDS = CALM.IDS;
 
   var POS_KEY = "cit-dock-pos";
-  var collapseTimer = null;
   var quietTimer = null;
 
   // ---------- Corner position model ----------
@@ -73,24 +73,6 @@
     ["br", "bl", "tr", "tl"].forEach(function (c) {
       d.classList.toggle("cit-corner-" + c, pos.corner === c);
     });
-    staggerFor(pos.corner);
-  }
-
-  // ---------- Radial bloom stagger ----------
-  // Delay grows with Chebyshev distance from the grid cell nearest the pill,
-  // so tiles open outward from the pill's corner — the bloom.
-  function staggerFor(corner) {
-    var bloom = document.getElementById(IDS.bloom);
-    if (!bloom) return;
-    var originRow = corner.indexOf("t") >= 0 ? 0 : 2;
-    var originCol = corner.indexOf("l") >= 0 ? 0 : 2;
-    var tiles = bloom.querySelectorAll(".cit-tile");
-    for (var i = 0; i < tiles.length && i < 9; i++) {
-      var row = Math.floor(i / 3);
-      var col = i % 3;
-      var dist = Math.max(Math.abs(row - originRow), Math.abs(col - originCol));
-      tiles[i].style.transitionDelay = dist * 0.038 + "s";
-    }
   }
 
   // ---------- Status ----------
@@ -111,66 +93,22 @@
   function refreshStatus() {
     var d = document.getElementById(IDS.dock);
     if (!d) return;
+    var elx = d.querySelector(".cit-dock-status");
+    if (!elx) return;
     var t = statusText();
-    var el = d.querySelector(".cit-dock-status");
-    if (el) {
-      el.textContent = t;
-      el.style.display = t ? "" : "none";
-    }
-    // The tray's engraved lid: the maison name until there's something to say.
-    var head = d.querySelector(".cit-bloom-head");
-    if (head) {
-      head.textContent = t || "CALM";
-      head.classList.toggle("cit-head-live", !!t);
-    }
+    elx.textContent = t;
+    elx.style.display = t ? "" : "none";
   }
 
-  // ---------- Open / collapse ----------
-  function bump() {
-    clearTimeout(collapseTimer);
-    if (S.dockAutoCollapse) collapseTimer = setTimeout(collapse, 6000);
-  }
+  // ---------- Open / collapse (the Console owns its own state) ----------
   function expand() {
-    var d = document.getElementById(IDS.dock);
-    if (d) {
-      d.classList.add("cit-dock-open");
-      bump();
-    }
+    if (CALM.console) CALM.console.open();
   }
   function collapse() {
-    var d = document.getElementById(IDS.dock);
-    if (d) d.classList.remove("cit-dock-open");
-    clearTimeout(collapseTimer);
+    if (CALM.console) CALM.console.close();
   }
   function toggleOpen() {
-    var d = document.getElementById(IDS.dock);
-    if (!d) return;
-    if (d.classList.contains("cit-dock-open")) collapse();
-    else expand();
-  }
-
-  // ---------- Tiles ----------
-  function tile(icon, label, onClick, id, quiet) {
-    var b = document.createElement("button");
-    b.type = "button";
-    b.className = "cit-tile" + (quiet ? " cit-tile-quiet" : "");
-    if (id) b.id = id;
-    b.title = label;
-    b.setAttribute("aria-label", label);
-    var ic = document.createElement("span");
-    ic.className = "cit-tile-ic";
-    ic.innerHTML = icon; // static markup from our icon set only
-    var lb = document.createElement("span");
-    lb.className = "cit-tile-label";
-    lb.textContent = label;
-    b.appendChild(ic);
-    b.appendChild(lb);
-    b.addEventListener("click", function (e) {
-      e.stopPropagation();
-      onClick(e);
-      bump();
-    });
-    return b;
+    if (CALM.console) CALM.console.toggle();
   }
 
   function build() {
@@ -195,49 +133,7 @@
     });
     d.appendChild(pill);
 
-    var bloom = document.createElement("div");
-    bloom.id = IDS.bloom;
-    bloom.setAttribute("role", "menu");
-
-    // Engraved lid: the maison name, replaced by live status when there is any.
-    var head = document.createElement("div");
-    head.className = "cit-bloom-head";
-    bloom.appendChild(head);
-
-    // Row 1 — what you came for. Row 2 — the session. Row 3 — the plumbing.
-    bloom.appendChild(
-      tile('<span class="cit-icon">' + IC.input + "</span>", "Input", function () {
-        CALM.core.manualToggleComposer();
-      }, IDS.toggle)
-    );
-    bloom.appendChild(tile(IC.zen, "Zen", function () {
-      CALM.modes.toggleZen();
-    }, IDS.zen));
-    bloom.appendChild(tile(IC.focus, "Focus", function () {
-      if (CALM.intent) CALM.intent.toggle(false);
-    }));
-
-    bloom.appendChild(tile(IC.pomodoro, "Timer", function () {
-      CALM.modes.toggle("pomodoro");
-      refreshStatus();
-    }, "cit-tile-pomodoro"));
-    bloom.appendChild(tile(IC.pause, "Pause", function () {
-      CALM.modes.toggle("pause");
-    }, "cit-tile-pause"));
-    bloom.appendChild(tile(IC.modes, "Modes", function () {
-      CALM.ui.toggleModesPop();
-    }));
-
-    bloom.appendChild(tile(IC.top, "Top", function () {
-      CALM.ui.smoothScrollTo(0);
-    }, IDS.top, true));
-    bloom.appendChild(tile(IC.bottom, "End", function () {
-      CALM.ui.smoothScrollTo(rt.scrollContainer ? rt.scrollContainer.scrollHeight : 0);
-    }, IDS.bottom, true));
-    bloom.appendChild(tile(IC.settings, "Settings", function () {
-      CALM.ui.toggleSettingsPanel();
-    }, IDS.settings, true));
-    d.appendChild(bloom);
+    CALM.console.create(d);
 
     document.body.appendChild(d);
     applyPos(d, loadPos());
@@ -253,8 +149,6 @@
     });
 
     refreshStatus();
-    if (CALM.ui.refreshModeButtons) CALM.ui.refreshModeButtons();
-    if (CALM.ui.updateQuickNav) CALM.ui.updateQuickNav();
   }
 
   // ---------- Quiet pill (fades while you type; wakes on approach) ----------

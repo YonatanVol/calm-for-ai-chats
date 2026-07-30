@@ -65,11 +65,19 @@ html[class*="light"], html[data-theme="light"] {
   --cit-tile-label: rgba(28, 29, 32, 0.52);
 }
 
+/* Every range input Calm owns follows the graphite palette — without this the
+   browser paints its default blue, which is jarring in a monochrome menu. */
+#cit-console input[type="range"],
+#cit-reader-pane input[type="range"],
+.cit-settings-row input[type="range"] {
+  accent-color: var(--cit-gold);
+}
+
 /* ----------------------------------------
-   The Bloom engine — a corner-anchored pill
-   whose 3×3 control tile always opens INWARD.
-   Motion is compositor-only (opacity/transform,
-   spring curve); no layout animation anywhere.
+   The Console — Calm's one menu.
+   A corner-anchored pill that opens a single
+   panel; Advanced slides in as a drawer of the
+   same panel, never a second window.
 ---------------------------------------- */
 #cit-dock {
   position: fixed;
@@ -79,186 +87,262 @@ html[class*="light"], html[data-theme="light"] {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   user-select: none;
   -webkit-user-select: none;
+  transition: opacity 0.3s var(--cit-ease);
 }
-#cit-dock.cit-dragging {
-  transition: none !important;
-}
-#cit-dock.cit-dragging .cit-dock-pill {
-  cursor: grabbing;
-}
+#cit-dock.cit-dragging { transition: none !important; }
+#cit-dock.cit-dragging .cit-dock-pill { cursor: grabbing; }
 #cit-dock.cit-quiet {
   opacity: 0.35;
   transition: opacity 0.45s var(--cit-ease);
 }
-#cit-dock {
-  transition: opacity 0.3s var(--cit-ease);
-}
 
-/* The bloom tile: absolutely positioned INSIDE the dock, on the inward side
-   of whichever corner the dock occupies — off-screen is impossible. */
-#cit-bloom {
+#cit-console {
   position: absolute;
-  width: 244px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  padding: 11px;
-  border-radius: 21px;
-  /* A lacquered tray: warm light caught at the top lip, gold breathing up
-     from the base, deep espresso between. */
-  background:
-    radial-gradient(120% 72% at 50% -8%, rgba(255, 255, 255, 0.05), transparent 62%),
-    linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
+  width: 268px;
+  padding: 10px;
+  border-radius: 18px;
+  background: linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
   box-shadow:
     inset 0 1px 0 var(--cit-tile-lip),
     inset 0 0 0 1px var(--cit-hairline-gold),
-    0 28px 64px rgba(0, 0, 0, 0.6),
-    0 3px 10px rgba(0, 0, 0, 0.36);
+    0 26px 60px rgba(0, 0, 0, 0.55);
   opacity: 0;
-  transform: scale(0.96);
+  transform: scale(0.97);
   pointer-events: none;
-  transition: opacity 0.26s var(--cit-spring), transform 0.4s var(--cit-spring);
+  transition: opacity 0.24s var(--cit-spring), transform 0.36s var(--cit-spring);
 }
-#cit-dock.cit-corner-br #cit-bloom { right: 0; bottom: calc(100% + 11px); transform-origin: bottom right; }
-#cit-dock.cit-corner-bl #cit-bloom { left: 0; bottom: calc(100% + 11px); transform-origin: bottom left; }
-#cit-dock.cit-corner-tr #cit-bloom { right: 0; top: calc(100% + 11px); transform-origin: top right; }
-#cit-dock.cit-corner-tl #cit-bloom { left: 0; top: calc(100% + 11px); transform-origin: top left; }
-#cit-dock.cit-dock-open #cit-bloom {
+#cit-dock.cit-corner-br #cit-console { right: 0; bottom: calc(100% + 11px); transform-origin: bottom right; }
+#cit-dock.cit-corner-bl #cit-console { left: 0; bottom: calc(100% + 11px); transform-origin: bottom left; }
+#cit-dock.cit-corner-tr #cit-console { right: 0; top: calc(100% + 11px); transform-origin: top right; }
+#cit-dock.cit-corner-tl #cit-console { left: 0; top: calc(100% + 11px); transform-origin: top left; }
+#cit-dock.cit-dock-open #cit-console {
   opacity: 1;
   transform: scale(1);
   pointer-events: auto;
 }
 
-/* The engraved lid — maison name, or live status when there is any. */
-.cit-bloom-head {
-  grid-column: 1 / -1;
-  padding: 2px 0 9px;
-  margin-bottom: 1px;
-  border-bottom: 1px solid var(--cit-hairline);
-  text-align: center;
+/* Live tile — the widest thing in the menu, so it reads first. */
+.cit-live {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.cit-live-main {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 13px;
+  background: linear-gradient(163deg, var(--cit-tile-a), var(--cit-tile-b));
+  box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-tile-edge);
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+.cit-live-main:hover { box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-gold); }
+.cit-live-on .cit-live-main {
+  background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
+}
+.cit-live-time {
   font-family: var(--cit-serif);
-  font-size: 10px;
-  letter-spacing: 0.42em;
-  text-indent: 0.42em; /* re-centre against the trailing letter-space */
-  text-transform: uppercase;
-  color: var(--cit-ink-faint);
+  font-size: 25px;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: var(--cit-ink);
+  font-variant-numeric: tabular-nums;
+}
+.cit-live-on .cit-live-time,
+.cit-live-on .cit-live-sub { color: var(--cit-on-gold); }
+.cit-live-idle {
+  font-family: var(--cit-serif);
+  font-size: 14px;
+  color: var(--cit-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.cit-bloom-head.cit-head-live {
-  letter-spacing: 0.12em;
-  text-indent: 0.12em;
-  color: var(--cit-gold-ink);
-  text-transform: none;
-  font-size: 11.5px;
+.cit-live-sub {
+  margin-top: 3px;
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--cit-tile-label);
 }
+.cit-live-side { display: flex; flex-direction: column; gap: 6px; }
+.cit-live-btn {
+  width: 40px;
+  flex: 1;
+  border: none;
+  border-radius: 11px;
+  background: linear-gradient(163deg, var(--cit-tile-a), var(--cit-tile-b));
+  box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-tile-edge);
+  color: var(--cit-ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: box-shadow 0.18s ease;
+}
+.cit-live-btn:hover { box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-gold); }
+.cit-live-btn.cit-active {
+  background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
+  color: var(--cit-on-gold);
+}
+.cit-live-btn .cit-svg { width: 16px; height: 16px; }
 
-.cit-tile {
-  position: relative;
-  overflow: hidden;
+/* Quick tiles — the three things reached most often. */
+.cit-quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cit-qt {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 64px;
+  height: 58px;
   border: none;
-  border-radius: 14px;
-  /* A key on a panel: lit lip, soft body, seated in its own hairline. */
+  border-radius: 12px;
   background: linear-gradient(163deg, var(--cit-tile-a), var(--cit-tile-b));
   box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-tile-edge);
   color: var(--cit-ink);
   cursor: pointer;
   padding: 0;
-  opacity: 0;
-  transform: translateY(7px) scale(0.94);
-  transition: opacity 0.26s var(--cit-spring), transform 0.36s var(--cit-spring),
-    box-shadow 0.22s ease;
+  transition: box-shadow 0.18s ease, transform 0.16s var(--cit-spring);
 }
-#cit-dock.cit-dock-open .cit-tile {
-  opacity: 1;
-  transform: none;
-}
-/* Gold rises from the base of the key on hover — a glow, not a flat wash. */
-.cit-tile::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(82% 72% at 50% 0%, rgba(255, 255, 255, 0.06), transparent 74%);
-  opacity: 0;
-  transition: opacity 0.26s var(--cit-ease);
-  pointer-events: none;
-}
-.cit-tile:hover::before {
-  opacity: 1;
-}
-.cit-tile:hover {
-  box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-gold);
-}
-.cit-tile:active {
-  transform: scale(0.965);
-}
-.cit-tile:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 1.5px var(--cit-gold);
-}
-.cit-tile.cit-active {
+.cit-qt:hover { box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-gold); }
+.cit-qt:active { transform: scale(0.97); }
+.cit-qt.cit-active {
   background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
   color: var(--cit-on-gold);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 0 0 1px var(--cit-hairline-gold), 0 4px 14px rgba(0, 0, 0, 0.18);
 }
-.cit-tile.cit-active::before {
-  opacity: 0;
-}
-.cit-tile.cit-tile-dim {
-  opacity: 0.3 !important;
-  pointer-events: none;
-}
-.cit-tile-ic {
-  position: relative;
-  display: inline-flex;
-  opacity: 0.92;
-  transition: transform 0.34s var(--cit-spring), color 0.2s ease, opacity 0.2s ease;
-}
-.cit-tile-ic .cit-svg {
-  width: 19px;
-  height: 19px;
-}
-.cit-tile:hover .cit-tile-ic {
-  transform: translateY(-1.5px);
-  color: var(--cit-gold-ink);
-  opacity: 1;
-}
-.cit-tile-label {
-  position: relative;
+.cit-qt .cit-svg { width: 18px; height: 18px; }
+.cit-qt-label {
   font-size: 8px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.15em;
   text-indent: 0.15em;
   color: var(--cit-tile-label);
-  transition: color 0.2s ease;
 }
-.cit-tile:hover .cit-tile-label {
+.cit-qt.cit-active .cit-qt-label { color: var(--cit-on-gold); }
+
+/* Inline sliders — the two most-adjusted values, no drawer needed. */
+.cit-con-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px 3px;
+}
+.cit-con-slabel {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--cit-tile-label);
+  width: 34px;
+  flex-shrink: 0;
+}
+.cit-con-slider input[type="range"] { flex: 1; }
+.cit-con-sval {
+  font-family: var(--cit-serif);
+  font-size: 11px;
   color: var(--cit-ink-dim);
+  width: 30px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
-/* Third row is plumbing — present, never competing. */
-.cit-tile-quiet .cit-tile-ic {
-  opacity: 0.66;
+
+/* Mode chips — small, from the registry. */
+.cit-modes-row { display: flex; flex-wrap: wrap; gap: 5px; padding: 4px 0 2px; }
+.cit-chipm {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border: none;
+  border-radius: 9px;
+  background: var(--cit-fill-soft);
+  box-shadow: inset 0 0 0 1px var(--cit-tile-edge);
+  color: var(--cit-ink-dim);
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
-.cit-tile-quiet .cit-tile-ic .cit-svg {
-  width: 16px;
-  height: 16px;
-}
-.cit-tile.cit-active .cit-tile-ic,
-.cit-tile.cit-active .cit-tile-label,
-.cit-tile.cit-active:hover .cit-tile-ic,
-.cit-tile.cit-active:hover .cit-tile-label {
+.cit-chipm:hover { color: var(--cit-ink); box-shadow: inset 0 0 0 1px var(--cit-hairline-strong); }
+.cit-chipm.cit-active {
+  background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
   color: var(--cit-on-gold);
-  opacity: 1;
 }
+.cit-chipm-ic { display: inline-flex; }
+.cit-chipm .cit-svg { width: 13px; height: 13px; }
+
+/* Footer + the Advanced drawer */
+.cit-con-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--cit-hairline);
+}
+.cit-con-hint {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--cit-ink-faint);
+}
+.cit-con-adv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: var(--cit-ink-dim);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  padding: 4px 2px;
+  transition: color 0.18s ease;
+}
+.cit-con-adv-btn:hover { color: var(--cit-ink); }
+.cit-con-adv-btn .cit-svg { width: 12px; height: 12px; transform: rotate(180deg); }
+.cit-con-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--cit-hairline);
+}
+.cit-con-back {
+  border: none;
+  background: transparent;
+  color: var(--cit-ink-dim);
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+}
+.cit-con-back:hover { color: var(--cit-ink); }
+.cit-con-back .cit-svg { width: 14px; height: 14px; }
+.cit-con-title {
+  font-family: var(--cit-serif);
+  font-size: 10px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--cit-ink-faint);
+}
+.cit-con-scroll {
+  max-height: 58vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+
+@keyframes cit-spring-in {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 
 .cit-dock-pill {
   display: flex;
@@ -310,76 +394,7 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   transform: rotate(180deg);
 }
 
-/* ----------------------------------------
-   Modes quick-popover (2-col grid of cards)
----------------------------------------- */
-#cit-modes-pop {
-  position: fixed;
-  bottom: 66px;
-  right: 20px;
-  z-index: 2147483002;
-  width: 252px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  background: var(--cit-surface);
-  border: 1px solid var(--cit-hairline-strong);
-  border-radius: 14px;
-  padding: 10px;
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  animation: cit-spring-in 0.22s var(--cit-ease);
-  transform-origin: bottom right;
-}
-.cit-mode-card {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 9px;
-  border-radius: 9px;
-  border: 1px solid var(--cit-hairline);
-  background: var(--cit-fill-soft);
-  color: var(--cit-ink);
-  font-size: 12px;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.cit-mode-card:hover {
-  background: var(--cit-hairline);
-  transform: translateY(-1px);
-}
-.cit-mode-card.cit-on {
-  background: var(--cit-gold-soft);
-  border-color: var(--cit-gold);
-}
-.cit-mode-ic {
-  font-size: 14px;
-  flex-shrink: 0;
-}
-.cit-modes-all {
-  grid-column: 1 / -1;
-  margin-top: 2px;
-  padding: 7px;
-  border: none;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--cit-ink-dim);
-  font-size: 12px;
-  cursor: pointer;
-}
-.cit-modes-all:hover {
-  background: var(--cit-fill-soft);
-  color: var(--cit-ink);
-}
 
-@keyframes cit-spring-in {
-  0% { opacity: 0; transform: translateY(10px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
 
 /* Drag affordances */
 .cit-dragging {
@@ -398,11 +413,9 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
 
 /* Reduced motion: kill Calm's own animations too */
 @media (prefers-reduced-motion: reduce) {
-  #cit-dock .cit-tile,
-  #cit-bloom,
-  #cit-modes-pop,
-  #cit-settings-panel,
-  #cit-intent-pop {
+  #cit-dock .cit-qt,
+  #cit-console,
+      #cit-intent-pop {
     transition: none !important;
     animation: none !important;
   }
@@ -438,59 +451,6 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
 /* ----------------------------------------
    Settings panel
 ---------------------------------------- */
-#cit-settings-panel {
-  position: fixed;
-  bottom: 58px;
-  right: 14px;
-  z-index: 2147483001;
-  width: 290px;
-  max-height: 80vh;
-  overflow-y: auto;
-  background: var(--cit-surface);
-  border: 1px solid var(--cit-hairline-strong);
-  border-radius: 14px;
-  padding: 12px 16px 14px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  animation: cit-spring-in 0.22s var(--cit-ease);
-  transform-origin: bottom right;
-}
-@keyframes cit-panel-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-.cit-settings-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
-.cit-settings-title {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--cit-ink-dim);
-}
-.cit-settings-close {
-  width: 22px;
-  height: 22px;
-  border: none;
-  background: transparent;
-  color: var(--cit-ink-dim);
-  font-size: 13px;
-  cursor: pointer;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.cit-settings-close:hover {
-  background: var(--cit-hairline);
-  color: var(--cit-ink);
-}
 .cit-settings-row {
   display: flex;
   align-items: center;
@@ -696,9 +656,7 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
 /* Presentation mode hides ALL Calm UI for clean capture/sharing —
    except the toast, which carries the "press Esc to exit" hint. */
 html.cit-presentation #cit-dock,
-html.cit-presentation #cit-modes-pop,
-html.cit-presentation #cit-settings-panel,
-html.cit-presentation #cit-type-chip,
+html.cit-presentation html.cit-presentation html.cit-presentation #cit-type-chip,
 html.cit-presentation #cit-chip-stack,
 html.cit-presentation #cit-intent-chip,
 html.cit-presentation #cit-intent-pop,
@@ -1259,36 +1217,6 @@ html.cit-presentation #cit-night-overlay {
 /* ----------------------------------------
    Tabbed settings
 ---------------------------------------- */
-.cit-tabbar {
-  display: flex;
-  gap: 2px;
-  margin: 4px 0 10px;
-  padding: 3px;
-  background: var(--cit-fill-soft);
-  border-radius: 10px;
-}
-.cit-tab {
-  flex: 1;
-  border: none;
-  background: transparent;
-  color: var(--cit-ink-dim);
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 6px 4px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.cit-tab:hover {
-  color: var(--cit-ink);
-}
-.cit-tab.cit-tab-on {
-  background: var(--cit-gold);
-  color: var(--cit-ink);
-}
-.cit-tab-content {
-  min-height: 60px;
-}
 .cit-about {
   padding: 6px 2px;
   color: var(--cit-ink);
@@ -1361,8 +1289,6 @@ html.cit-presentation #cit-night-overlay {
 /* SVG icon sizing */
 .cit-svg { width: 16px; height: 16px; display: block; }
 .cit-svg-mark { width: 20px; height: 20px; }
-.cit-mode-ic { display: inline-flex; }
-.cit-mode-ic .cit-svg { width: 15px; height: 15px; }
 .cit-row-ic { display: inline-flex; margin-right: 9px; color: var(--cit-gold); vertical-align: middle; }
 .cit-row-ic .cit-svg { width: 15px; height: 15px; }
 .cit-row-label { display: inline-flex; align-items: center; }
@@ -1371,8 +1297,6 @@ html.cit-presentation #cit-night-overlay {
 
 /* Gold hairline + deep shadow on every raised surface */
 .cit-dock-pill,
-#cit-modes-pop,
-#cit-settings-panel,
 #cit-intent-chip,
 #cit-pomo-widget,
 .cit-pomo-card,
@@ -1397,19 +1321,6 @@ html.cit-presentation #cit-night-overlay {
 .cit-pomo-prog { stroke: var(--cit-gold) !important; }
 
 /* Uppercase spaced tabs with a gold active underline */
-.cit-tabbar { background: transparent; border-bottom: 1px solid var(--cit-hairline); border-radius: 0; padding: 0; gap: 0; }
-.cit-tab {
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 9.5px;
-  padding: 9px 2px 8px;
-  border-radius: 0;
-}
-.cit-tab.cit-tab-on {
-  background: transparent;
-  color: var(--cit-gold);
-  box-shadow: inset 0 -1.5px 0 0 var(--cit-gold);
-}
 
 /* Panel breathing room + gold controls */
 #cit-settings-panel { padding: 16px 20px 18px; border-radius: 16px; }

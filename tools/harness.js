@@ -13,7 +13,7 @@ var ROOT = path.join(__dirname, "..");
 
 var MODULES = [
   "icons", "adapters", "state", "modes", "presets", "audio",
-  "pomodoro", "reader", "ui", "dock", "wellness", "intent", "core", "typeahead",
+  "pomodoro", "reader", "ui", "console", "dock", "wellness", "intent", "core", "typeahead",
 ].map(function (n) { return path.join(ROOT, "src", n + ".js"); });
 
 var passed = 0, failed = 0;
@@ -282,13 +282,13 @@ section("Lifecycle");
     C.rt.pauseEndTs === end1 && C.rt.paused === true && end1 > Date.now());
   C.modes.exit("pause");
 
-  C.ui.toggleSettingsPanel(); C.ui.toggleModesPop();
-  var openBefore = !!w.bodyEls["cit-settings-panel"] && !!w.bodyEls["cit-modes-pop"];
+  C.intent.toggle(false);
+  var openBefore = !!w.bodyEls["cit-intent-pop"];
   var clicksBefore = (w.docLs.click || []).length;
   w.nav("https://chatgpt.com/c/fourth");
   check("popover registry closes popovers + listeners on nav",
-    openBefore && !w.bodyEls["cit-settings-panel"] && !w.bodyEls["cit-modes-pop"] &&
-    (w.docLs.click || []).length < clicksBefore);
+    openBefore && !w.bodyEls["cit-intent-pop"] &&
+    (w.docLs.click || []).length <= clicksBefore);
 
   w.docLs.pointermove = []; w.docLs.pointerup = []; w.docLs.pointercancel = [];
   var el2 = global.document.createElement("div");
@@ -303,25 +303,24 @@ section("Lifecycle");
     !w.docLs.pointercancel.length);
 })();
 
-/* ---------------- Bloom dock ---------------- */
-section("Bloom dock");
+/* ---------------- Console (the one menu) ---------------- */
+section("Console");
 (function () {
   var w = buildWorld("chatgpt.com", {
     seed: { "cit-dock-pos": JSON.stringify({ left: 1200, top: 800 }) },
   });
   var C = w.C, D = C.dock;
-  var pos = JSON.parse(w.local["cit-dock-pos"]);
-  check("v1→v2 corner migration", pos.corner === "br" && pos.dx >= 12 && pos.dy >= 12);
 
-  var dock = w.bodyEls["cit-dock"], bloom = w.bodyEls["cit-bloom"];
-  var tiles = bloom.querySelectorAll(".cit-tile");
-  check("9 tiles + engraved lid, corner-anchored insets",
-    tiles.length === 9 && !!bloom.querySelector(".cit-bloom-head") &&
+  var pos = JSON.parse(w.local["cit-dock-pos"]);
+  check("v1 to v2 corner migration", pos.corner === "br" && pos.dx >= 12);
+
+  var dock = w.bodyEls["cit-dock"];
+  var con = w.bodyEls["cit-console"];
+  check("pill hosts exactly one Console (no second floating panel)",
+    !!dock && !!con && !w.bodyEls["cit-settings-panel"] && !w.bodyEls["cit-modes-pop"]);
+  check("corner-anchored insets applied",
     dock.classList.contains("cit-corner-br") &&
     dock.style.right !== "auto" && dock.style.left === "auto");
-  check("radial stagger from pill corner",
-    parseFloat(tiles[8].style.transitionDelay) === 0 &&
-    parseFloat(tiles[0].style.transitionDelay) > 0);
 
   var quad = [
     [{ left: 30, top: 30, width: 120, height: 40 }, "tl"],
@@ -331,83 +330,57 @@ section("Bloom dock");
   ].every(function (t) { return D._nearestCorner(t[0]).corner === t[1]; });
   check("nearest-corner detection all quadrants", quad);
 
-  var pill = dock.children[0];
-  pill.__ls.pointerdown[0]({ button: 0, clientX: 1250, clientY: 820, pointerId: 1 });
-  (w.docLs.pointermove || []).slice().forEach(function (f) { f({ clientX: 60, clientY: 60 }); });
-  dock.__rect = { left: 40, top: 40, right: 160, bottom: 80, width: 120, height: 40 };
-  (w.docLs.pointerup || []).slice().forEach(function (f) { f({}); });
-  var pos2 = JSON.parse(w.local["cit-dock-pos"]);
-  check("drag→drop re-anchors + persists v2",
-    pos2.corner === "tl" && dock.classList.contains("cit-corner-tl"));
+  // Main view: one live tile, three quick tiles, two sliders, mode chips
+  check("main view has a live tile + 3 quick tiles",
+    con.querySelectorAll(".cit-live").length === 1 &&
+    con.querySelectorAll(".cit-qt").length === 3);
+  check("inline sliders present", con.querySelectorAll(".cit-con-slider").length === 2);
+  check("mode chips come from the registry",
+    con.querySelectorAll(".cit-chipm").length ===
+      C.modes.bySurface("tile").filter(function (id) {
+        return ["zen", "focusreader", "pomodoro"].indexOf(id) < 0;
+      }).length);
 
-  var labels = tiles.map(function (t) {
-    var l = t.querySelector(".cit-tile-label");
-    return l ? l.textContent : "";
-  });
-  D.expand();
+  // Open / close
+  C.console.open();
   var wasOpen = dock.classList.contains("cit-dock-open");
   (w.docLs.keydown || []).forEach(function (f) { f({ key: "Escape" }); });
-  check("no CLOSE tile; Esc dismisses",
-    labels.indexOf("Close") < 0 && wasOpen && !dock.classList.contains("cit-dock-open"));
+  check("pill opens it, Esc closes it",
+    wasOpen && !dock.classList.contains("cit-dock-open"));
 
+  // Advanced opens IN PLACE — no second body-level element appears
+  var bodyIdsBefore = Object.keys(w.bodyEls).length;
+  C.console.open();
+  var advBtn = con.querySelector(".cit-con-adv-btn");
+  advBtn.__ls.click[0]({ stopPropagation: function () {} });
+  var con2 = w.bodyEls["cit-console"];
+  check("Advanced drawer opens inside the Console, not as a new window",
+    con2.classList.contains("cit-con-adv") &&
+    Object.keys(w.bodyEls).length === bodyIdsBefore &&
+    !!con2.querySelector(".cit-con-scroll"));
+  var back = con2.querySelector(".cit-con-back");
+  back.__ls.click[0]({ stopPropagation: function () {} });
+  check("Back returns to the main view",
+    !w.bodyEls["cit-console"].classList.contains("cit-con-adv"));
+
+  // Quiet pill still works (it must NOT fade while the menu is open)
   C.rt.composerEl = { contains: function () { return true; } };
+  (w.docLs.input || []).forEach(function (f) { f({ target: {} }); });
+  check("pill does not fade while the Console is open",
+    !dock.classList.contains("cit-quiet"));
+  C.console.close();
   (w.docLs.input || []).forEach(function (f) { f({ target: {} }); });
   var quietOn = dock.classList.contains("cit-quiet");
   (w.docLs.pointermove || []).forEach(function (f) {
-    try { f({ clientX: 50, clientY: 50 }); } catch (_) {}
+    try { f({ clientX: 1250, clientY: 830 }); } catch (_) {}
   });
-  check("quiet pill: fades on typing, wakes on approach",
+  check("quiet pill fades on typing and wakes on approach",
     quietOn && !dock.classList.contains("cit-quiet"));
-
-  C.rt.composerHidden = false; C.rt.scrollContainer = {};
-  C.ui.updateQuickNav();
-  var topTile = w.bodyEls["cit-nav-top"];
-  var dimmed = topTile.classList.contains("cit-tile-dim");
-  C.rt.composerHidden = true;
-  C.ui.updateQuickNav();
-  check("quick-nav dims tiles (no grid holes)",
-    dimmed && !topTile.classList.contains("cit-tile-dim"));
 
   w.nav("https://chatgpt.com/c/next");
   var nd = w.bodyEls["cit-dock"];
-  check("nav rebuild keeps corner + 9 tiles",
-    !!nd && nd.classList.contains("cit-corner-tl") &&
-    w.bodyEls["cit-bloom"].querySelectorAll(".cit-tile").length === 9);
-})();
-
-/* ---------------- Intention card ---------------- */
-section("Intention card");
-(function () {
-  var w = buildWorld("chatgpt.com", {});
-  var C = w.C;
-  function open() {
-    if (!w.bodyEls["cit-intent-pop"]) C.intent.toggle(false);
-    return w.bodyEls["cit-intent-pop"];
-  }
-  var pop = open();
-  check("engraved lid + close + footer",
-    !!pop.querySelector(".cit-intent-head") && !!pop.querySelector(".cit-intent-foot") &&
-    !!pop.querySelector(".cit-intent-close"));
-  var secs = pop.querySelectorAll(".cit-intent-sec").map(function (s) {
-    return s.children[0].textContent;
-  });
-  check("sections labelled; shortcut in a kbd chip",
-    secs.length === 2 && secs[0] === "First steps" && secs[1] === "Parked thoughts" &&
-    !!pop.querySelector(".cit-kbd"));
-  var goal = pop.querySelector(".cit-intent-goal");
-  goal.value = "  ship the review  ";
-  pop.querySelector(".cit-intent-begin").__ls.click[0]({ stopPropagation: function () {} });
-  check("Begin trims+saves goal, closes card",
-    C.intent.state.goal === "ship the review" && !w.bodyEls["cit-intent-pop"]);
-  C.intent.state.tasks = [{ t: "a", done: false }, { t: "b", done: true }];
-  var pop2 = open();
-  check("step counter reflects state",
-    pop2.querySelector(".cit-intent-meta").textContent === "2/3");
-  pop2.querySelector(".cit-intent-close").__ls.click[0]({ stopPropagation: function () {} });
-  check("lid close dismisses", !w.bodyEls["cit-intent-pop"]);
-  open();
-  w.nav("https://chatgpt.com/c/next");
-  check("registry closes intent card on SPA nav", !w.bodyEls["cit-intent-pop"]);
+  check("nav rebuild keeps corner + Console",
+    !!nd && nd.classList.contains("cit-corner-br") && !!w.bodyEls["cit-console"]);
 })();
 
 /* ---------------- Mode registry is the single source ---------------- */

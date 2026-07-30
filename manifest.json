@@ -21,6 +21,7 @@
         "src/pomodoro.js",
         "src/reader.js",
         "src/ui.js",
+        "src/console.js",
         "src/dock.js",
         "src/wellness.js",
         "src/intent.js",
