@@ -86,6 +86,11 @@ position; demote, never delete.
 
 ## Done
 
+- [x] 2026-07-30 — H · Margin shipped (marginalia rail + automatic fallback),
+      CSS review acted on, and the active-state colour regression from the
+      host-isolation reset fixed. Harness 144; browser suites for the
+      sanitizer and for cascade/contrast.
+
 - [x] 2026-07-30 — full code review acted on: 18 confirmed defects fixed
       (Presentation lockout, Advanced-drawer wipe, preset typography, reset
       destroying its own panel, Focus Reader settings inert outside the pane,

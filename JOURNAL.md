@@ -112,3 +112,29 @@ sliver, and asked for a full review plus more design options.
   to docs/future/ so the repo stops contradicting the listing.
 
 Harness 87 -> 121 checks. manifest 3.1.0. Zip 60.4 KB.
+
+## 2026-07-30 (later still) — the Margin, and a regression I shipped
+
+- **H · Margin built.** Controls as marginalia in the empty gutter beside the
+  text: no card, no border, 20% opacity at rest, waking on approach. Built as a
+  presentation of the dock (rail replaces the pill inside #cit-dock) so the
+  Console, popover registry, Escape stack and palette are untouched. The gutter
+  is measured, never assumed, and below 76px the dock falls back to the corner
+  pill on its own. Setting: Advanced -> Menu style.
+- **The CSS review caught a regression from my own host-isolation fix.**
+  `color:` on a descendant inside a :where() reset is still a DECLARATION, and
+  a declaration beats inheritance — so every icon inside an active control was
+  painted with the base ink on top of the active fill. White on white, both
+  themes, every toggle. Verified by measuring computed styles, not by eye.
+  Typography and colour now sit on the reset's roots only.
+  Lesson: zero SPECIFICITY is not zero EFFECT. Added tools/contrast-test.html
+  so a cascade bug like this fails a suite instead of shipping.
+- Also fixed from that review: a selector with no declaration block that was
+  swallowing the next rule, an !important that had silently killed the
+  Pomodoro break ring, three uses of --cit-gold as a background under ink
+  (1.42:1 -> 10.19:1), a Console with no max-width, and a responsive block
+  still aimed at a panel deleted in v3.1.
+- Second stub lie fixed: remove() forgot only its own id, so descendants stayed
+  findable after detachment and teardown tests passed falsely.
+
+Harness 121 -> 144. Browser suites: sanitizer 16/16, contrast 7/7.
