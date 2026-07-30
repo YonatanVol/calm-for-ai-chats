@@ -81,3 +81,34 @@ re-render tests were reading stale nodes. Fixed the stub, not the assertion.
 Verified: 87/87 · three hosts init with NO chrome API present at all ·
 install.py --zip clean · Console and palette rendered headlessly in dark and
 light and reviewed before merging.
+
+## 2026-07-30 (later) — full code review + the clipped-label bug
+
+Owner reported the Console's live tile rendering its label as an unreadable
+sliver, and asked for a full review plus more design options.
+
+- **Root cause of the visual bug: no CSS isolation.** Calm's UI inherited
+  typography from the host page; `.cit-live-idle` combined `overflow:hidden`
+  with an inherited line-height, so a small host line-height collapsed the line
+  box and clipped the glyphs. Found by building a 12-case host-interference
+  matrix and rendering it headless — case 11 reproduced the screenshot exactly.
+  Fixed with a `:where()` (zero-specificity) reset over all Calm chrome. The
+  same matrix caught a second bug: under `dir=rtl` the whole Console mirrored
+  and the bidi scrambled the sub-line. Chrome is now pinned LTR; the reader
+  keeps per-block bidi; user text carries dir=auto.
+- **Three reviewers** (correctness, CSS, security/architecture) produced 18
+  confirmed defects. Six were MAJOR and reproducible, including a Presentation
+  mode that became an unrecoverable trap with shortcuts off, a Pomodoro preset
+  that wiped two thirds of the Advanced drawer, and presets that silently
+  failed to apply typography. All fixed, each with a regression test.
+- **The sanitizer was a denylist with zero tests** — the one security-critical
+  function in the codebase. Rewritten as an allowlist that REBUILDS the tree
+  from elements we create, plus tools/sanitizer-test.html: 16 real attacks in a
+  real browser, 16/16 passing.
+- **Privacy corrections.** The policy's central technical claim was false in
+  its reasoning (no host permissions does not prevent same-origin fetch), and
+  it omitted that extension storage lives in the site's storage area — which
+  matters for parked thoughts specifically. Both corrected. Backend plans moved
+  to docs/future/ so the repo stops contradicting the listing.
+
+Harness 87 -> 121 checks. manifest 3.1.0. Zip 60.4 KB.

@@ -60,8 +60,8 @@ position; demote, never delete.
 ## C — Hardening (audit-confirmed rough edges)
 
 - [ ] insertIntoInput textarea path REPLACES value instead of inserting at
-      caret — type-ahead flush can clobber an existing draft (core.js).
-      NOTE: this is now the highest-value remaining correctness bug.
+      caret — type-ahead flush can clobber an existing draft (core.js). This is
+      the highest-value remaining correctness bug.
 - [ ] restoreDraft kept-text check reads innerText for textareas (always
       empty) — rewrites + refires input events every show (core.js).
 - [ ] rt.scrollContainer staleness: React can replace the scroller node;
@@ -85,6 +85,14 @@ position; demote, never delete.
 - [ ] Firefox MV3 port (browser.* shims, background differences).
 
 ## Done
+
+- [x] 2026-07-30 — full code review acted on: 18 confirmed defects fixed
+      (Presentation lockout, Advanced-drawer wipe, preset typography, reset
+      destroying its own panel, Focus Reader settings inert outside the pane,
+      pomodoro stats, zen clobbering host styles, uncapped retry loop, shadow
+      DOM keystroke capture, Escape gaps, dead controls). Sanitizer rewritten
+      as an allowlist with a 16-case browser attack suite. Host-CSS isolation
+      reset. Privacy claims corrected. Harness 87 -> 121.
 
 - [x] 2026-07-30 — v3.1 menu rebuild, five phases merged to develop:
       P1 strip-network (zero permissions, zero network, auth/sync/config
