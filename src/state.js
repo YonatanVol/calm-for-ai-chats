@@ -29,8 +29,8 @@
     typeAhead: "auto", // off | auto | buffer | both — typing while input hidden
     settingsVersion: 3, // bump when a migration below needs to run
     // Mode parameters
-    readerFontScale: 110, // % (80..160) — Reader mode
-    readerLineHeight: 16, // ×0.1 => 1.6 — Reader mode
+    readerFontScale: 100, // % (80..160) — host-page text size (100 = off)
+    readerLineHeight: 16, // ×0.1 => 1.6 — host-page line height (16 = off)
     nightLevel: 35, // overlay opacity % (10..70) — Night/Dim
     autoScrollSpeed: 3, // px per tick (1..10) — Auto-scroll
     pauseMinutes: 15, // snooze duration (5..60) — Pause
@@ -164,7 +164,6 @@
     scrollSensitivity: "free",
     quickNav: "free",
     "mode:zen": "free",
-    "mode:reader": "free",
     "mode:focusreader": "free",
     "mode:night": "free",
     "mode:privacy": "free",

@@ -106,7 +106,16 @@
       String(S.readerLineHeight / 10)
     );
   }
-  function readerEnter() {
+  // Reader typography is a SETTING, not a mode: it applies whenever the user
+  // has moved either slider off its default, the same way reading width does.
+  // ("Reader" as a name now means one thing only — the Focus Reader pane.)
+  function applyReaderType() {
+    var on = (S.readerFontScale | 0) !== 100 || (S.readerLineHeight | 0) !== 16;
+    if (!on) {
+      document.documentElement.classList.remove("cit-reader");
+      removeEl("cit-reader-style");
+      return;
+    }
     var t = prefix(site.readerTargets(), "html.cit-reader");
     injectStyle(
       "cit-reader-style",
@@ -115,10 +124,6 @@
     );
     readerVars();
     document.documentElement.classList.add("cit-reader");
-  }
-  function readerExit() {
-    document.documentElement.classList.remove("cit-reader");
-    removeEl("cit-reader-style");
   }
 
   // ---------- Night / Dim ----------
@@ -316,24 +321,35 @@
   }
 
   // ---------- Registry ----------
+  // surface: where the mode is offered to the user.
+  //   "tile"     — a control in the Console (the everyday five)
+  //   "advanced" — a row in the Advanced drawer
+  //   "command"  — reachable from the palette / a shortcut only
+  // Every list in the UI derives from this; there are no hard-coded mode
+  // arrays anywhere else.
   var MODES = {
-    zen: { label: "Zen", icon: "❏", enter: zenEnter, exit: zenExit },
-    reader: { label: "Reader", icon: "A", enter: readerEnter, exit: readerExit, vars: readerVars },
+    zen: { label: "Zen", icon: "❏", surface: "tile", enter: zenEnter, exit: zenExit },
     focusreader: {
       label: "Focus Reader",
       icon: "\u2750",
+      surface: "tile",
       enter: function () { if (CALM.reader) CALM.reader.open(); },
       exit: function () { if (CALM.reader) CALM.reader.close(); },
     },
-    night: { label: "Night", icon: "☾", enter: nightEnter, exit: nightExit, vars: nightVars },
-    privacy: { label: "Privacy", icon: "⦿", enter: privacyEnter, exit: privacyExit },
-    presentation: { label: "Present", icon: "▣", enter: presentationEnter, exit: presentationExit },
-    autoscroll: { label: "Auto-scroll", icon: "↧", enter: autoscrollEnter, exit: autoscrollExit },
-    pause: { label: "Pause", icon: "⏸", enter: pauseEnter, exit: pauseExit },
-    pomodoro: { label: "Pomodoro", icon: "◴", enter: pomodoroEnter, exit: pomodoroExit },
-    ruler: { label: "Reading ruler", icon: "▬", enter: rulerEnter, exit: rulerExit, vars: rulerVars },
-    gray: { label: "Grayscale", icon: "◐", enter: grayEnter, exit: grayExit, vars: grayVars },
-    motion: { label: "Reduce motion", icon: "◇", enter: motionEnter, exit: motionExit },
+    night: { label: "Night", icon: "☾", surface: "tile", enter: nightEnter, exit: nightExit, vars: nightVars },
+    ruler: { label: "Reading ruler", icon: "▬", surface: "tile", enter: rulerEnter, exit: rulerExit, vars: rulerVars },
+    pomodoro: { label: "Pomodoro", icon: "◴", surface: "tile", enter: pomodoroEnter, exit: pomodoroExit },
+    pause: { label: "Pause", icon: "⏸", surface: "live", enter: pauseEnter, exit: pauseExit },
+    gray: { label: "Grayscale", icon: "◐", surface: "advanced", enter: grayEnter, exit: grayExit, vars: grayVars },
+    motion: { label: "Reduce motion", icon: "◇", surface: "advanced", enter: motionEnter, exit: motionExit },
+    privacy: { label: "Privacy", icon: "⦿", surface: "advanced", enter: privacyEnter, exit: privacyExit },
+    autoscroll: { label: "Auto-scroll", icon: "↧", surface: "advanced", enter: autoscrollEnter, exit: autoscrollExit },
+    presentation: { label: "Present", icon: "▣", surface: "command", enter: presentationEnter, exit: presentationExit },
+  };
+  function bySurface(kind) {
+    return Object.keys(MODES).filter(function (id) {
+      return MODES[id].surface === kind;
+    });
   };
 
   function setModeBtnActive(id, on) {
@@ -385,6 +401,9 @@
     isActive: isActive,
     refreshVars: refreshVars,
     applyWidth: applyWidth,
+    applyReaderType: applyReaderType,
+    bySurface: bySurface,
+    ids: function () { return Object.keys(MODES); },
     // back-compat aliases used by core/ui/keyboard:
     applyZen: function (on) {
       on ? modeEnter("zen") : modeExit("zen");
