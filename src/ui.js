@@ -292,8 +292,7 @@
     }
     p = document.createElement("div");
     p.id = IDS.modesPop;
-    ["focusreader", "zen", "reader", "ruler", "night", "gray", "motion", "privacy",
-     "presentation", "autoscroll", "pause", "pomodoro"].forEach(function (id) {
+    CALM.modes.bySurface("tile").forEach(function (id) {
       var m = CALM.modes.MODES[id];
       if (!m) return;
       var card = document.createElement("button");
@@ -420,8 +419,7 @@
   }
 
   function buildModesTab(c) {
-    ["focusreader", "zen", "reader", "ruler", "night", "gray", "motion", "privacy",
-     "presentation", "autoscroll", "pause", "pomodoro"].forEach(function (id) {
+    CALM.modes.ids().forEach(function (id) {
       c.appendChild(modeRow(id));
     });
     c.appendChild(divider("Mode settings"));
@@ -471,8 +469,8 @@
   }
   function buildReadingTab(c) {
     c.appendChild(sliderRow("Reading width (0=off)", "readingWidth", 0, 1600, 20, CALM.modes.applyWidth));
-    c.appendChild(sliderRow("Reader font %", "readerFontScale", 80, 160, 5, CALM.modes.refreshVars));
-    c.appendChild(sliderRow("Reader line-height ×10", "readerLineHeight", 12, 22, 1, CALM.modes.refreshVars));
+    c.appendChild(sliderRow("Page text size %", "readerFontScale", 80, 160, 5, CALM.modes.applyReaderType));
+    c.appendChild(sliderRow("Page line-height ×10", "readerLineHeight", 12, 22, 1, CALM.modes.applyReaderType));
     c.appendChild(sliderRow("Night dim %", "nightLevel", 10, 70, 5, CALM.modes.refreshVars));
     c.appendChild(sliderRow("Ruler height px", "rulerHeight", 50, 160, 10, CALM.modes.refreshVars));
     c.appendChild(sliderRow("Ruler dim %", "rulerDim", 15, 70, 5, CALM.modes.refreshVars));

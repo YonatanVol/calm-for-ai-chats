@@ -375,6 +375,7 @@
     ui.createUI();
     discoverScroll();
     modes.applyWidth();
+    modes.applyReaderType();
 
     // Re-enter modes that were active before the navigation (fresh DOM), then
     // fall back to remember-state for full page loads.

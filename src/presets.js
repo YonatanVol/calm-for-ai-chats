@@ -33,7 +33,7 @@
       name: "Deep Reading",
       builtin: true,
       settings: { readingWidth: 1000, readerFontScale: 120, readerLineHeight: 18, nightLevel: 25 },
-      modes: ["reader"],
+      modes: [],
     },
     { name: "Study", builtin: true, settings: {}, modes: ["zen", "pomodoro"] },
     { name: "Present", builtin: true, settings: {}, modes: ["presentation"] },
@@ -41,7 +41,7 @@
       name: "Night Owl",
       builtin: true,
       settings: { nightLevel: 45, readerFontScale: 115 },
-      modes: ["night", "reader"],
+      modes: ["night"],
     },
   ];
 

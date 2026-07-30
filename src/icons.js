@@ -57,7 +57,6 @@
   // Per-mode icon lookup for the modes popover / settings rows.
   I.mode = {
     zen: I.zen,
-    reader: I.reader,
     focusreader: I.book,
     ruler: I.ruler,
     night: I.night,

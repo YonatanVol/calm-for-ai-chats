@@ -410,6 +410,46 @@ section("Intention card");
   check("registry closes intent card on SPA nav", !w.bodyEls["cit-intent-pop"]);
 })();
 
+/* ---------------- Mode registry is the single source ---------------- */
+section("Mode registry");
+(function () {
+  var uiSrc = fs.readFileSync(path.join(ROOT, "src", "ui.js"), "utf8");
+  check("no hard-coded mode arrays left in ui.js",
+    !/\[\s*"(focusreader|zen)"\s*,/.test(uiSrc));
+
+  var w = buildWorld("chatgpt.com", {});
+  var C = w.C, M = C.modes;
+  check("'reader' is no longer a mode", !M.MODES.reader &&
+    C.FEATURE_TIERS["mode:reader"] === undefined);
+  check("every mode declares a surface",
+    M.ids().every(function (id) { return !!M.MODES[id].surface; }));
+  var tiles = M.bySurface("tile");
+  check("five everyday modes surface as tiles",
+    tiles.length === 5 && tiles.indexOf("zen") >= 0 &&
+    tiles.indexOf("focusreader") >= 0 && tiles.indexOf("pomodoro") >= 0,
+    tiles.join(","));
+  check("niche modes still exist, just moved off the tiles",
+    ["gray", "motion", "privacy", "autoscroll", "presentation"].every(function (id) {
+      return !!M.MODES[id] && M.MODES[id].surface !== "tile";
+    }));
+  check("every surfaced mode has an icon",
+    M.ids().every(function (id) { return !!C.icons.mode[id]; }));
+
+  // Reader typography now behaves like reading width: a setting, applied at
+  // init, with defaults meaning "off".
+  check("reader typography applies as a setting, off at defaults",
+    typeof M.applyReaderType === "function" &&
+    !global.document.documentElement.classList.contains("cit-reader"));
+  C.settings.readerFontScale = 130;
+  M.applyReaderType();
+  check("moving the slider turns it on",
+    global.document.documentElement.classList.contains("cit-reader"));
+  C.settings.readerFontScale = 100;
+  M.applyReaderType();
+  check("returning to default turns it off",
+    !global.document.documentElement.classList.contains("cit-reader"));
+})();
+
 /* ---------------- Intention: never self-opens ---------------- */
 section("No auto-open");
 (function () {
