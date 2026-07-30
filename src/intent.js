@@ -85,6 +85,7 @@
       c.appendChild(cic);
       var txt = document.createElement("span");
       txt.className = "cit-intent-chip-text";
+      txt.setAttribute("dir", "auto"); // the goal is the user's own words
       var x = document.createElement("span");
       x.className = "cit-intent-x";
       x.textContent = "✕";
@@ -155,6 +156,7 @@
     var goal = document.createElement("input");
     goal.type = "text";
     goal.className = "cit-intent-goal";
+    goal.setAttribute("dir", "auto");
     goal.placeholder = "draft the report intro";
     goal.value = st.goal;
     goal.addEventListener("keydown", function (e) {

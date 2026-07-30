@@ -66,8 +66,9 @@ function buildWorld(hostname, opts) {
           if (i >= 0) el.__parent.children.splice(i, 1);
         }
       },
-      setAttribute: noop,
-      getAttribute: function () { return null; },
+      __attrs: {},
+      setAttribute: function (k, v) { el.__attrs[k] = v; },
+      getAttribute: function (k) { return el.__attrs[k] == null ? null : el.__attrs[k]; },
       querySelectorAll: function (sel) {
         var out = [];
         (function walk(n) {
@@ -394,6 +395,42 @@ section("Console");
   var nd = w.bodyEls["cit-dock"];
   check("nav rebuild keeps corner + Console",
     !!nd && nd.classList.contains("cit-corner-br") && !!w.bodyEls["cit-console"]);
+})();
+
+/* ---------------- Host isolation ---------------- */
+section("Host isolation");
+(function () {
+  var css = fs.readFileSync(path.join(ROOT, "content.css"), "utf8");
+  var m = css.match(/:where\([^)]*#cit-console[^)]*\)[^{]*\{([^}]*)\}/);
+  check("a zero-specificity reset guards Calm's chrome", !!m);
+  if (m) {
+    var body = m[1];
+    // These are the inherited properties a host page can set that visibly
+    // break Calm. line-height was the one that clipped the live tile's label
+    // to a sliver; direction mirrored the whole Console under a Hebrew page.
+    ["line-height", "letter-spacing", "text-indent", "white-space",
+     "direction", "text-transform", "font-size", "box-sizing"].forEach(function (prop) {
+      check("reset neutralises inherited " + prop, body.indexOf(prop + ":") >= 0);
+    });
+    check("the reset uses :where() so real rules still win without !important",
+      /:where\(/.test(css) && body.indexOf("!important") < 0);
+  }
+  // The reader shows the user's conversation: it must NOT be forced to one
+  // direction, or Hebrew and Arabic responses would render backwards.
+  var readerReset = css.match(/:where\(#cit-reader-pane[^{]*\{([^}]*)\}/);
+  check("the reader's reset leaves bidi and whitespace alone",
+    !!readerReset && readerReset[1].indexOf("direction:") < 0 &&
+      readerReset[1].indexOf("white-space:") < 0);
+  check("code blocks re-assert white-space: pre",
+    /\.cit-fr-body pre \{\s*white-space: pre;/.test(css));
+
+  // User-authored text stays bidi-aware even though the chrome is LTR.
+  var w = buildWorld("chatgpt.com", {});
+  w.C.intent.state.goal = "לסיים את הסקירה";
+  w.C.console.render();
+  var idle = w.bodyEls["cit-console"].querySelector(".cit-live-idle");
+  check("the goal renders with dir=auto (Hebrew reads correctly)",
+    !!idle && idle.__attrs && idle.__attrs.dir === "auto");
 })();
 
 /* ---------------- Mode registry is the single source ---------------- */
