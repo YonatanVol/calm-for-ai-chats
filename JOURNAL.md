@@ -18,3 +18,32 @@ What shipped, what was verified, what's next. Facts only.
   truthfully. Adversarial review workflow run before merge.
 - Ops: daily scheduled task `calm-daily-improvement` (09:00) created;
   growth-audit workflow launched (feature tree → ROADMAP.md → GTM checklist).
+
+## 2026-07-29 — daily improvement
+
+- Shipped A1 `auto/daily-20260729`: STORE_LISTING.md rewritten from scratch.
+  The old copy was actively false — it advertised "zero permissions, no network
+  requests" and two sites, written before auth/sync and Claude support landed.
+  Submitting on it would have contradicted the manifest at review.
+- New listing: 3 sites, Focus Reader led as the flagship, quiet-graphite
+  positioning, honest optional-sign-in story, CWS single-purpose statement,
+  a per-permission justification table (identity / storage / Supabase host /
+  content-script matches), data-usage checkbox answers, and the ordered 5-shot
+  1280×800 list feeding roadmap item A3. Also corrected the review-time
+  expectation: `identity` + a host permission means a normal review, not the
+  fast path the old file promised.
+- Every claim checked against source, not memory: shortcuts (H/Z/P/K) read from
+  core.js + intent.js, bionic range 20–60 from reader.js, 3-task cap from
+  intent.js, permissions from manifest.json. Drafted summary was 108 chars, not
+  the 121 first written — counted and corrected.
+- Verified: `node --check` 18/18 src files · content.css braces 261=261 ·
+  `node tools/harness.js` 57/57 (incl. 3-host load smoke for chatgpt.com,
+  gemini.google.com, claude.ai) · `python3 install.py --zip` exit 0, 59.2 KB,
+  no `_`-prefixed / .pem / .DS_Store entries.
+- Note: the task file's smoke list names 16 content scripts and omits
+  reader.js; the manifest ships 17. The harness reads the real manifest order,
+  so the gate is correct — the checklist is the stale one.
+- Roadmap: A1 checked off. Added a C-tier doc-drift item (README stale,
+  FEATURES.md still says 16 scripts) with a harness assertion so the count
+  can't silently drift again.
+- Next: A2 onboarding first-run tour (3 quiet cards over the dock).

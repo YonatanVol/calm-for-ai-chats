@@ -8,12 +8,6 @@ position; demote, never delete.
 
 ## A — Release blockers (v3.0.0 to the Chrome Web Store)
 
-- [ ] Rewrite STORE_LISTING.md truthfully: 3 sites (ChatGPT, Gemini, Claude),
-      the Focus Reader + focus suite, quiet-graphite positioning, real
-      permissions story (identity+storage+Supabase host), zero analytics.
-      Include the CWS single-purpose statement and per-permission
-      justifications, and the exact asset shot-list (1280×800 screenshots ×5,
-      440×280 small promo tile, 128px icon).
 - [ ] Onboarding: first-run tour (3 quiet cards over the dock: pill → bloom →
       Focus Reader) + a "what's new in 3.0" note for upgraders. No modals over
       site content; dismiss = never again (localStorage).
@@ -79,6 +73,11 @@ position; demote, never delete.
 - [ ] Retry-loop cap for scroll discovery (symmetric with composer's 120).
 - [ ] Modes quick-popover z-index vs Focus Reader pane: popover (…002)
       floats above the pane (…001) — close popovers on focusreader enter.
+- [ ] Doc-drift sweep: README is stale against the shipped design (FEATURES.md
+      flags it ◐), and FEATURES.md still says "16 ordered no-build content
+      scripts" while the manifest ships 17 (reader.js landed after the audit).
+      Refresh both, and have the harness assert the script count matches the
+      manifest so this drift fails the gate instead of aging quietly.
 
 ## D — Growth & platform (needs owner input where marked)
 
@@ -94,6 +93,12 @@ position; demote, never delete.
 
 ## Done
 
+- [x] 2026-07-29 — STORE_LISTING.md rewritten truthfully: 3 sites, Focus Reader
+      + focus suite, quiet-graphite positioning, real permissions story
+      (identity + storage + Supabase host), CWS single-purpose statement,
+      per-permission justification table, data-usage checkbox answers, and the
+      5-shot 1280×800 asset list. Retired the false "zero permissions, no
+      network requests" copy.
 - [x] 2026-07-27 — P11 Focus Reader (bionic/Ease/Spotlight/RTL, sanitized
       local-only cloning); review-hardened; harness 57 checks.
 - [x] 2026-07-27 — Quiet graphite palette (gold removed); Bloom tray +
