@@ -47,3 +47,37 @@ What shipped, what was verified, what's next. Facts only.
   FEATURES.md still says 16 scripts) with a harness assertion so the count
   can't silently drift again.
 - Next: A2 onboarding first-run tour (3 quiet cards over the dock).
+
+## 2026-07-30 — v3.1 menu rebuild
+
+Owner asked for a menu redesign (chose the Console from five rendered options),
+for the floating "What did you come to do?" card to stop appearing, and for a
+subtraction pass. Five phases, each harness-gated and merged to develop.
+
+- Pre-step: rescued the 2026-07-29 daily run, which wrote and verified
+  STORE_LISTING.md but never reached its commit step. The daily task needs a
+  "tree must be clean at exit" check.
+- P1 strip-network: deleted auth.js, sync.js, background.js and config.js
+  (547 lines gating nothing; config.js was injecting a Supabase anon JWT into
+  every page for no reader). Manifest now declares NO permissions and no host
+  access. Focus logging kept, moved local (CALM.stats). Intention auto-open
+  removed — it was calling .focus() 2s after load and eating the first thing
+  typed in a fresh tab.
+- P2 mode-registry: `surface` field on every mode; the 12-id array that was
+  copy-pasted into two files is gone; `reader` folded into settings so
+  "Reader" means only the pane.
+- P3 console: bloom tray + modes popover + settings panel -> one panel with an
+  in-place Advanced drawer. Corner-anchor engine untouched.
+- P4 palette: ⌘K over a derived list (modes from the registry, settings from
+  defaultSettings), arrows nudge numbers in place.
+- P5 polish: showToggleButton persistence, preset coverage 10/37 -> all,
+  dockQuiet exposed, one Escape STACK (registering at load order gets topmost
+  exactly backwards), nags moved below the reader pane.
+
+Harness 57 -> 87 checks. Two new tests failed first and both were real: the
+Escape ordering, and a stub bug where innerHTML="" did not clear children, so
+re-render tests were reading stale nodes. Fixed the stub, not the assertion.
+
+Verified: 87/87 · three hosts init with NO chrome API present at all ·
+install.py --zip clean · Console and palette rendered headlessly in dark and
+light and reviewed before merging.

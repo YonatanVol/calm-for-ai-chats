@@ -61,37 +61,38 @@ position; demote, never delete.
 
 - [ ] insertIntoInput textarea path REPLACES value instead of inserting at
       caret — type-ahead flush can clobber an existing draft (core.js).
+      NOTE: this is now the highest-value remaining correctness bug.
 - [ ] restoreDraft kept-text check reads innerText for textareas (always
       empty) — rewrites + refires input events every show (core.js).
 - [ ] rt.scrollContainer staleness: React can replace the scroller node;
       add an isConnected check before quick-nav/scroll use (core.js).
 - [ ] Move the hard-coded excluded-scroller selectors from core.js into a
       per-adapter excludedScrollers() field (adapters.js).
-- [ ] Settings guard: prevent disabling BOTH the toggle button and the
-      keyboard shortcut while auto-hide is on (no escape hatch left).
 - [ ] Scroll-sensitivity thresholds (150/20px) into CALM.const.
 - [ ] Retry-loop cap for scroll discovery (symmetric with composer's 120).
-- [ ] Modes quick-popover z-index vs Focus Reader pane: popover (…002)
-      floats above the pane (…001) — close popovers on focusreader enter.
-- [ ] Doc-drift sweep: README is stale against the shipped design (FEATURES.md
-      flags it ◐), and FEATURES.md still says "16 ordered no-build content
-      scripts" while the manifest ships 17 (reader.js landed after the audit).
-      Refresh both, and have the harness assert the script count matches the
-      manifest so this drift fails the gate instead of aging quietly.
 
 ## D — Growth & platform (needs owner input where marked)
 
+- [ ] Re-add a paid tier when billing exists (auth/sync were deleted in P1;
+      supabase/schema.sql is kept in-repo for that day) — OWNER: provider +
+      pricing.
 - [ ] Review-collection loop: after 7 active days, one quiet "enjoying
       Calm?" card → Web Store review link; never repeats after dismiss.
 - [ ] i18n pass: extract UI strings; ship Hebrew (full RTL chrome) first.
 - [ ] Growth measurement WITHOUT analytics: store-listing installs + a
       voluntary in-extension "how did you find us?" (local, user-sent).
-- [ ] isPro seam → real entitlements via Supabase (grandfather early users)
-      — blocked on OWNER: payment provider + pricing.
 - [ ] Edge Add-ons submission package (same zip) — OWNER account needed.
 - [ ] Firefox MV3 port (browser.* shims, background differences).
 
 ## Done
+
+- [x] 2026-07-30 — v3.1 menu rebuild, five phases merged to develop:
+      P1 strip-network (zero permissions, zero network, auth/sync/config
+      deleted, intention auto-open removed), P2 mode-registry (surface field,
+      duplicated arrays gone, Reader folded into settings), P3 console (three
+      menus become one, Advanced as an in-place drawer), P4 palette (⌘K over a
+      derived action list), P5 polish (showToggleButton, presets, dockQuiet,
+      a single Escape stack, nag z-index below the reader). Harness 57 → 87.
 
 - [x] 2026-07-29 — STORE_LISTING.md rewritten truthfully: 3 sites, Focus Reader
       + focus suite, quiet-graphite positioning, real permissions story

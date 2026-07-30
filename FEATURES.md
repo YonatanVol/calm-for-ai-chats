@@ -1,6 +1,15 @@
 # Calm — feature tree
 
-Generated from a full-code audit (2026-07-27). ✅ shipped · ◐ partial · ○ stub.
+Generated from a full-code audit (2026-07-27), updated after the 2026-07-30
+v3.1 menu rebuild. ✅ shipped · ◐ partial · ○ stub.
+
+**What changed in v3.1:** the bloom tray, modes popover and tabbed settings
+panel were replaced by a single **Console** (`src/console.js`) with an in-place
+Advanced drawer, plus a **⌘K command palette** (`src/palette.js`). Sign-in and
+cloud sync were deleted — the extension now declares **zero permissions** and
+makes **no network requests**. `reader` is no longer a mode (its typography is
+a setting); modes now declare a `surface` so every list derives from the
+registry. Entries below marked ⛔ describe surfaces that no longer exist.
 Newest addition: the **Focus Reader** pane (bionic fixation, Ease, Spotlight, RTL) — post-audit, listed under Modes.
 
 ## Core engine (36)
@@ -188,4 +197,15 @@ Newest addition: the **Focus Reader** pane (bionic fixation, Ease, Spotlight, RT
 - **Modes** (added post-audit)
   - ✅ Focus Reader — Calm-owned reading pane: bionic fixation slider, Ease, Spotlight, per-block RTL, sanitized local-only cloning
 
-_138 features._
+### v3.1 additions
+- ✅ Console — one menu: live timer tile, quick toggles, inline sliders, mode
+  chips from the registry, Advanced as an in-place drawer
+- ✅ Command palette (⌘K) — every mode/action/setting, derived not hand-listed;
+  arrows nudge numeric settings in place
+- ✅ Shared Escape stack — one listener, closes the topmost open surface
+- ✅ Local focus log (`CALM.stats`) — capped, device-only
+- ⛔ Removed: bloom tray, modes popover, tabbed settings panel, Google
+  sign-in, Supabase sync, `reader` mode, `identity`/`storage` permissions
+
+_Feature count is no longer tracked here; the harness (`tools/harness.js`,
+87 checks) is the source of truth for what actually works._

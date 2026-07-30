@@ -23,8 +23,12 @@ a quiet graphite design language.
   **Night/Dim** warmth overlay.
 
 **Focus (ADHD-friendly)**
-- **The Calm menu** — one draggable pill, anchored to a corner so it can never
-  open off-screen; expands into all controls.
+- **The Console** — one draggable pill, anchored to a corner so it can never
+  open off-screen. It opens a single panel: a live timer tile, quick toggles,
+  inline sliders, and an Advanced drawer that slides in rather than opening a
+  second window.
+- **Command palette** (`Ctrl/Cmd+K`) — every mode, action and setting in one
+  keystroke; arrow keys nudge numeric settings in place.
 - **Intention** — "What did you come to do?", with up to 3 first steps and a
   `Ctrl/Cmd+Shift+K` **thought parking lot**. It never opens by itself; you ask
   for it.
@@ -76,6 +80,7 @@ Chrome Web Store listing: coming soon (see [`STORE_LISTING.md`](STORE_LISTING.md
 
 | Action | Shortcut |
 | --- | --- |
+| **Command palette** (everything) | `Ctrl/Cmd + K` |
 | Toggle input | `Ctrl/Cmd + Shift + H` |
 | Zen mode | `Ctrl/Cmd + Shift + Z` |
 | Presentation mode | `Ctrl/Cmd + Shift + P` (Esc exits) |
