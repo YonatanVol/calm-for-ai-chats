@@ -136,6 +136,9 @@
     CALM.console.create(d);
 
     document.body.appendChild(d);
+    // Render only once the dock is IN the document: the Console resolves its
+    // own node by id, so rendering while detached was a silent no-op.
+    CALM.console.render();
     applyPos(d, loadPos());
 
     // Drag the pill; on drop, snap to the nearest corner and persist v2.

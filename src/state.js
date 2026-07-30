@@ -22,7 +22,6 @@
     showToggleButton: true,
     showHints: true,
     rememberState: false,
-    showQuickNav: true,
     sensitivity: 5, // 1 (needs big scroll) .. 10 (hair trigger)
     readingWidth: 0, // 0 = off; else px
     zenComposer: true, // zen also hides the composer
@@ -157,7 +156,6 @@
     rememberState: "free",
     readingWidth: "free",
     scrollSensitivity: "free",
-    quickNav: "free",
     "mode:zen": "free",
     "mode:focusreader": "free",
     "mode:night": "free",

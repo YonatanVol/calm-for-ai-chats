@@ -21,10 +21,11 @@
   var filtered = [];
   var cursor = 0;
   var keyHandler = null;
+  var unEsc = null;
 
   // Settings worth exposing by name, with their ranges. Booleans are inferred.
   var RANGES = {
-    readingWidth: [0, 1400, 20],
+    readingWidth: [0, 1600, 20],
     readerFontScale: [80, 160, 5],
     readerLineHeight: [12, 22, 1],
     sensitivity: [1, 10, 1],
@@ -81,7 +82,7 @@
     items.push({
       kind: "action",
       name: "Open Advanced settings",
-      run: function () { if (CALM.console) CALM.console.open(); },
+      run: function () { if (CALM.console) CALM.console.openAdvanced(); },
     });
     // Every mode, whatever surface it normally lives on
     CALM.modes.ids().forEach(function (id) {
@@ -89,7 +90,10 @@
         kind: "mode",
         id: id,
         name: CALM.modes.MODES[id].label,
-        run: function () { CALM.modes.toggle(id); },
+        run: function () {
+          CALM.modes.toggle(id);
+          if (CALM.console) CALM.console.render();
+        },
       });
     });
     // Every setting
@@ -104,6 +108,7 @@
           run: function () {
             S[k] = !S[k];
             CALM.saveSettings();
+            if (CALM.reader && CALM.reader.refreshVars) CALM.reader.refreshVars();
             if (CALM.console) CALM.console.render();
           },
         });
@@ -183,6 +188,7 @@
     if (CALM.modes.refreshVars) CALM.modes.refreshVars();
     if (CALM.modes.applyWidth) CALM.modes.applyWidth();
     if (CALM.modes.applyReaderType) CALM.modes.applyReaderType();
+    if (CALM.reader && CALM.reader.refreshVars) CALM.reader.refreshVars();
     if (CALM.console) CALM.console.render();
     renderList();
   }
@@ -255,11 +261,20 @@
     filter("");
     input.focus();
     if (CALM.ui.registerPopover) CALM.ui.registerPopover(close);
+    // Escape worked only while the input kept focus; clicking a row moved it.
+    if (!unEsc && CALM.ui.registerEscape) {
+      unEsc = CALM.ui.registerEscape(function () {
+        if (!document.getElementById(PID)) return false;
+        close();
+        return true;
+      });
+    }
   }
 
   function close() {
     var p = document.getElementById(PID);
     if (p) p.remove();
+    if (unEsc) { unEsc(); unEsc = null; }
     if (CALM.ui.unregisterPopover) CALM.ui.unregisterPopover(close);
   }
 

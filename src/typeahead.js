@@ -28,9 +28,23 @@
       !e.altKey
     );
   }
-  function focusInEditable() {
-    var a = document.activeElement;
-    if (!a) return false;
+  function focusInEditable(e) {
+    // document.activeElement stops at a shadow HOST, so a field inside a web
+    // component looked "not editable" and we swallowed the user's keystrokes
+    // and redirected them into the chat composer. Prefer the real event target
+    // (composedPath pierces shadow roots), then walk any nested shadow roots.
+    var a = null;
+    if (e && e.composedPath) {
+      var path = e.composedPath();
+      if (path && path.length) a = path[0];
+    }
+    if (!a) {
+      a = document.activeElement;
+      while (a && a.shadowRoot && a.shadowRoot.activeElement) {
+        a = a.shadowRoot.activeElement;
+      }
+    }
+    if (!a || !a.tagName) return false;
     return (
       a.isContentEditable ||
       a.tagName === "TEXTAREA" ||
@@ -50,7 +64,7 @@
       var mode = S.typeAhead;
       if (mode === "off" || !mode) return;
       if (!isPrintable(e)) return;
-      if (focusInEditable()) return;
+      if (focusInEditable(e)) return;
 
       e.preventDefault();
       e.stopPropagation();

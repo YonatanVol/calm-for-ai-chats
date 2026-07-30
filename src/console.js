@@ -77,6 +77,11 @@
   function toggle() {
     isOpen() ? close() : open();
   }
+  function openAdvanced() {
+    open();
+    setView("advanced");
+    render();
+  }
   function setView(v) {
     view = v;
     var c = root();
@@ -88,7 +93,7 @@
   function quickTile(id, iconName, label, isOn, onClick) {
     var b = el("button", "cit-qt");
     b.type = "button";
-    b.id = id || "";
+    if (id) b.id = id;
     b.title = label;
     b.setAttribute("aria-label", label);
     b.appendChild(icon(iconName));
@@ -227,18 +232,28 @@
     if (!S.showToggleButton) inputTile.classList.add("cit-qt-dim");
     quick.appendChild(inputTile);
     quick.appendChild(
-      quickTile(IDS.zen, "zen", "Zen", function () {
-        return CALM.modes.isActive("zen");
-      }, function () {
-        CALM.modes.toggleZen();
-      })
+      (function () {
+        var t = quickTile(IDS.zen, "zen", "Zen", function () {
+          return CALM.modes.isActive("zen");
+        }, function () {
+          CALM.modes.toggleZen();
+        });
+        t.setAttribute("data-cit-mode", "zen");
+        return t;
+      })()
     );
     quick.appendChild(
-      quickTile(null, "book", "Reader", function () {
-        return CALM.modes.isActive("focusreader");
-      }, function () {
-        CALM.modes.toggle("focusreader");
-      })
+      (function () {
+        var t = quickTile(null, "book", "Reader", function () {
+          return CALM.modes.isActive("focusreader");
+        }, function () {
+          CALM.modes.toggle("focusreader");
+        });
+        // So refreshModeButtons keeps it in sync when the pane is closed from
+        // inside (Escape or its own ✕) rather than from this tile.
+        t.setAttribute("data-cit-mode", "focusreader");
+        return t;
+      })()
     );
     c.appendChild(quick);
 
@@ -260,7 +275,7 @@
       setView("advanced");
       render();
     });
-    adv.appendChild(icon("chevron"));
+    adv.appendChild(icon("collapse"));
     var hint = el("span", "cit-con-hint", CALM.palette ? "⌘K" : "");
     foot.appendChild(hint);
     foot.appendChild(adv);
@@ -277,6 +292,7 @@
       e.stopPropagation();
       setView("main");
       render();
+      bump(); // Advanced cleared the timer; leaving it must re-arm the fold
     });
     head.appendChild(back);
     head.appendChild(el("span", "cit-con-title", "Advanced"));
@@ -295,16 +311,35 @@
     if (view === "advanced") buildAdvanced(c);
     else buildMain(c);
     if (CALM.ui.refreshModeButtons) CALM.ui.refreshModeButtons();
-    if (CALM.ui.updateQuickNav) CALM.ui.updateQuickNav();
   }
 
   // Cheap refresh while a timer runs — only the live tile changes, and only
   // while the Console is actually open.
+  // Only the clock changes second to second. Rebuilding the whole tile every
+  // tick destroyed the Pause and Intention buttons underneath the cursor —
+  // losing keyboard focus once a second and swallowing any click held across
+  // a tick — so patch the text nodes instead and rebuild only when the tile's
+  // shape actually changes (running <-> idle).
+  var lastRunning = null;
   function tick() {
     if (!isOpen() || view !== "main") return;
     var c = root();
     var live = c && c.querySelector(".cit-live");
-    if (live) c.replaceChild(liveTile(), live);
+    if (!live) return;
+    var ps = CALM.pomodoro && CALM.pomodoro.state;
+    var running = !!(ps && ps.running);
+    if (running !== lastRunning) {
+      lastRunning = running;
+      c.replaceChild(liveTile(), live);
+      return;
+    }
+    if (!running) return;
+    var t = live.querySelector(".cit-live-time");
+    var sub = live.querySelector(".cit-live-sub");
+    var m = Math.floor(ps.remaining / 60);
+    var s2 = ps.remaining % 60;
+    if (t) t.textContent = m + ":" + (s2 < 10 ? "0" + s2 : s2);
+    if (sub) sub.textContent = ps.phase + " · " + ps.cycle + "/" + (S.pomoCycles | 0);
   }
   setInterval(tick, 1000);
 
@@ -314,12 +349,15 @@
       c.id = IDS.console;
       c.setAttribute("role", "menu");
       host.appendChild(c);
-      render();
+      // render() resolves the node by id, so it can only work once the dock is
+      // in the document; dock.build() appends the dock afterwards and open()
+      // renders then.
       return c;
     },
     open: open,
     close: close,
     toggle: toggle,
+    openAdvanced: openAdvanced,
     render: render,
     isOpen: isOpen,
   };

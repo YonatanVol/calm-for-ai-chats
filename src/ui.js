@@ -42,11 +42,6 @@
   }
 
   // ---- Quick nav ----
-  // Scroll-to-top/end moved to the palette, so there is no quick-nav element
-  // to show or hide. The export stays because core.js calls it whenever the
-  // composer's visibility changes.
-  function updateQuickNav() {}
-
   function smoothScrollTo(top) {
     if (!rt.scrollContainer) return;
     try {
@@ -255,26 +250,7 @@
   }
 
   // ---- Generic popover close ----
-  function closeOnOutsideOf(p, excludeIds) {
-    function close() {
-      p.remove();
-      document.removeEventListener("click", handler, true);
-      document.removeEventListener("keydown", onKey, true);
-      unregisterPopover(close);
-    }
-    function handler(e) {
-      if (!p.contains(e.target) && excludeIds.indexOf(e.target.id) < 0) close();
-    }
-    function onKey(e) {
-      if (e.code === "Escape") close();
-    }
-    registerPopover(close);
-    setTimeout(function () {
-      document.addEventListener("click", handler, true);
-      document.addEventListener("keydown", onKey, true);
-    }, 0);
-    return close;
-  }
+
 
   // The Console (src/console.js) is the only menu now: the modes popover and
   // the tabbed settings panel are gone, and the section builders below render
@@ -330,8 +306,12 @@
             S.pomoBreakMin = v[1];
             S.pomoLongBreakMin = v[2];
             CALM.saveSettings();
+            // Re-render the WHOLE drawer, not just this tab into the shared
+            // container: `c` here is the drawer body, so the old
+            // `c.innerHTML=""; buildModesTab(c)` deleted Reading, Behavior,
+            // Presets and About along with it.
             c.innerHTML = "";
-            buildModesTab(c); // re-render so the sliders show the new values
+            buildAdvancedSections(c);
           }
         }
       )
@@ -373,15 +353,29 @@
         if (S.rememberState) CALM.saveState();
       })
     );
-    c.appendChild(toggleRow("Quick scroll buttons", "showQuickNav", updateQuickNav));
     c.appendChild(toggleRow("Keyboard shortcuts", "keyboardShortcut"));
+    c.appendChild(toggleRow("Fade the pill while typing", "dockQuiet"));
     c.appendChild(
-      toggleRow("Fade the pill while typing", "dockQuiet"),
       toggleRow("Show input tile", "showToggleButton", function () {
         if (CALM.console) CALM.console.render();
       })
     );
     c.appendChild(toggleRow("Dock auto-collapse", "dockAutoCollapse"));
+    c.appendChild(
+      selectRow(
+        "Where the goal shows",
+        "intentChipMode",
+        [
+          { value: "dock", label: "In the pill" },
+          { value: "floating", label: "Floating chip" },
+          { value: "hidden", label: "Nowhere" },
+        ],
+        function () {
+          if (CALM.intent) CALM.intent.renderChip();
+          if (CALM.dock) CALM.dock.refreshStatus();
+        }
+      )
+    );
     var reset = document.createElement("button");
     reset.type = "button";
     reset.className = "cit-save-preset";
@@ -406,6 +400,9 @@
         }
       });
       if (CALM.dock) CALM.dock.build();
+      // build() removes and re-creates the dock, taking this very drawer with
+      // it. Re-open on Advanced so the user stays where they were.
+      if (CALM.console) CALM.console.openAdvanced();
       showToast("Positions reset", true);
     });
     c.appendChild(reset);
@@ -612,7 +609,6 @@
   CALM.ui = {
     showToast: showToast,
     hideToast: hideToast,
-    updateQuickNav: updateQuickNav,
     smoothScrollTo: smoothScrollTo,
     showTypeChip: showTypeChip,
     hideTypeChip: hideTypeChip,

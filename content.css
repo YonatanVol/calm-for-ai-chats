@@ -718,7 +718,9 @@ body.cit-composer-hidden
 /* Presentation mode hides ALL Calm UI for clean capture/sharing —
    except the toast, which carries the "press Esc to exit" hint. */
 html.cit-presentation #cit-dock,
-html.cit-presentation html.cit-presentation html.cit-presentation #cit-type-chip,
+html.cit-presentation #cit-palette,
+html.cit-presentation #cit-reader-pane,
+html.cit-presentation #cit-type-chip,
 html.cit-presentation #cit-chip-stack,
 html.cit-presentation #cit-intent-chip,
 html.cit-presentation #cit-intent-pop,

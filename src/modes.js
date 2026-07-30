@@ -85,7 +85,11 @@
   function zenExit() {
     document.documentElement.classList.remove("cit-zen");
     removeEl("cit-zen-style");
-    rt.zenHidden.concat(site.zenTargets()).forEach(function (el) {
+    // Only strip inline display from elements WE set it on. The re-query used
+    // to run on every site, so on Gemini/Claude (zenInline: false) exiting Zen
+    // deleted inline styles the site itself had set — e.g. a collapsed sidenav.
+    var touched = site.zenInline ? rt.zenHidden.concat(site.zenTargets()) : rt.zenHidden;
+    touched.forEach(function (el) {
       try {
         el.style.removeProperty("display");
       } catch (_) {}
@@ -335,6 +339,7 @@
       surface: "tile",
       enter: function () { if (CALM.reader) CALM.reader.open(); },
       exit: function () { if (CALM.reader) CALM.reader.close(); },
+      vars: function () { if (CALM.reader) CALM.reader.refreshVars(); },
     },
     night: { label: "Night", icon: "☾", surface: "tile", enter: nightEnter, exit: nightExit, vars: nightVars },
     ruler: { label: "Reading ruler", icon: "▬", surface: "tile", enter: rulerEnter, exit: rulerExit, vars: rulerVars },

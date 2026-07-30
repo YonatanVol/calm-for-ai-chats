@@ -48,7 +48,6 @@
     rt.composerEl.style.setProperty("display", "none", "important");
     document.body.classList.add("cit-composer-hidden");
     rt.composerHidden = true;
-    ui.updateQuickNav();
     if (S.rememberState) CALM.saveState();
     if (opts.auto && S.showHints) ui.showToast();
   }
@@ -58,7 +57,6 @@
     rt.composerEl.style.removeProperty("display");
     document.body.classList.remove("cit-composer-hidden");
     rt.composerHidden = false;
-    ui.updateQuickNav();
     if (S.rememberState) CALM.saveState();
     restoreDraft();
     flushTypeAhead();
@@ -199,7 +197,6 @@
     if (el !== rt.scrollContainer) {
       rt.scrollContainer = el;
       rt.lastScrollTop = el.scrollTop;
-      ui.updateQuickNav();
       return;
     }
     handleScrollEl(el);
@@ -214,15 +211,20 @@
     if (sc) {
       rt.scrollContainer = sc;
       rt.lastScrollTop = sc.scrollTop;
-      ui.updateQuickNav();
       stopRetry();
     } else startRetry();
   }
   function startRetry() {
     if (rt.retryTimer) return;
+    // Capped like the composer probe. Uncapped, a rotted scrollRoot selector on
+    // a non-scrolling route re-ran largestScroller() — getComputedStyle on every
+    // div under <main> — every 1.5s for the life of the tab. The capture-phase
+    // scroll listener still adopts a container the moment the user scrolls, so
+    // giving up here costs nothing.
+    var tries = 0;
     rt.retryTimer = setInterval(function () {
-      if (!rt.scrollContainer) discoverScroll();
-      else stopRetry();
+      if (rt.scrollContainer || ++tries > 40) return stopRetry();
+      discoverScroll();
     }, C.RETRY_MS);
   }
   function stopRetry() {
@@ -340,8 +342,15 @@
   document.addEventListener(
     "keydown",
     function (e) {
+      // Escape ALWAYS leaves Presentation, even with shortcuts switched off:
+      // Presentation hides every Calm surface including the menu that turned
+      // it on, so gating this made it an unrecoverable trap that "remember
+      // state" could persist across reloads.
+      if (e.code === "Escape" && CALM.modes.isActive("presentation")) {
+        CALM.modes.exit("presentation");
+        return;
+      }
       if (!S.keyboardShortcut) return;
-      // Escape leaves Presentation mode (its buttons are hidden).
       if (e.code === "Escape" && modes.isActive && modes.isActive("presentation")) {
         modes.exit("presentation");
         return;
@@ -413,7 +422,6 @@
         (modes.isActive("zen") && S.zenComposer) ||
         (S.rememberState && !!(CALM.loadState() || {}).composerHidden);
       if (wantHidden && !rt.composerHidden) hideComposer();
-      ui.updateQuickNav();
     })(0);
   }
 
