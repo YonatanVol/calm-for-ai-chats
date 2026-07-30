@@ -120,7 +120,12 @@
       );
     } else {
       var goal = CALM.intent && CALM.intent.state && CALM.intent.state.goal;
-      main.appendChild(el("div", "cit-live-idle", goal || "Start a focus block"));
+      var idle = el("div", "cit-live-idle", goal || "Start a focus block");
+      // The chrome is forced LTR (see the host-isolation reset in content.css),
+      // but the goal is the user's own words — Hebrew, Arabic or otherwise — so
+      // this one element resolves its direction from its content.
+      if (goal) idle.setAttribute("dir", "auto");
+      main.appendChild(idle);
       main.appendChild(
         el("div", "cit-live-sub", (S.pomoFocusMin | 0) + " min · " + (S.pomoBreakMin | 0) + " break")
       );
