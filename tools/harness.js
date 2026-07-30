@@ -13,7 +13,7 @@ var ROOT = path.join(__dirname, "..");
 
 var MODULES = [
   "icons", "adapters", "state", "modes", "presets", "audio",
-  "pomodoro", "reader", "ui", "console", "dock", "wellness", "intent", "core", "typeahead",
+  "pomodoro", "reader", "ui", "console", "dock", "palette", "wellness", "intent", "core", "typeahead",
 ].map(function (n) { return path.join(ROOT, "src", n + ".js"); });
 
 var passed = 0, failed = 0;
@@ -421,6 +421,75 @@ section("Mode registry");
   M.applyReaderType();
   check("returning to default turns it off",
     !global.document.documentElement.classList.contains("cit-reader"));
+})();
+
+/* ---------------- Command palette ---------------- */
+section("Palette");
+(function () {
+  var w = buildWorld("chatgpt.com", {});
+  var C = w.C;
+
+  var kd = (w.docLs.keydown || []);
+  kd.forEach(function (f) {
+    f({ ctrlKey: true, metaKey: false, shiftKey: false, code: "KeyK",
+        preventDefault: function () {}, stopPropagation: function () {} });
+  });
+  var p = w.bodyEls["cit-palette"];
+  check("Ctrl+K opens the palette", !!p);
+
+  var items = C.palette._items();
+  check("every mode is reachable from the palette",
+    C.modes.ids().every(function (id) {
+      return items.some(function (it) { return it.kind === "mode" && it.id === id; });
+    }));
+  check("Advanced-only settings are reachable too",
+    items.some(function (it) { return it.key === "grayLevel"; }) &&
+    items.some(function (it) { return it.key === "dockQuiet"; }));
+
+  var input = p.querySelector(".cit-pal-input");
+  input.value = "zen";
+  input.__ls.input[0]({ stopPropagation: function () {} });
+  var rows = p.querySelectorAll(".cit-pal-row");
+  check("typing filters the list", rows.length > 0 && rows.length < items.length);
+  check("subsequence matching works (rdr finds Reading ruler)",
+    (function () {
+      input.value = "rdr";
+      input.__ls.input[0]({ stopPropagation: function () {} });
+      return p.querySelectorAll(".cit-pal-row").some(function (r) {
+        return /ruler/i.test(r.children[0].textContent);
+      });
+    })());
+
+  input.value = "zen";
+  input.__ls.input[0]({ stopPropagation: function () {} });
+  var before = C.modes.isActive("zen");
+  input.__ls.keydown[0]({ key: "Enter", stopPropagation: function () {}, preventDefault: function () {} });
+  check("Enter runs the highlighted item and closes",
+    C.modes.isActive("zen") !== before && !w.bodyEls["cit-palette"]);
+  C.modes.exit("zen");
+
+  // Arrow keys nudge a numeric setting in place
+  kd.forEach(function (f) {
+    f({ ctrlKey: true, metaKey: false, shiftKey: false, code: "KeyK",
+        preventDefault: function () {}, stopPropagation: function () {} });
+  });
+  var p2 = w.bodyEls["cit-palette"];
+  var i2 = p2.querySelector(".cit-pal-input");
+  i2.value = "night level";
+  i2.__ls.input[0]({ stopPropagation: function () {} });
+  var was = C.settings.nightLevel;
+  i2.__ls.keydown[0]({ key: "ArrowRight", stopPropagation: function () {}, preventDefault: function () {} });
+  check("arrows nudge a numeric setting without leaving the palette",
+    C.settings.nightLevel === was + 5 && !!w.bodyEls["cit-palette"]);
+
+  var docKeysBefore = (w.docLs.keydown || []).length;
+  i2.__ls.keydown[0]({ key: "Escape", stopPropagation: function () {}, preventDefault: function () {} });
+  check("Esc closes it and the registry entry is released",
+    !w.bodyEls["cit-palette"] && (w.docLs.keydown || []).length <= docKeysBefore);
+
+  C.palette.open();
+  w.nav("https://chatgpt.com/c/next");
+  check("SPA nav closes the palette", !w.bodyEls["cit-palette"]);
 })();
 
 /* ---------------- Intention: never self-opens ---------------- */
