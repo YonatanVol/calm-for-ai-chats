@@ -42,9 +42,9 @@
   }
 
   // ---- Quick nav ----
-  // Quick-nav lived on the old bloom tiles. The Console exposes scrolling
-  // through the palette instead, so there is nothing to show or hide here;
-  // the export stays because core.js calls it on every composer change.
+  // Scroll-to-top/end moved to the palette, so there is no quick-nav element
+  // to show or hide. The export stays because core.js calls it whenever the
+  // composer's visibility changes.
   function updateQuickNav() {}
 
   function smoothScrollTo(top) {
@@ -217,6 +217,34 @@
     var i = popovers.indexOf(closeFn);
     if (i >= 0) popovers.splice(i, 1);
   }
+  // One Escape listener for the whole extension. Handlers run newest-first and
+  // the first one that reports it handled the key wins, so Escape always
+  // dismisses the topmost surface.
+  // A STACK of currently-open surfaces. Registering at open time (rather than
+  // at module load) is what makes "topmost" mean what the user sees: the last
+  // thing opened is the first thing Escape closes.
+  var escapers = [];
+  function registerEscape(fn) {
+    escapers.push(fn);
+    return function () {
+      var i = escapers.indexOf(fn);
+      if (i >= 0) escapers.splice(i, 1);
+    };
+  }
+  document.addEventListener(
+    "keydown",
+    function (e) {
+      if (e.key !== "Escape") return;
+      for (var i = escapers.length - 1; i >= 0; i--) {
+        if (escapers[i]() === true) {
+          e.stopPropagation();
+          return;
+        }
+      }
+    },
+    true
+  );
+
   function closeAllPopovers() {
     popovers.slice().forEach(function (c) {
       try {
@@ -348,31 +376,10 @@
     c.appendChild(toggleRow("Quick scroll buttons", "showQuickNav", updateQuickNav));
     c.appendChild(toggleRow("Keyboard shortcuts", "keyboardShortcut"));
     c.appendChild(
-      toggleRow("Show toggle button", "showToggleButton", function () {
-        var b = document.getElementById(IDS.toggle);
-        if (b) b.style.display = S.showToggleButton ? "" : "none";
+      toggleRow("Fade the pill while typing", "dockQuiet"),
+      toggleRow("Show input tile", "showToggleButton", function () {
+        if (CALM.console) CALM.console.render();
       })
-    );
-    c.appendChild(toggleRow("Hint when auto-hidden", "showHints"));
-    c.appendChild(
-      toggleRow("Intention prompt (🎯)", "intentionPrompt", function () {
-        if (CALM.intent) CALM.intent.renderChip();
-      })
-    );
-    c.appendChild(
-      selectRow(
-        "Goal display",
-        "intentChipMode",
-        [
-          { value: "dock", label: "In the dock" },
-          { value: "floating", label: "Floating chip" },
-          { value: "hidden", label: "Hidden" },
-        ],
-        function () {
-          if (CALM.intent) CALM.intent.renderChip();
-          if (CALM.dock) CALM.dock.refreshStatus();
-        }
-      )
     );
     c.appendChild(toggleRow("Dock auto-collapse", "dockAutoCollapse"));
     var reset = document.createElement("button");
@@ -613,6 +620,7 @@
     hideChip: hideChip,
     refreshModeButtons: refreshModeButtons,
     registerPopover: registerPopover,
+    registerEscape: registerEscape,
     unregisterPopover: unregisterPopover,
     closeAllPopovers: closeAllPopovers,
     createUI: createUI,

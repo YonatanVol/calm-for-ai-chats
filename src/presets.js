@@ -14,18 +14,13 @@
   var rt = CALM.rt;
 
   var CUSTOM_KEY = "cit-presets";
-  var PRESET_KEYS = [
-    "readingWidth",
-    "sensitivity",
-    "readerFontScale",
-    "readerLineHeight",
-    "nightLevel",
-    "autoScrollSpeed",
-    "pauseMinutes",
-    "zenComposer",
-    "typeAhead",
-    "autoHideOnScroll",
-  ];
+  // A preset snapshots EVERY user-facing setting. It used to capture 10 of
+  // them and silently discard the rest, so "save current as preset" lied.
+  function presetKeys() {
+    return Object.keys(CALM.defaultSettings).filter(function (k) {
+      return k !== "settingsVersion";
+    });
+  }
 
   var BUILTINS = [
     { name: "Default", builtin: true, settings: { readingWidth: 0 }, modes: [] },
@@ -95,7 +90,7 @@
       return x.name !== name;
     });
     var snap = {};
-    PRESET_KEYS.forEach(function (k) {
+    presetKeys().forEach(function (k) {
       snap[k] = S[k];
     });
     var modes = Object.keys(rt.activeModes).filter(function (id) {

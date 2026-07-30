@@ -23,6 +23,7 @@
   var IDS = CALM.IDS;
 
   var collapseTimer = null;
+  var unEsc = null;
   var view = "main"; // "main" | "advanced"
 
   function el(tag, cls, text) {
@@ -57,6 +58,13 @@
     setView("main");
     render();
     d.classList.add("cit-dock-open");
+    if (!unEsc && CALM.ui.registerEscape) {
+      unEsc = CALM.ui.registerEscape(function () {
+        if (!isOpen()) return false;
+        close();
+        return true;
+      });
+    }
     bump();
   }
   function close() {
@@ -64,6 +72,7 @@
     if (d) d.classList.remove("cit-dock-open");
     clearTimeout(collapseTimer);
     setView("main");
+    if (unEsc) { unEsc(); unEsc = null; }
   }
   function toggle() {
     isOpen() ? close() : open();
@@ -201,13 +210,17 @@
     c.appendChild(liveTile());
 
     var quick = el("div", "cit-quick");
-    quick.appendChild(
-      quickTile(IDS.toggle, "input", "Input", function () {
-        return !!rt.composerHidden;
-      }, function () {
-        CALM.core.manualToggleComposer();
-      })
-    );
+    var inputTile = quickTile(IDS.toggle, "input", "Input", function () {
+      return !!rt.composerHidden;
+    }, function () {
+      CALM.core.manualToggleComposer();
+    });
+    // Honoured at BUILD time, and dimmed rather than removed so the row keeps
+    // its three columns. (The old tray set display:none from the settings
+    // handler, which both punched a hole in the grid and was silently undone
+    // by the next rebuild.)
+    if (!S.showToggleButton) inputTile.classList.add("cit-qt-dim");
+    quick.appendChild(inputTile);
     quick.appendChild(
       quickTile(IDS.zen, "zen", "Zen", function () {
         return CALM.modes.isActive("zen");

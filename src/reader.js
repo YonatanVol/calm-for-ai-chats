@@ -32,6 +32,7 @@
 
   var cleanRoot = null; // sanitized, pre-bionic copy of the response
   var keyHandler = null;
+  var unEsc = null;
   var curBlock = -1;
 
   // ---------- Extraction + sanitization ----------
@@ -342,11 +343,7 @@
   }
 
   function onKey(e) {
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      CALM.modes.exit("focusreader");
-      return;
-    }
+    if (e.key === "Escape") return; // the shared Escape handler owns this
     if (!S.frSpotlight) return;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
@@ -366,6 +363,13 @@
     if (p && p.focus) p.focus(); // keyboard scroll/Esc belong to the pane
     keyHandler = onKey;
     document.addEventListener("keydown", keyHandler, true);
+    if (!unEsc && CALM.ui.registerEscape) {
+      unEsc = CALM.ui.registerEscape(function () {
+        if (!paneEl()) return false;
+        CALM.modes.exit("focusreader");
+        return true;
+      });
+    }
   }
 
   function close() {
@@ -375,6 +379,7 @@
       document.removeEventListener("keydown", keyHandler, true);
       keyHandler = null;
     }
+    if (unEsc) { unEsc(); unEsc = null; }
     cleanRoot = null;
   }
 
