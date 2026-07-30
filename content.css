@@ -92,13 +92,9 @@ html[class*="light"], html[data-theme="light"] {
   min-width: 0;
   float: none;
   vertical-align: baseline;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 13px;
-  font-weight: 400;
   font-style: normal;
   font-variant: normal;
   font-stretch: normal;
-  line-height: 1.45;
   letter-spacing: normal;
   word-spacing: normal;
   text-indent: 0;
@@ -112,7 +108,25 @@ html[class*="light"], html[data-theme="light"] {
   direction: ltr;
   unicode-bidi: isolate;
   writing-mode: horizontal-tb;
+}
+
+/* Typography and colour are set on the ROOTS only, never on descendants:
+   `color: …` on a descendant is a DECLARATION, and a declaration beats
+   inheritance — which silently broke every active control, painting its icon
+   with the base ink on top of the active fill instead of inheriting the
+   active foreground. Elements that must not be crushed by a hostile host
+   declare their own line-height/font-size in their own rule below, which
+   outranks any `*` or type selector the page can write. */
+:where(
+  #cit-dock, #cit-console, #cit-palette, #cit-intent-pop, #cit-intent-chip,
+  #cit-pomo-widget, #cit-pomo-overlay, #cit-toast, #cit-chip-stack,
+  #cit-type-chip, #cit-timebar, .cit-fr-bar
+) {
   color: var(--cit-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
 }
 
 /* The Focus Reader shows the user's own conversation, so it gets the same
@@ -165,6 +179,7 @@ html[class*="light"], html[data-theme="light"] {
 #cit-console {
   position: absolute;
   width: 268px;
+  max-width: calc(100vw - 24px);
   padding: 10px;
   border-radius: 18px;
   background: linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
@@ -455,9 +470,6 @@ html[class*="light"], html[data-theme="light"] {
   color: var(--cit-ink);
 }
 
-body.cit-composer-hidden 
-
-
 /* Drag affordances */
 .cit-dragging {
   transition: none !important;
@@ -467,9 +479,6 @@ body.cit-composer-hidden
   cursor: grab;
 }
 #cit-pomo-widget {
-  cursor: grab;
-}
-.cit-settings-header {
   cursor: grab;
 }
 
@@ -1040,7 +1049,9 @@ html.cit-presentation #cit-night-overlay {
   padding: 7px 13px;
   border-radius: 999px;
   background: var(--cit-gold);
-  color: var(--cit-ink);
+  /* --cit-gold is a light grey since the monochrome pass; ink on it measured
+     1.42:1. The on-gold token is the readable counterpart. */
+  color: var(--cit-on-gold);
   font-size: 12.5px;
   font-weight: 600;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -1145,7 +1156,7 @@ html.cit-presentation #cit-night-overlay {
   justify-content: center;
   background: radial-gradient(
       1200px 800px at 50% 40%,
-      var(--cit-gold),
+      rgba(255, 255, 255, 0.06),
       transparent 60%
     ),
     rgba(12, 13, 18, 0.9);
@@ -1253,6 +1264,7 @@ html.cit-presentation #cit-night-overlay {
 .cit-mini-btn:hover {
   background: var(--cit-gold);
   border-color: var(--cit-gold);
+  color: var(--cit-on-gold); /* ink on this fill measured 1.42:1 */
 }
 .cit-mini-btn.cit-del {
   padding: 3px 7px;
@@ -1306,47 +1318,18 @@ html.cit-presentation #cit-night-overlay {
 .cit-about .cit-about-dim {
   color: var(--cit-ink-dim);
 }
-.cit-about .cit-about-pro {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--cit-gold);
-  color: var(--cit-on-gold);
-  font-weight: 600;
-  font-size: 12px;
-}
-
+.cit-about 
 /* ----------------------------------------
    Responsive
 ---------------------------------------- */
 @media (max-width: 480px) {
-  #cit-settings-panel {
-    right: 8px;
-    width: calc(100vw - 16px);
-  }
-  #cit-toast {
-    right: 12px;
-    bottom: 116px;
-    max-width: calc(100vw - 24px);
-    white-space: normal;
-  }
+  #cit-console { width: calc(100vw - 24px); }
+  #cit-toast { left: 12px; right: 12px; transform: none; text-align: center; }
 }
 
 /* ----------------------------------------
    Account tab (cloud sync)
 ---------------------------------------- */
-.cit-account {
-  padding: 4px 2px;
-}
-.cit-account-who {
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-.cit-account-err {
-  margin-top: 8px;
-  color: #e5484d;
-  font-size: 12px;
-}
 
 /* ================= Calm Maison — finishing layer =================
    Typography, gold hairlines, shimmer, and SVG sizing. Appended last so
@@ -1374,22 +1357,14 @@ html.cit-presentation #cit-night-overlay {
 }
 
 /* Serif voice: titles, dock status, pomodoro numerals */
-.cit-settings-title {
-  font-family: var(--cit-serif);
-  font-size: 15px;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0.03em;
-  color: var(--cit-ink);
-}
 .cit-dock-status { font-family: var(--cit-serif); }
 .cit-pomo-time { font-family: var(--cit-serif) !important; letter-spacing: 0.05em; }
-.cit-pomo-prog { stroke: var(--cit-gold) !important; }
+/* Scoped so it cannot override the break ring, which is deliberately warm. */
+.cit-pomo-ring .cit-pomo-prog { stroke: var(--cit-gold); }
 
 /* Uppercase spaced tabs with a gold active underline */
 
 /* Panel breathing room + gold controls */
-#cit-settings-panel { padding: 16px 20px 18px; border-radius: 16px; }
 .cit-settings-row { padding: 11px 0; }
 .cit-slider { accent-color: var(--cit-gold); }
 .cit-toggle-switch.cit-on { background: linear-gradient(135deg, var(--cit-gold-bright), var(--cit-gold-deep)); }
@@ -1683,3 +1658,148 @@ html.cit-presentation #cit-night-overlay {
 /* An input tile the user has switched off: still present so the row keeps its
    three columns, but visibly inert. */
 .cit-qt.cit-qt-dim { opacity: 0.3; pointer-events: none; }
+
+.cit-ic { display: inline-flex; align-items: center; justify-content: center; }
+
+/* ----------------------------------------
+   The Margin — controls as marginalia.
+   No card, no border, no background: marks in
+   the empty gutter beside the text, at rest
+   almost invisible.
+---------------------------------------- */
+#cit-dock.cit-margin {
+  transform: translateY(-50%);
+  /* A generous invisible hit area, so the marks wake as the pointer
+     approaches rather than only on a direct hit. */
+  padding: 26px 30px;
+  margin: -26px -30px;
+  opacity: 0.2;
+  transition: opacity 0.4s var(--cit-ease);
+}
+#cit-dock.cit-margin:hover,
+#cit-dock.cit-margin:focus-within,
+#cit-dock.cit-margin.cit-dock-open {
+  opacity: 1;
+}
+/* While a timer runs the marks stay a little more present, so the count is
+   readable without hunting for it. */
+#cit-dock.cit-margin.cit-margin-live { opacity: 0.4; }
+#cit-dock.cit-margin.cit-quiet { opacity: 0.08; }
+
+.cit-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 34px;
+}
+.cit-mark {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 9px;
+  color: var(--cit-ink-dim);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.cit-mark:hover { color: var(--cit-ink); background: var(--cit-fill-soft); }
+.cit-mark:focus-visible {
+  outline: none;
+  color: var(--cit-ink);
+  box-shadow: inset 0 0 0 1.5px var(--cit-hairline-strong);
+}
+.cit-mark .cit-svg { width: 17px; height: 17px; }
+/* Active state is a mark in the margin, not a filled button: a short rule
+   along the outer edge, the way you would tick something in a book. */
+.cit-mark.cit-active { color: var(--cit-ink); }
+.cit-mark.cit-active::after {
+  content: "";
+  position: absolute;
+  top: 11px;
+  bottom: 11px;
+  width: 1.5px;
+  border-radius: 1px;
+  background: var(--cit-ink);
+}
+/* Close enough to read as a tick ON the mark, not a stray rule beside it. */
+#cit-dock.cit-rail-right .cit-mark.cit-active::after { right: 4px; }
+#cit-dock.cit-rail-left .cit-mark.cit-active::after { left: 4px; }
+
+/* The label writes itself out toward the text, never away into the void. */
+.cit-mark-label {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--cit-ink-faint);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s var(--cit-ease), transform 0.24s var(--cit-spring);
+}
+#cit-dock.cit-rail-right .cit-mark-label {
+  right: calc(100% + 4px);
+  transform: translateY(-50%) translateX(6px);
+}
+#cit-dock.cit-rail-left .cit-mark-label {
+  left: calc(100% + 4px);
+  transform: translateY(-50%) translateX(-6px);
+}
+.cit-mark:hover .cit-mark-label,
+.cit-mark:focus-visible .cit-mark-label {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* Minutes remaining, tucked under the timer mark. */
+.cit-mark:has(.cit-mark-count:not(:empty)) .cit-mark-ic {
+  transform: translateY(-4px);
+}
+.cit-mark-count {
+  position: absolute;
+  bottom: 3px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--cit-serif);
+  font-size: 9px;
+  line-height: 1;
+  color: var(--cit-ink-faint);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.cit-mark-count:empty { display: none; }
+
+/* The Console opens INWARD from the rail — toward the text, never off-screen —
+   and is vertically centred on it. */
+#cit-dock.cit-margin #cit-console {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%) scale(0.97);
+  transform-origin: center;
+}
+#cit-dock.cit-margin.cit-dock-open #cit-console {
+  transform: translateY(-50%) scale(1);
+}
+#cit-dock.cit-margin.cit-rail-right #cit-console {
+  right: calc(100% + 10px);
+  left: auto;
+}
+#cit-dock.cit-margin.cit-rail-left #cit-console {
+  left: calc(100% + 10px);
+  right: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #cit-dock.cit-margin,
+  .cit-mark,
+  .cit-mark-label { transition: none; }
+}

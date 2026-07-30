@@ -60,7 +60,14 @@ function buildWorld(hostname, opts) {
         return c;
       },
       remove: function () {
-        delete world.bodyEls[el.__id];
+        // Removing a node removes its whole subtree in a real DOM. The stub
+        // used to forget only the node's own id, so descendants stayed
+        // "findable" by getElementById after their parent was detached — and
+        // teardown tests passed when the real page would have kept nothing.
+        (function forget(n) {
+          if (n.__id) delete world.bodyEls[n.__id];
+          (n.children || []).forEach(forget);
+        })(el);
         if (el.__parent) {
           var i = el.__parent.children.indexOf(el);
           if (i >= 0) el.__parent.children.splice(i, 1);
@@ -399,6 +406,65 @@ section("Console");
     !!nd && nd.classList.contains("cit-corner-br") && !!w.bodyEls["cit-console"]);
 })();
 
+/* ---------------- The Margin ---------------- */
+section("Margin");
+(function () {
+  var w = buildWorld("chatgpt.com", {});
+  var C = w.C;
+
+  // A realistic column: 700px of text centred in a 1400px window leaves 350px
+  // of gutter on each side.
+  function column(left, right) {
+    C.rt.composerEl = w.makeEl("div");
+    C.rt.composerEl.__rect = { left: left, right: right, width: right - left,
+      top: 100, bottom: 500, height: 400 };
+  }
+
+  column(350, 1050);
+  var m = C.margin.measure();
+  check("finds the roomier gutter and centres the rail in it",
+    !!m && m.side === "right" && m.x > 1050 && m.x < 1400, JSON.stringify(m));
+
+  // A column pushed right (site sidebar open) should move the rail left.
+  column(700, 1380);
+  var m2 = C.margin.measure();
+  check("follows the column when the page layout shifts",
+    !!m2 && m2.side === "left" && m2.x < 700, JSON.stringify(m2));
+
+  // No gutter -> margin mode must decline rather than sit on the text.
+  column(20, 1380);
+  check("declines when there is no room", C.margin.measure() === null);
+
+  // End to end: the rail replaces the pill, and the Console still works.
+  column(350, 1050);
+  C.settings.menuStyle = "margin";
+  C.dock.build();
+  var dock = w.bodyEls["cit-dock"];
+  check("margin mode renders the rail instead of the pill",
+    !!w.bodyEls["cit-margin-rail"] && !dock.querySelector(".cit-dock-pill") &&
+      dock.classList.contains("cit-margin"));
+  check("the rail carries five marks",
+    w.bodyEls["cit-margin-rail"].querySelectorAll(".cit-mark").length === 5);
+  check("the Console still lives in the same host",
+    !!w.bodyEls["cit-console"]);
+  C.console.open();
+  check("and still opens from the rail", C.console.isOpen());
+  C.console.close();
+
+  // Fall back on its own when the gutter disappears — no setting to change.
+  column(20, 1380);
+  C.dock.build();
+  check("falls back to the corner pill when the gutter goes away",
+    !w.bodyEls["cit-margin-rail"] &&
+      !!w.bodyEls["cit-dock"].querySelector(".cit-dock-pill"));
+  check("and the Console survives the fallback", !!w.bodyEls["cit-console"]);
+
+  C.settings.menuStyle = "console";
+  C.dock.build();
+  check("switching back to the pill leaves no rail behind",
+    !w.bodyEls["cit-margin-rail"]);
+})();
+
 /* ---------------- Sanitizer ---------------- */
 section("Sanitizer");
 (function () {
@@ -461,22 +527,37 @@ section("Sanitizer");
 section("Host isolation");
 (function () {
   var css = fs.readFileSync(path.join(ROOT, "content.css"), "utf8");
-  var m = css.match(/:where\([^)]*#cit-console[^)]*\)[^{]*\{([^}]*)\}/);
-  check("a zero-specificity reset guards Calm's chrome", !!m);
-  if (m) {
-    var body = m[1];
-    // These are the inherited properties a host page can set that visibly
-    // break Calm. line-height was the one that clipped the live tile's label
-    // to a sliver; direction mirrored the whole Console under a Hebrew page.
-    ["line-height", "letter-spacing", "text-indent", "white-space",
-     "direction", "text-transform", "font-size", "box-sizing"].forEach(function (prop) {
-      check("reset neutralises inherited " + prop, body.indexOf(prop + ":") >= 0);
-    });
-    check("the reset uses :where() so real rules still win without !important",
-      /:where\(/.test(css) && body.indexOf("!important") < 0);
-  }
-  // The reader shows the user's conversation: it must NOT be forced to one
-  // direction, or Hebrew and Arabic responses would render backwards.
+  var rules = css.match(/:where\([^)]*#cit-console[^)]*\)[^{]*\{[^}]*\}/g) || [];
+  var descendant = rules.filter(function (r) { return /\)\s*\*\s*\{/.test(r); })[0];
+  var rootOnly = rules.filter(function (r) { return !/\)\s*\*\s*\{/.test(r); })[0];
+  check("a zero-specificity reset guards Calm's chrome", !!descendant && !!rootOnly);
+  if (!descendant || !rootOnly) return;
+
+  // Properties a hostile host sets that must never reach our descendants.
+  ["letter-spacing", "text-indent", "white-space", "direction",
+   "text-transform", "box-sizing"].forEach(function (prop) {
+    check("descendants are guarded against inherited " + prop,
+      descendant.indexOf(prop + ":") >= 0);
+  });
+
+  // REGRESSION GUARD. `color` (and friends) on a DESCENDANT is a declaration,
+  // and a declaration beats inheritance — so declaring them there paints every
+  // icon inside an active control with the base ink instead of the active
+  // foreground, i.e. white-on-white. They belong on the roots only.
+  ["color", "font-size", "line-height", "font-weight"].forEach(function (prop) {
+    check("descendants do NOT declare " + prop + " (it would break active states)",
+      descendant.indexOf(prop + ":") < 0);
+    check("the root does declare " + prop, rootOnly.indexOf(prop + ":") >= 0);
+  });
+
+  check("the reset uses :where() so real rules still win without !important",
+    descendant.indexOf("!important") < 0 && rootOnly.indexOf("!important") < 0);
+
+  // Elements a host could crush must state their own line-height, which
+  // outranks any `*` or type selector the page can write.
+  check("the live-tile label declares its own line-height",
+    /\.cit-live-idle \{[^}]*line-height:/.test(css));
+
   var readerReset = css.match(/:where\(#cit-reader-pane[^{]*\{([^}]*)\}/);
   check("the reader's reset leaves bidi and whitespace alone",
     !!readerReset && readerReset[1].indexOf("direction:") < 0 &&
@@ -484,7 +565,13 @@ section("Host isolation");
   check("code blocks re-assert white-space: pre",
     /\.cit-fr-body pre \{\s*white-space: pre;/.test(css));
 
-  // User-authored text stays bidi-aware even though the chrome is LTR.
+  // No rule may still target a surface v3.1 deleted.
+  ["#cit-settings-panel", "#cit-modes-pop", "#cit-bloom", ".cit-account"].forEach(function (sel) {
+    check("no dead CSS for " + sel, css.indexOf(sel) < 0);
+  });
+  check("a browser colour/contrast suite is committed",
+    fs.existsSync(path.join(ROOT, "tools", "contrast-test.html")));
+
   var w = buildWorld("chatgpt.com", {});
   w.C.intent.state.goal = "לסיים את הסקירה";
   w.C.console.render();
