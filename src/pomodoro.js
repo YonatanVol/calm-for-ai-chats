@@ -103,7 +103,8 @@
   }
   function nextPhase() {
     if (CALM.audio) CALM.audio.playChime();
-    logElapsed(); // best-effort; no-op when signed out or <1 min elapsed
+    if (st.skipLogged) st.skipLogged = false; // skip() already logged it
+    else logElapsed();
     if (st.phase === "focus") {
       var longNow = st.cycle >= (S.pomoCycles | 0);
       enterPhase(longNow ? "long" : "break");
@@ -115,6 +116,9 @@
       showOverlay(); // surface the break
     } else {
       if (st.phase === "long") {
+        // Already logged above; stop() would otherwise log the same block a
+        // second time on the way out.
+        st.remaining = st.total;
         CALM.modes.exit("pomodoro"); // whole set done
         return;
       }
@@ -133,10 +137,15 @@
     render();
   }
   function skip() {
+    // Log what actually elapsed BEFORE collapsing the clock — zeroing first
+    // made a block skipped at minute 2 report the full 25.
+    logElapsed();
+    st.skipLogged = true;
     st.remaining = 0;
     nextPhase();
   }
   function reset() {
+    logElapsed(); // a discarded partial block still happened
     st.cycle = 1;
     st.paused = false;
     enterPhase("focus");
@@ -271,5 +280,5 @@
     if (o) o.remove();
   }
 
-  CALM.pomodoro = { start: start, stop: stop, state: st };
+  CALM.pomodoro = { start: start, stop: stop, skip: skip, reset: reset, state: st };
 })();

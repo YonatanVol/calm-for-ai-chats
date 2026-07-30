@@ -339,6 +339,20 @@
       if (!p.contains(e.target) && e.target.id !== "cit-intent-chip") closePop();
     }
     if (CALM.ui.registerPopover) CALM.ui.registerPopover(closePop);
+    // Escape closes it too — it used to be the only Calm surface you could not
+    // dismiss with the keyboard.
+    var unEsc = CALM.ui.registerEscape
+      ? CALM.ui.registerEscape(function () {
+          if (!document.getElementById("cit-intent-pop")) return false;
+          closePop();
+          return true;
+        })
+      : null;
+    var innerClose = closePop;
+    closePop = function () {
+      if (unEsc) { unEsc(); unEsc = null; }
+      innerClose();
+    };
     setTimeout(function () {
       document.addEventListener("click", closeOnOutside, true);
     }, 0);

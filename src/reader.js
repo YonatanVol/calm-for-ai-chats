@@ -18,17 +18,29 @@
   var S = CALM.settings;
   var IDS = CALM.IDS;
 
-  // Tags dropped wholesale during sanitization. Matched case-insensitively:
-  // SVG/MathML elements keep lowercase tagName (foreign namespaces), so an
-  // uppercase-only lookup would silently let them through.
-  var DROP = {
-    SCRIPT: 1, STYLE: 1, LINK: 1, META: 1, BUTTON: 1, INPUT: 1, SELECT: 1,
-    TEXTAREA: 1, SVG: 1, IMG: 1, PICTURE: 1, VIDEO: 1, AUDIO: 1, IFRAME: 1,
-    CANVAS: 1, FORM: 1, NAV: 1, DIALOG: 1, OBJECT: 1, EMBED: 1, APPLET: 1,
-    TEMPLATE: 1, MATH: 1, BASE: 1, SOURCE: 1, TRACK: 1, AREA: 1, MAP: 1,
-    SLOT: 1, PORTAL: 1,
+  // ALLOWLIST, not a denylist. A denylist has to enumerate every dangerous tag
+  // forever — NOSCRIPT, FRAMESET, PLAINTEXT, FENCEDFRAME, whatever HTML adds
+  // next — and anything it forgets sails through. Here the default is "not
+  // trusted": an unknown tag is unwrapped (its text kept), never adopted.
+  // That also means we never re-adopt a host CUSTOM ELEMENT — cloning one back
+  // into the document could run the page framework's own constructor inside
+  // our pane, after sanitizing.
+  var KEEP = {
+    P: 1, DIV: 1, SPAN: 1, BR: 1, HR: 1,
+    H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1,
+    UL: 1, OL: 1, LI: 1, DL: 1, DT: 1, DD: 1,
+    PRE: 1, CODE: 1, BLOCKQUOTE: 1, FIGURE: 1, FIGCAPTION: 1,
+    TABLE: 1, THEAD: 1, TBODY: 1, TFOOT: 1, TR: 1, TH: 1, TD: 1, CAPTION: 1,
+    A: 1, B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, DEL: 1, INS: 1,
+    MARK: 1, SMALL: 1, SUB: 1, SUP: 1, ABBR: 1, KBD: 1, SAMP: 1, VAR: 1, Q: 1,
   };
-  var BLOCKS = { P: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1, UL: 1, OL: 1, PRE: 1, BLOCKQUOTE: 1, TABLE: 1, DIV: 1, HR: 1 };
+  // Unwrapping these would leak their contents as visible text — their child
+  // text IS markup or code.
+  var DROP_ENTIRELY = {
+    SCRIPT: 1, STYLE: 1, TEMPLATE: 1, NOSCRIPT: 1, IFRAME: 1, OBJECT: 1,
+    EMBED: 1, FRAME: 1, FRAMESET: 1, PLAINTEXT: 1, XMP: 1, LISTING: 1,
+    HEAD: 1, TITLE: 1, SELECT: 1, OPTION: 1, TEXTAREA: 1, BUTTON: 1,
+  };
 
   var cleanRoot = null; // sanitized, pre-bionic copy of the response
   var keyHandler = null;
@@ -44,51 +56,54 @@
   }
 
   function safeHref(v) {
-    return /^https?:\/\//i.test(v || "") ? v : null;
+    // Strip control characters and whitespace before testing: "java\tscript:"
+    // and a leading newline both slip past a naive prefix check.
+    var clean = String(v || "").replace(/[\u0000-\u0020\u007f]/g, "");
+    return /^https?:\/\/[^\s]/i.test(clean) ? clean : null;
   }
 
+  // Rebuild rather than clone-and-strip: walk the source and construct fresh
+  // elements that we own. Nothing from the host survives except allowed tag
+  // names, the text, and vetted link hrefs.
   function sanitize(node) {
-    // Walk a detached clone: drop noise wholesale, strip every attribute
-    // (site classes, handlers, tracking data) except a vetted link href.
-    var clone = node.cloneNode(true);
-    // KaTeX pre-pass: attribute stripping would shred rendered math into
-    // duplicated glyph soup, so swap each formula for its TeX source.
-    Array.prototype.slice
-      .call(clone.querySelectorAll ? clone.querySelectorAll(".katex") : [])
-      .forEach(function (k) {
-        var ann = k.querySelector('annotation[encoding="application/x-tex"]');
-        var code = document.createElement("code");
-        code.textContent = ann ? ann.textContent : k.textContent;
-        if (k.parentNode) k.parentNode.replaceChild(code, k);
-      });
-    (function scrub(el) {
-      var kids = Array.prototype.slice.call(el.children || []);
-      kids.forEach(function (ch) {
-        if (DROP[String(ch.tagName).toUpperCase()]) {
-          ch.remove();
+    var out = document.createElement("div");
+    (function copy(src, dest) {
+      var kids = src.childNodes ? Array.prototype.slice.call(src.childNodes) : [];
+      kids.forEach(function (n) {
+        if (n.nodeType === 3) {
+          dest.appendChild(document.createTextNode(n.textContent));
           return;
         }
-        scrub(ch);
+        if (n.nodeType !== 1) return;
+        var tag = String(n.tagName || "").toUpperCase();
+        // Rendered maths: keep the TeX source, not the glyph soup KaTeX emits.
+        if (n.classList && n.classList.contains && n.classList.contains("katex")) {
+          var ann = n.querySelector &&
+            n.querySelector('annotation[encoding="application/x-tex"]');
+          var code = document.createElement("code");
+          code.textContent = ann ? ann.textContent : n.textContent;
+          dest.appendChild(code);
+          return;
+        }
+        if (DROP_ENTIRELY[tag]) return;
+        if (!Object.prototype.hasOwnProperty.call(KEEP, tag)) {
+          copy(n, dest); // unknown tag: unwrap, keep the words
+          return;
+        }
+        var kid = document.createElement(tag);
+        if (tag === "A") {
+          var href = safeHref(n.getAttribute && n.getAttribute("href"));
+          if (href) {
+            kid.setAttribute("href", href);
+            kid.setAttribute("target", "_blank");
+            kid.setAttribute("rel", "noopener noreferrer");
+          }
+        }
+        dest.appendChild(kid);
+        copy(n, kid);
       });
-      if (el.attributes) {
-        for (var i = el.attributes.length - 1; i >= 0; i--) {
-          var name = el.attributes[i].name;
-          if (el.tagName === "A" && name === "href") continue;
-          el.removeAttribute(name);
-        }
-      }
-      if (el.tagName === "A") {
-        var href = safeHref(el.getAttribute("href"));
-        if (href) {
-          el.setAttribute("href", href);
-          el.setAttribute("target", "_blank");
-          el.setAttribute("rel", "noopener noreferrer");
-        } else {
-          el.removeAttribute("href");
-        }
-      }
-    })(clone);
-    return clone;
+    })(node, out);
+    return out;
   }
 
   // ---------- Bionic fixation ----------
@@ -385,8 +400,16 @@
 
   CALM.reader = {
     open: open,
+    // Lets the palette and presets change frSize/frEase/frSpotlight/frBionic
+    // from outside the pane and have the open pane actually reflect it.
+    refreshVars: function () {
+      if (!paneEl()) return;
+      setVars();
+      render();
+    },
     close: close,
     refresh: load,
     _boldCount: boldCount, // exposed for the harness
+    _sanitize: sanitize, // the one security-critical function — must be testable
   };
 })();

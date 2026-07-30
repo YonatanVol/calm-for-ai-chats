@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Calm — Reading Mode for AI Chats",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Calm reading and ADHD-friendly focus for ChatGPT, Gemini and Claude: hide the input, Zen mode, Focus Reader, Pomodoro, reading ruler. No permissions, no account, no network requests.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt5tSGdWA72UgSety3iUG1SNo3MjuMAtI+iSX9YRIzoVJv347EtLySgzZ0gMVma+rK03ErOpEN5ffS1ZzdoDXaeRxkoa2mQ1jdJ+cawuku30aRoVXDNlcNoCK9Bzq6pI8t8Fe6B6BoF3zJ+aSi3m83AO7FFZYhzp9uc0N24OH9mBKLiblHQnYufKxrx5AtW5ueVTx+NtsxCn/TX6zR0mQLtYeusfLNLMxGXAxpwJJMaoW0uTlZ4FmPVSBKentM8tVtVBvdfnqKqemSYcN+RqOmc8STEPdBIbXum0XcFr6CowTLFPMnearNVSXgUldcCpKPPCIDYcT6GvPUs+RqJ2gDwIDAQAB",
   "content_scripts": [

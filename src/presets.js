@@ -79,7 +79,10 @@
       CALM.modes.enter(id);
     });
     CALM.modes.applyWidth();
+    CALM.modes.applyReaderType(); // was missed when `reader` stopped being a mode
     CALM.modes.refreshVars();
+    if (CALM.reader && CALM.reader.refreshVars) CALM.reader.refreshVars();
+    if (CALM.console) CALM.console.render();
     if (CALM.ui && CALM.ui.refreshModeButtons) CALM.ui.refreshModeButtons();
   }
 

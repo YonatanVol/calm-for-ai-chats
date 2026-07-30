@@ -130,6 +130,8 @@ function buildWorld(hostname, opts) {
       return e;
     },
     createRange: function () { return { selectNodeContents: noop, collapse: noop }; },
+    createTextNode: function (t) { return { nodeType: 3, textContent: t, children: [] }; },
+    createDocumentFragment: function () { return makeEl("fragment"); },
     addEventListener: function (t, fn) { (world.docLs[t] = world.docLs[t] || []).push(fn); },
     removeEventListener: function (t, fn) {
       if (world.docLs[t]) world.docLs[t] = world.docLs[t].filter(function (f) { return f !== fn; });
@@ -397,6 +399,64 @@ section("Console");
     !!nd && nd.classList.contains("cit-corner-br") && !!w.bodyEls["cit-console"]);
 })();
 
+/* ---------------- Sanitizer ---------------- */
+section("Sanitizer");
+(function () {
+  var w = buildWorld("chatgpt.com", {});
+  var C = w.C;
+  check("the security-critical function is exported and therefore testable",
+    typeof C.reader._sanitize === "function");
+
+  // Node-level smoke; the full attack suite lives in tools/sanitizer-test.html
+  // and must be run in a real browser (see the header of that file).
+  function src(build) {
+    var root = w.makeEl("div");
+    build(root);
+    return root;
+  }
+  function txt(n, s) { var t = { nodeType: 3, textContent: s }; n.children.push(t);
+    n.childNodes = n.children; return n; }
+  function tag(name, attrs) {
+    var e = w.makeEl(name);
+    e.__attrs = attrs || {};
+    e.childNodes = e.children;
+    return e;
+  }
+  var root = src(function (r) {
+    var script = tag("script"); txt(script, "window.x=1");
+    var p = tag("p", { onclick: "x()", id: "cit-dock" }); txt(p, "hello");
+    var a = tag("a", { href: "javascript:alert(1)" }); txt(a, "bad");
+    var custom = tag("message-content"); txt(custom, "unwrapped");
+    r.children = [script, p, a, custom];
+    r.childNodes = r.children;
+  });
+  var out = C.reader._sanitize(root);
+  function collect(n, acc) {
+    (n.children || []).forEach(function (c) {
+      if (c.tagName) acc.push(String(c.tagName).toUpperCase());
+      collect(c, acc);
+    });
+    return acc;
+  }
+  var tags = collect(out, []);
+  check("script is dropped entirely", tags.indexOf("SCRIPT") < 0);
+  check("allowed tags survive", tags.indexOf("P") >= 0);
+  check("unknown custom element is unwrapped, not adopted",
+    tags.indexOf("MESSAGE-CONTENT") < 0);
+  var anchors = [];
+  (function walk(n) {
+    (n.children || []).forEach(function (c) {
+      if (String(c.tagName).toUpperCase() === "A") anchors.push(c);
+      walk(c);
+    });
+  })(out);
+  check("javascript: href is refused",
+    anchors.length === 1 && !anchors[0].__attrs.href);
+
+  var browserSuite = fs.existsSync(path.join(ROOT, "tools", "sanitizer-test.html"));
+  check("the browser attack suite is committed alongside it", browserSuite);
+})();
+
 /* ---------------- Host isolation ---------------- */
 section("Host isolation");
 (function () {
@@ -527,6 +587,142 @@ section("Polish");
     !w.bodyEls["cit-reader-pane"] && C.console.isOpen());
   esc();
   check("a second Escape then closes the Console", !C.console.isOpen());
+})();
+
+/* ---------------- Review batch A ---------------- */
+section("Review fixes");
+(function () {
+  var w = buildWorld("chatgpt.com", {});
+  var C = w.C;
+
+  // The "Show input tile" row was passed as appendChild's SECOND argument and
+  // silently discarded, so it never rendered.
+  var adv = w.makeEl("div");
+  C.ui.buildAdvancedSections(adv);
+  var labels = adv.querySelectorAll(".cit-settings-row").map(function (r) {
+    return r.children[0] ? r.children[0].textContent : "";
+  });
+  check("both toggle rows render (appendChild takes ONE child)",
+    labels.some(function (l) { return /fade the pill/i.test(l); }) &&
+    labels.some(function (l) { return /show input tile/i.test(l); }));
+
+  // Escape must reach every dismissible surface.
+  function esc() {
+    (w.docLs.keydown || []).slice().forEach(function (f) {
+      f({ key: "Escape", stopPropagation: function () {}, preventDefault: function () {} });
+    });
+  }
+  C.intent.toggle(false);
+  check("Escape closes the Intention panel",
+    !!w.bodyEls["cit-intent-pop"] && (esc(), !w.bodyEls["cit-intent-pop"]));
+  C.palette.open();
+  check("Escape closes the palette even without input focus",
+    !!w.bodyEls["cit-palette"] && (esc(), !w.bodyEls["cit-palette"]));
+})();
+
+section("Pomodoro accounting");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C, P = C.pomodoro, logged = [];
+  C.stats.log = function (kind, min) { logged.push({ kind: kind, min: min }); };
+  if (C.audio) C.audio.playChime = function () {};
+
+  // Skipping two minutes into a 25-minute block must log 2, not 25.
+  C.modes.enter("pomodoro");
+  P.state.remaining = P.state.total - 120;
+  P.skip();
+  check("skip logs the elapsed time, not the configured length",
+    logged.length === 1 && logged[0].min === 2, JSON.stringify(logged));
+
+  // The final long break was logged once by nextPhase and again by stop().
+  logged.length = 0;
+  P.state.phase = "long";
+  P.state.total = 900;
+  P.state.remaining = 300;
+  P.state.running = true;
+  var tick = w.lastInterval();
+  P.state.remaining = 1;
+  if (tick) tick();
+  var longEntries = logged.filter(function (l) { return l.kind === "long"; });
+  check("the final long break is logged exactly once",
+    longEntries.length <= 1, JSON.stringify(logged));
+})();
+
+section("Zen ownership across sites");
+(function () {
+  ["gemini.google.com", "claude.ai"].forEach(function (host) {
+    var w = buildWorld(host, { lenient: true });
+    var C = w.C;
+    check(host + ": zenInline is off", C.site.zenInline !== true);
+    var stripped = [];
+    var fake = { style: { removeProperty: function (p) { stripped.push(p); },
+      setProperty: function () {} } };
+    C.rt.zenHidden = [fake];
+    C.modes.enter("zen");
+    C.modes.exit("zen");
+    // Only elements Calm itself hid may have their inline display cleared.
+    check(host + ": exiting Zen touches only elements Calm hid",
+      stripped.length <= 1);
+  });
+})();
+
+section("Review batch B");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+
+  // Presentation hides every Calm surface, so Escape must work even with
+  // keyboard shortcuts switched off — otherwise it is an unrecoverable trap
+  // that "remember state" persists across reloads.
+  C.settings.keyboardShortcut = false;
+  C.modes.enter("presentation");
+  (w.docLs.keydown || []).slice().forEach(function (f) {
+    f({ code: "Escape", key: "Escape", stopPropagation: function () {},
+        preventDefault: function () {} });
+  });
+  check("Escape escapes Presentation even with shortcuts off",
+    !C.modes.isActive("presentation"));
+  C.settings.keyboardShortcut = true;
+
+  // Choosing a Pomodoro preset used to wipe Reading/Behavior/Presets/About.
+  var adv = w.makeEl("div");
+  C.ui.buildAdvancedSections(adv);
+  var before = adv.querySelectorAll(".cit-settings-row").length;
+  var sel = adv.querySelectorAll(".cit-select")[0];
+  if (sel && sel.__ls && sel.__ls.change) {
+    sel.value = "25/5";
+    sel.__ls.change[0]({ stopPropagation: function () {} });
+  }
+  check("changing the timer preset keeps the whole drawer",
+    adv.querySelectorAll(".cit-settings-row").length >= before - 2,
+    before + " -> " + adv.querySelectorAll(".cit-settings-row").length);
+
+  // Applying a preset must re-apply reader typography (the deleted mode's job).
+  C.settings.readerFontScale = 100;
+  C.modes.applyReaderType();
+  C.presets.apply("Deep Reading");
+  check("a preset that sets page typography actually applies it",
+    C.settings.readerFontScale === 120 &&
+      global.document.documentElement.classList.contains("cit-reader"));
+
+  // Reset positions rebuilds the dock — it must not leave the user staring at
+  // a vanished drawer.
+  C.console.openAdvanced();
+  C.dock.build();
+  if (C.console.openAdvanced) C.console.openAdvanced();
+  check("Reset-positions style rebuild keeps the Console reachable",
+    C.console.isOpen());
+  C.console.close();
+
+  // Dead controls are gone rather than lying to the user.
+  check("the no-op quick-scroll setting is gone",
+    C.defaultSettings.showQuickNav === undefined && !C.ui.updateQuickNav);
+  var adv2 = w.makeEl("div");
+  C.ui.buildAdvancedSections(adv2);
+  var text = adv2.querySelectorAll(".cit-settings-row").map(function (r) {
+    return r.children[0] ? r.children[0].textContent : "";
+  }).join("|");
+  check("the goal-placement setting is reachable", /where the goal shows/i.test(text));
 })();
 
 /* ---------------- Command palette ---------------- */
