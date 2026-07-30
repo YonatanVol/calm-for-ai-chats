@@ -360,6 +360,19 @@
         if (CALM.console) CALM.console.render();
       })
     );
+    c.appendChild(
+      selectRow(
+        "Menu style",
+        "menuStyle",
+        [
+          { value: "console", label: "Corner pill" },
+          { value: "margin", label: "Page margin (needs room)" },
+        ],
+        function () {
+          if (CALM.dock) CALM.dock.build();
+        }
+      )
+    );
     c.appendChild(toggleRow("Dock auto-collapse", "dockAutoCollapse"));
     c.appendChild(
       selectRow(

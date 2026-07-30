@@ -118,6 +118,28 @@
     var d = document.createElement("div");
     d.id = IDS.dock;
 
+    // Margin mode replaces the PILL, not the Console: the rail renders in the
+    // same host, so the Console, the popover registry and Escape are unchanged.
+    // If the gutter is too narrow (small window, zoomed page, wide site
+    // layout) fits() says so and we quietly use the corner pill instead.
+    var marginMode = CALM.margin && CALM.margin.fits();
+    if (marginMode) {
+      CALM.margin.build(d);
+      CALM.console.create(d);
+      document.body.appendChild(d);
+      CALM.console.render();
+      if (!CALM.margin.place(d)) {
+        // Lost the gutter between measuring and placing — start over as a pill.
+        d.remove();
+        S.__marginFallback = true;
+        build();
+        S.__marginFallback = false;
+        return;
+      }
+      CALM.margin.refresh();
+      return;
+    }
+
     var IC = CALM.icons;
     var pill = document.createElement("button");
     pill.type = "button";

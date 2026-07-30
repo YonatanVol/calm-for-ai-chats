@@ -1,0 +1,40 @@
+<!doctype html>
+<!-- Calm — active-state colour and contrast suite.
+     Guards a regression that a stub DOM cannot see: a `color` declaration on a
+     DESCENDANT of an active control beats inheritance, so the icon inside an
+     active tile gets painted with the base ink on top of the active fill —
+     white on white. Only a real cascade catches it.
+
+     Run:
+       "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+         --headless --disable-gpu --allow-file-access-from-files \
+         --virtual-time-budget=2000 --dump-dom tools/contrast-test.html
+     Every line must read PASS. --><html><head><link rel="stylesheet" href="../content.css"></head><body>
+<div id="cit-dock" class="cit-dock-open"><div id="cit-console">
+ <div class="cit-live cit-live-on"><div class="cit-live-main"><div class="cit-live-time">24:31</div></div>
+  <div class="cit-live-side"><button class="cit-live-btn cit-active" id="lb"><span class="cit-ic"><svg class="cit-svg"><path/></svg></span></button></div></div>
+ <div class="cit-quick"><button class="cit-qt cit-active" id="qt"><span class="cit-ic"><svg class="cit-svg"><path/></svg></span><span class="cit-qt-label" id="ql">Zen</span></button></div>
+ <div class="cit-modes-row"><button class="cit-chipm cit-active" id="cm"><span class="cit-chipm-ic"></span><span id="cml">Night</span></button></div>
+</div></div>
+<div class="cit-chip" id="chip">25m here</div>
+<pre id="out"></pre>
+<script>
+function lum(c){var m=c.match(/[\d.]+/g).map(Number);var f=m.slice(0,3).map(function(v){v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*f[0]+.7152*f[1]+.0722*f[2];}
+function ratio(a,b){var l1=lum(a),l2=lum(b);return ((Math.max(l1,l2)+.05)/(Math.min(l1,l2)+.05)).toFixed(2);}
+function bg(el){while(el){var c=getComputedStyle(el).backgroundColor;if(c&&c!=="rgba(0, 0, 0, 0)")return c;var bi=getComputedStyle(el).backgroundImage;if(bi&&bi!=="none")return "GRADIENT";el=el.parentElement;}return "rgb(0,0,0)";}
+var rows=[];
+var ON_ACTIVE="rgb(27, 28, 31)"; // --cit-on-gold in the dark theme
+function chk(name,id,sel){var host=document.getElementById(id);var el=sel?host.querySelector(sel):host;
+ var c=getComputedStyle(el).color;
+ rows.push((c===ON_ACTIVE?"PASS  ":"FAIL  ")+name.padEnd(48)+c);}
+chk("active quick tile — BUTTON","qt");
+chk("active quick tile — icon span (.cit-ic)","qt",".cit-ic");
+chk("active quick tile — label","qt",".cit-qt-label");
+chk("active live button — icon span","lb",".cit-ic");
+chk("active mode chip — BUTTON","cm");
+chk("active mode chip — unclassed label span","cm","span:last-child");
+var chip=document.getElementById("chip");
+var cr=parseFloat(ratio(getComputedStyle(chip).color, bg(chip)==="GRADIENT"?"rgb(199,200,204)":bg(chip)));
+rows.push((cr>=4.5?"PASS  ":"FAIL  ")+"wellness chip contrast".padEnd(48)+cr+":1");
+document.getElementById("out").textContent=rows.join("\n");
+</script></body></html>

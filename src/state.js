@@ -44,6 +44,7 @@
     frSpotlight: false, // dim all blocks except the current one
     intentionPrompt: true, // ask "what did you come to do?" once per tab
     intentChipMode: "dock", // dock | floating | hidden — where the 🎯 goal shows
+    menuStyle: "console", // console (corner pill) | margin (marks in the gutter)
     dockAutoCollapse: true, // dock folds back to the pill after 6s idle
     dockQuiet: true, // pill fades while typing; wakes on pointer approach
     showTimeOnPage: true, // "🕐 25m here" chip (from 5 minutes on)
@@ -112,6 +113,7 @@
     typeChip: "cit-type-chip",
     dock: "cit-dock",
     console: "cit-console",
+    rail: "cit-margin-rail",
     readerPane: "cit-reader-pane",
   };
 
