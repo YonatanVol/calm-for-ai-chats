@@ -3,7 +3,8 @@
  * Proprietary and source-available; see LICENSE. Not open-source.
  *
  * Settings (localStorage), per-site persisted state, shared runtime state,
- * constants/IDs, and the isPro()/entitlement seam. Exposes window.CALM.*.
+ * constants/IDs, the entitlement seam and the local focus log.
+ * Everything here is device-local. Exposes window.CALM.*.
  */
 (function () {
   "use strict";
@@ -153,7 +154,7 @@
     resumePomodoro: null, // nav snapshot: {phase,remaining,cycle,paused,enteredZen}
   };
 
-  // Entitlement seam — all free in v1; Phase 7 resolves from Supabase/Stripe.
+  // Feature tiers. Nothing is "pro" today — there is no account and no server.
   var FEATURE_TIERS = {
     composerToggle: "free",
     keyboardShortcut: "free",
@@ -176,11 +177,30 @@
     "mode:motion": "free",
   };
   CALM.FEATURE_TIERS = FEATURE_TIERS;
-  CALM.isPro = function () {
-    return true;
-  };
+  // Entitlement seam. Every feature is free and there is no paid tier, no
+  // account and no server — so this is honest rather than a stub that claims
+  // otherwise. When billing eventually exists, this is the single hook.
   CALM.entitled = function (feature) {
-    return FEATURE_TIERS[feature] === "free" || CALM.isPro();
+    return FEATURE_TIERS[feature] !== "pro";
+  };
+
+  // Focus-session log — local only, capped, never leaves the device.
+  var LOG_KEY = "cit-focus-log";
+  CALM.stats = {
+    log: function (kind, minutes) {
+      try {
+        var arr = JSON.parse(localStorage.getItem(LOG_KEY) || "[]");
+        arr.push({ k: kind, m: minutes, t: Date.now(), s: site.id });
+        localStorage.setItem(LOG_KEY, JSON.stringify(arr.slice(-500)));
+      } catch (_) {}
+    },
+    all: function () {
+      try {
+        return JSON.parse(localStorage.getItem(LOG_KEY) || "[]");
+      } catch (_) {
+        return [];
+      }
+    },
   };
 
   CALM.loadState = function () {

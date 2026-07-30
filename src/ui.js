@@ -374,7 +374,6 @@
       { id: "reading", label: "Reading", build: buildReadingTab },
       { id: "behavior", label: "Behavior", build: buildBehaviorTab },
       { id: "presets", label: "Presets", build: buildPresetsTab },
-      { id: "account", label: "Account", build: buildAccountTab },
       { id: "about", label: "About", build: buildAboutTab },
     ];
     function showTab(id) {
@@ -560,83 +559,14 @@
     c.appendChild(host);
     buildPresets(host);
   }
-  function buildAccountTab(c) {
-    var wrap = document.createElement("div");
-    wrap.className = "cit-account";
-    c.appendChild(wrap);
-
-    function render() {
-      wrap.innerHTML = "";
-      var auth = CALM.auth;
-      if (!auth) {
-        var na = document.createElement("p");
-        na.className = "cit-about-dim";
-        na.textContent = "Sync isn't available right now.";
-        wrap.appendChild(na);
-        return;
-      }
-      if (auth.isSignedIn()) {
-        var u = auth.user() || {};
-        var who = document.createElement("div");
-        who.className = "cit-account-who";
-        who.textContent = "Signed in as " + (u.email || u.id || "your account");
-        var note = document.createElement("p");
-        note.className = "cit-about-dim";
-        note.textContent =
-          "Your settings, presets and focus stats sync to your account.";
-        var out = document.createElement("button");
-        out.type = "button";
-        out.className = "cit-save-preset";
-        out.textContent = "Sign out";
-        out.addEventListener("click", function (e) {
-          e.stopPropagation();
-          auth.signOut().then(render);
-        });
-        wrap.appendChild(who);
-        wrap.appendChild(note);
-        wrap.appendChild(out);
-      } else {
-        var intro = document.createElement("p");
-        intro.className = "cit-about-dim";
-        intro.textContent =
-          "Sign in to sync your settings, presets and focus stats across devices. The free experience stays fully local until you do.";
-        var inBtn = document.createElement("button");
-        inBtn.type = "button";
-        inBtn.className = "cit-save-preset";
-        inBtn.textContent = "Sign in with Google";
-        inBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          inBtn.disabled = true;
-          inBtn.textContent = "Opening Google…";
-          CALM.auth.signInWithGoogle().then(function (r) {
-            if (r && r.ok) {
-              render();
-            } else {
-              inBtn.disabled = false;
-              inBtn.textContent = "Sign in with Google";
-              var err = document.createElement("div");
-              err.className = "cit-account-err";
-              err.textContent = (r && r.error) || "Sign-in failed. Try again.";
-              wrap.appendChild(err);
-            }
-          });
-        });
-        wrap.appendChild(intro);
-        wrap.appendChild(inBtn);
-      }
-    }
-    render();
-  }
-
   function buildAboutTab(c) {
     var d = document.createElement("div");
     d.className = "cit-about";
     d.innerHTML =
       '<div class="cit-about-name">Calm</div>' +
       '<div class="cit-about-ver">Reading Mode for AI Chats</div>' +
-      "<p>Distraction-free reading for ChatGPT &amp; Gemini — hide the input, 8 focus modes, a Pomodoro timer, and more.</p>" +
-      '<p class="cit-about-dim">Your conversations are never read or sent. Settings stay on your device.</p>' +
-      '<p><span class="cit-about-pro">Pro — cloud sync, dashboard &amp; Spotify — coming soon.</span></p>';
+      "<p>Distraction-free reading for ChatGPT, Gemini and Claude — hide the input, the Focus Reader, a Pomodoro timer, and more.</p>" +
+      '<p class="cit-about-dim">No permissions, no account, no network requests. Everything stays on your device.</p>';
     c.appendChild(d);
   }
 

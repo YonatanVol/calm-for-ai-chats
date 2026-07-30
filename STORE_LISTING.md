@@ -74,14 +74,11 @@ the extension ID so the OAuth redirect URL stays stable across uploads. Leave it
 > blooms out when you need it. No badges, no streak guilt, no confetti.
 >
 > **Privacy, stated plainly**
-> Calm never reads, stores or transmits your conversations. It has no analytics,
-> no trackers, no ads and no third-party code. Signed out — the default — nothing
-> leaves your browser at all.
->
-> Sign-in is entirely optional. If you choose it, Google sign-in syncs only your
-> settings, your custom presets and focus-session durations to your own
-> row-level-secured record. Never conversation content. Sign out and the network
-> goes quiet again; every feature keeps working offline.
+> Calm requests no Chrome permissions at all — its permission list is empty and
+> it declares no host access, so it is technically incapable of contacting a
+> server. There is no account, no sync and no network traffic. It has no
+> analytics, no trackers, no ads and no third-party code, and it never reads,
+> stores or transmits your conversations. Nothing leaves your browser, ever.
 >
 > Works on ChatGPT, Gemini and Claude.
 
@@ -102,17 +99,16 @@ the extension ID so the OAuth redirect URL stays stable across uploads. Leave it
 
 **Per-permission justification** — one field each in the dashboard:
 
+Calm declares **no permissions and no host permissions**, so the dashboard asks
+for only one justification:
+
 | Permission | Justification to paste |
 | --- | --- |
-| `identity` | Used only for the optional "Sign in with Google" button, so a user who wants their settings on more than one machine can authenticate. The extension is fully functional without ever signing in, and the permission is not exercised until the user clicks Sign in. |
-| `storage` | Stores the signed-in user's session token in `chrome.storage.local` so they are not asked to sign in on every page load. Unused while signed out. |
-| Host: `https://jcjvzwgxdvohdbkgdzwg.supabase.co/*` | The extension's own Supabase backend. It is contacted only for signed-in users, and only to sync that user's settings, custom presets and focus-session durations. No conversation content is ever sent. No request is made while signed out. |
-| Content scripts on `chatgpt.com`, `gemini.google.com`, `claude.ai` | These are the three sites the extension adjusts. The content script reads page layout to find the composer and scroll container and applies styling. It does not read, collect or transmit conversation text. |
+| Content scripts on `chatgpt.com`, `gemini.google.com`, `claude.ai` | These are the three sites the extension adjusts. The content script reads page layout to find the composer and scroll container and applies styling. It does not read, collect or transmit conversation text, and the extension makes no network requests. |
 
 **Data usage checkboxes**
 
-- Personally identifiable information — **Yes**: email address, and only for users
-  who choose to sign in.
+- Personally identifiable information — **No**. The extension collects nothing.
 - Everything else (health, financial, authentication info, personal
   communications, location, web history, user activity, website content) —
   **No**.
@@ -176,9 +172,9 @@ screenshot chrome, the promo tiles, or the icon.
 → 4. fill the Privacy tab (single purpose, all four justifications, data
 checkboxes) → 5. add the privacy-policy URL → 6. **Submit for review**.
 
-Calm requests `identity` plus a host permission, so expect a **normal** review
-(commonly several days to two weeks), not the fast path a zero-permission
-extension gets. The per-permission justifications above are what shorten it.
+Calm requests no permissions and no host access, which is the profile that
+attracts the **least** review friction. Reviews still take days rather than
+hours, but there is no permission story to defend.
 
 **Post-submission:** publishing to the store and cutting the `main`/tag release
 are owner decisions. The daily automation never performs them.

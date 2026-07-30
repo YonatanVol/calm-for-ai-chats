@@ -2,12 +2,11 @@
 
 A Chrome extension that makes **ChatGPT**, **Gemini**, and **Claude** calmer to
 read and easier to focus in — built with ADHD-friendly workflows at its core and
-a hand-crafted "Maison" design language (espresso, ivory, brushed gold, serif
-details).
+a quiet graphite design language.
 
-> Local-first: your conversations are never read or transmitted. Signing in for
-> cross-device sync is optional — until you do, nothing leaves your browser.
-> See [`PRIVACY.md`](PRIVACY.md) for the plain-language details.
+> **No permissions, no account, no network requests.** Calm declares an empty
+> permission list, so it is technically incapable of contacting a server.
+> Everything stays in your browser. See [`PRIVACY.md`](PRIVACY.md).
 
 ---
 
@@ -18,14 +17,17 @@ details).
   auto-hide as you scroll and instant reveal the moment you start typing —
   whatever you type lands in the input, nothing lost (RTL/Hebrew safe).
 - **Zen mode** (`Ctrl/Cmd+Shift+Z`) — sidebar, header and suggestion chips gone.
-- **Reading width**, **Reader typography** (font size / line height), and
+- **Focus Reader** — the response lifted into Calm's own reading pane: bionic
+  fixation, dyslexia-friendly spacing, spotlight, full Hebrew/RTL support.
+- **Reading width**, **reader typography** (font size / line height), and
   **Night/Dim** warmth overlay.
 
 **Focus (ADHD-friendly)**
-- **The Calm Dock** — one draggable pill with your 🎯 intention and timer status;
-  expands into all controls.
-- **Intention prompt** — "What did you come to do?" pinned as a goal chip, with
-  up to 3 micro-tasks and a `Ctrl/Cmd+Shift+K` **thought parking lot**.
+- **The Calm menu** — one draggable pill, anchored to a corner so it can never
+  open off-screen; expands into all controls.
+- **Intention** — "What did you come to do?", with up to 3 first steps and a
+  `Ctrl/Cmd+Shift+K` **thought parking lot**. It never opens by itself; you ask
+  for it.
 - **Pomodoro** — animated timer with presets (10/2 starter, 25/5, 52/17, 90/20),
   auto-Zen during focus, chime, and a screen-width progress bar.
 - **Reading ruler**, **Grayscale**, **Reduce motion** — attention anchors and
@@ -35,24 +37,20 @@ details).
   captures; Esc exits.
 - **Presets** — save and switch whole setups (Deep Reading, Study, Night Owl…).
 
-**Optional account (off by default)**
-- Google sign-in syncs your settings, presets, and focus stats across devices
-  (Supabase, row-level security). The signed-out experience is fully local.
-
 Works on `chatgpt.com`, `gemini.google.com`, and `claude.ai`.
 
 ---
 
 ## 🔒 Permissions, honestly
 
-| Permission | Why |
+Calm requests **zero Chrome permissions**. The manifest's permission list is
+empty and there are no host permissions.
+
+| What it has | Why |
 | --- | --- |
 | Content script on the 3 chat sites | Adjust the on-screen layout |
-| `identity` | The optional Google sign-in popup |
-| `storage` | Keep your session on your device |
-| Supabase host access | Sync traffic — signed-in users only |
 
-No analytics, no trackers, no conversation access. Ever.
+No analytics, no trackers, no account, no network. Ever.
 
 ---
 

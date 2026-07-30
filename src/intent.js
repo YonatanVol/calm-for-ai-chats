@@ -356,19 +356,11 @@
     true
   );
 
-  // ---------- First-load intention prompt (once per tab) ----------
-  function boot() {
-    if (!S.intentionPrompt) return;
-    renderChip();
-    if (!st.asked) {
-      st.asked = true;
-      save();
-      setTimeout(function () {
-        if (!document.getElementById("cit-intent-pop")) togglePop(false);
-      }, 2000);
-    }
-  }
-  if (S.intentionPrompt) boot();
+  // ---------- Boot ----------
+  // The card NEVER opens by itself. It used to auto-open 2s after every page
+  // load and focus its own input, which stole the first thing you typed on a
+  // fresh tab. It now opens only when asked: the menu, or Ctrl/Cmd+Shift+K.
+  if (S.intentionPrompt) renderChip();
 
   CALM.intent = {
     state: st,

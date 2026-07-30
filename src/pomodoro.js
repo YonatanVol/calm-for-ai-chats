@@ -38,8 +38,8 @@
   }
   function logElapsed() {
     var m = elapsedMin();
-    if (m >= 1 && st.phase !== "idle" && CALM.sync && CALM.sync.logFocus) {
-      CALM.sync.logFocus(st.phase, m);
+    if (m >= 1 && st.phase !== "idle" && CALM.stats) {
+      CALM.stats.log(st.phase, m);
     }
   }
 
