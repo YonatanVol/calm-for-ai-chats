@@ -169,6 +169,24 @@
     if (CALM.ui.refreshModeButtons) CALM.ui.refreshModeButtons();
   }
 
+  // Re-measure after anything that can move the text column. Zen removes the
+  // site's sidebar, which shifts and widens the column — the marks used to
+  // stay where the old edge was, sometimes on top of the words.
+  function reposition() {
+    if (S.menuStyle !== "margin") return;
+    var dock = document.getElementById(IDS.dock);
+    if (!dock) return;
+    var inMargin = dock.classList.contains("cit-margin");
+    var m = measure();
+    if (!m && !inMargin) return; // still no gutter, still a pill
+    if (m && inMargin) {
+      place(dock); // just move it
+      return;
+    }
+    // Gained or lost the gutter: the dock has to change shape.
+    if (CALM.dock) CALM.dock.build();
+  }
+
   // The column moves when the window resizes or the site opens its sidebar.
   window.addEventListener(
     "resize",
@@ -189,6 +207,7 @@
     place: place,
     measure: measure,
     fits: fits,
+    reposition: reposition,
     refresh: refresh,
   };
 })();

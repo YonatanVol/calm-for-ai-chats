@@ -61,6 +61,7 @@
       document.documentElement.classList.remove("cit-width");
       document.documentElement.style.removeProperty("--cit-reading-width");
     }
+    if (CALM.margin && CALM.margin.reposition) CALM.margin.reposition();
   }
 
   // ---------- Zen ----------
@@ -367,6 +368,11 @@
   function persist() {
     if (S.rememberState) CALM.saveState();
   }
+  // Several modes change the page's geometry (Zen removes the sidebar, reading
+  // width narrows the column). Anything anchored to the text has to be told.
+  function afterLayoutChange() {
+    if (CALM.margin && CALM.margin.reposition) CALM.margin.reposition();
+  }
   function modeEnter(id) {
     var m = MODES[id];
     if (!m || rt.activeModes[id]) return;
@@ -374,6 +380,7 @@
     rt.activeModes[id] = true;
     m.enter();
     setModeBtnActive(id, true);
+    afterLayoutChange();
     persist();
   }
   function modeExit(id) {
@@ -382,6 +389,7 @@
     rt.activeModes[id] = false;
     m.exit();
     setModeBtnActive(id, false);
+    afterLayoutChange();
     persist();
   }
   function modeToggle(id) {

@@ -126,9 +126,14 @@ function buildWorld(hostname, opts) {
     addEventListener: noop, innerWidth: 1400, innerHeight: 900, CALM: undefined,
   };
   global.document = {
-    // Tests set world.docQuery to simulate the page having (or not having)
-    // assistant responses, which auto-hide now consults.
-    querySelector: function () { return world.docQuery || null; },
+    // Tests set world.docQuery to simulate what the page contains. A function
+    // lets a test answer per selector — e.g. "there is a composer but no
+    // assistant response yet", which is exactly a brand-new chat.
+    querySelector: function (sel) {
+      return typeof world.docQuery === "function"
+        ? world.docQuery(sel)
+        : world.docQuery || null;
+    },
     querySelectorAll: function () { return []; },
     createElement: function (t) {
       var e = makeEl(t);
@@ -406,6 +411,227 @@ section("Console");
   var nd = w.bodyEls["cit-dock"];
   check("nav rebuild keeps corner + Console",
     !!nd && nd.classList.contains("cit-corner-br") && !!w.bodyEls["cit-console"]);
+})();
+
+/* ---------------- Scenario tests (written before the fixes) --------------- */
+// These describe things a person actually does, not units of code. Each one
+// was written first and watched fail.
+section("Scenarios");
+(function () {
+  var w = buildWorld("chatgpt.com", {});
+  var C = w.C;
+
+  function scroller(clientH, scrollH, top) {
+    var el = w.makeEl("div");
+    el.clientHeight = clientH; el.scrollHeight = scrollH; el.scrollTop = top;
+    el.closest = function () { return null; };
+    return el;
+  }
+  function scrollTo(el, top) {
+    el.scrollTop = top;
+    (w.docLs.scroll || []).forEach(function (f) { f({ target: el }); });
+  }
+  function adopt(el) {
+    C.rt.scrollContainer = null; C.rt.accUp = 0; C.rt.scrollLocked = false;
+    scrollTo(el, el.scrollTop);
+  }
+  C.rt.composerEl = w.makeEl("div");
+  w.docQuery = w.makeEl("div"); // a real conversation is on the page
+
+  // SCENARIO 1 — "I hid the input on purpose so I could read. The answer was
+  // still streaming, the page scrolled itself to the bottom, and the input
+  // came back." An explicit action must not be undone by an implicit one.
+  var el1 = scroller(800, 4000, 2000);
+  adopt(el1);
+  C.rt.composerHidden = false;
+  C.core.manualToggleComposer();          // deliberate hide
+  // Human-sized steps: a single 1150px jump would be swallowed by the
+  // relayout guard and the test would pass without proving anything.
+  [2400, 2800, 3150].forEach(function (t) {
+    C.rt.scrollLocked = false;
+    scrollTo(el1, t);
+  });                                     // streaming drags us to the bottom
+  check("a hide I asked for survives the page scrolling to the bottom",
+    C.rt.composerHidden);
+
+  // ...but an automatic hide SHOULD still reveal at the bottom, as designed.
+  C.rt.composerHidden = false;
+  C.rt.scrollLocked = false;
+  var el2 = scroller(800, 4000, 2000);
+  adopt(el2);
+  scrollTo(el2, 1900);                    // one notch up -> auto-hide
+  var autoHid = C.rt.composerHidden;
+  [2300, 2700, 3100, 3200].forEach(function (t) {
+    C.rt.scrollLocked = false;
+    scrollTo(el2, t);
+  });                                     // back to the bottom
+  check("an automatic hide still reveals when I reach the bottom",
+    autoHid && !C.rt.composerHidden);
+
+  // SCENARIO 1c — "I clicked the site's jump-to-bottom arrow." Arriving at the
+  // bottom should reveal the input however I got there; the relayout guard is
+  // about not mistaking a jump for a HIDE gesture, not about ignoring where I
+  // ended up.
+  C.rt.composerHidden = false;
+  C.rt.scrollLocked = false;
+  var el3 = scroller(800, 4000, 1000);
+  adopt(el3);
+  C.rt.composerHidden = true;             // hidden automatically earlier
+  C.rt.hiddenManually = false;
+  scrollTo(el3, 3200);                    // one big jump to the bottom
+  check("the jump-to-bottom button reveals the input", !C.rt.composerHidden);
+
+  // SCENARIO 2 — "I had a half-written prompt, hid the input, kept typing,
+  // and when it came back my earlier text was gone."
+  var ta = w.makeEl("textarea");
+  ta.tagName = "TEXTAREA";
+  ta.value = "half-written prompt";
+  ta.dispatchEvent = function () {};
+  C.site.promptInput = function () { return ta; };
+  C.rt.composerHidden = true;
+  C.rt.pendingText = " and the rest";
+  C.core.showComposer();
+  check("typing while hidden APPENDS to my draft instead of erasing it",
+    ta.value.indexOf("half-written prompt") >= 0 &&
+      ta.value.indexOf(" and the rest") >= 0, JSON.stringify(ta.value));
+
+  // SCENARIO 3 — "I turned on Zen with the margin rail showing. The sidebar
+  // vanished, the text moved, and the marks stayed where the old edge was."
+  C.settings.menuStyle = "margin";
+  C.rt.composerEl.__rect = { left: 350, right: 1050, width: 700, top: 0, bottom: 400, height: 400 };
+  C.dock.build();
+  var before = w.bodyEls["cit-dock"].style.left;
+  // Zen removes the sidebar: the column shifts left and widens.
+  C.rt.composerEl.__rect = { left: 150, right: 1250, width: 1100, top: 0, bottom: 400, height: 400 };
+  C.modes.enter("zen");
+  var after = w.bodyEls["cit-dock"] && w.bodyEls["cit-dock"].style.left;
+  check("the margin rail follows the text when Zen changes the layout",
+    before !== after, "left " + before + " -> " + after);
+  C.modes.exit("zen");
+  C.settings.menuStyle = "console";
+  C.dock.build();
+})();
+
+section("Scenarios II");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  C.rt.composerEl = w.makeEl("div");
+
+  // SCENARIO 4 — "I hid the input, then hit Ctrl+Shift+H expecting it back."
+  // The manual-hide flag must not make the manual toggle a one-way trip.
+  C.rt.composerHidden = false;
+  C.core.manualToggleComposer();
+  C.core.manualToggleComposer();
+  check("the manual toggle still toggles back", !C.rt.composerHidden);
+
+  // SCENARIO 5 — "Zen hid my input. I pressed the Input tile to get it back
+  // while staying in Zen." Zen owns the composer, but an explicit request
+  // should still win.
+  C.settings.zenComposer = true;
+  C.modes.enter("zen");
+  var hidByZen = C.rt.composerHidden;
+  C.core.manualToggleComposer();
+  check("I can reveal the input without leaving Zen",
+    hidByZen && !C.rt.composerHidden && C.modes.isActive("zen"));
+  C.modes.exit("zen");
+
+  // SCENARIO 6 — "A Pomodoro block ended while I was reading. The break
+  // overlay appeared." Leaving the timer must not leave the page dimmed or
+  // the composer stuck hidden.
+  C.rt.composerHidden = false;
+  C.modes.enter("pomodoro");
+  C.modes.exit("pomodoro");
+  check("ending a timer leaves nothing behind",
+    !C.modes.isActive("zen") && !w.bodyEls["cit-pomo-overlay"] &&
+      !w.bodyEls["cit-pomo-widget"] && !w.bodyEls["cit-timebar"]);
+
+  // SCENARIO 7 — "I set a reading width, then switched the site to a wider
+  // window." Width is a setting, not a mode: it must survive a navigation.
+  C.settings.readingWidth = 900;
+  C.modes.applyWidth();
+  var onBefore = global.document.documentElement.classList.contains("cit-width");
+  w.nav("https://chatgpt.com/c/next");
+  check("reading width survives navigating to another chat",
+    onBefore && global.document.documentElement.classList.contains("cit-width"));
+  C.settings.readingWidth = 0;
+  C.modes.applyWidth();
+
+  // SCENARIO 8 — "I typed into the page while Calm was hiding the input, but
+  // my cursor was in the site's own search box." Type-ahead must not steal
+  // keystrokes aimed somewhere else.
+  C.rt.composerHidden = true;
+  C.rt.pendingText = "";
+  C.settings.typeAhead = "auto";
+  var searchBox = w.makeEl("input");
+  searchBox.tagName = "INPUT";
+  var swallowed = false;
+  (w.docLs.keydown || []).forEach(function (f) {
+    f({ key: "a", code: "KeyA", ctrlKey: false, metaKey: false, altKey: false,
+        composedPath: function () { return [searchBox]; },
+        preventDefault: function () { swallowed = true; },
+        stopPropagation: function () {} });
+  });
+  check("typing in the site's own field is not hijacked", !swallowed);
+  C.rt.composerHidden = false;
+})();
+
+section("Scenarios III");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  C.rt.composerEl = w.makeEl("div");
+
+  // SCENARIO 9 — "I was half-way through a prompt in one chat, hid the input,
+  // then opened a DIFFERENT chat." A draft belongs to the conversation it was
+  // written in; it must not reappear in another one.
+  var box = w.makeEl("div");
+  box.tagName = "DIV";
+  box.innerText = "a question about my tax return";
+  C.site.promptInput = function () { return box; };
+  C.rt.composerHidden = false;
+  C.core.manualToggleComposer();          // hides, saving the draft
+  w.nav("https://chatgpt.com/c/a-different-chat");
+  var fresh = w.makeEl("div");
+  fresh.tagName = "DIV";
+  fresh.innerText = "";                   // the new chat's empty composer
+  C.site.promptInput = function () { return fresh; };
+  C.rt.composerEl = w.makeEl("div");
+  C.rt.composerHidden = true;
+  C.core.showComposer();
+  check("a draft does not follow me into a different conversation",
+    !/tax return/.test(fresh.innerText || ""),
+    JSON.stringify(fresh.innerText));
+
+  // SCENARIO 10 — "I turned on Remember state. Next time I opened a BRAND NEW
+  // chat the input was already hidden, with nothing to read." Restoring a
+  // hidden composer is only sensible where there IS something to read.
+  var w2 = buildWorld("chatgpt.com", {
+    lenient: true,
+    seed: { "cit-state-chatgpt": JSON.stringify({ composerHidden: true, modes: {} }) },
+  });
+  var respSel = w2.C.site.responseSel;
+  // A brand-new chat: the composer exists, no assistant response does.
+  w2.docQuery = function (sel) {
+    return sel === respSel ? null : w2.makeEl("div");
+  };
+  w2.C.settings.rememberState = true;
+  w2.C.rt.composerHidden = false;
+  w2.C.core.init();
+  check("remembered 'hidden' is not restored onto an empty new chat",
+    !w2.C.rt.composerHidden);
+
+  // ...but on a chat that HAS a conversation, remembering still works.
+  var w3 = buildWorld("chatgpt.com", {
+    lenient: true,
+    seed: { "cit-state-chatgpt": JSON.stringify({ composerHidden: true, modes: {} }) },
+  });
+  w3.docQuery = function () { return w3.makeEl("div"); }; // responses present
+  w3.C.settings.rememberState = true;
+  w3.C.rt.composerHidden = false;
+  w3.C.core.init();
+  check("remembered 'hidden' still applies to a real conversation",
+    w3.C.rt.composerHidden);
 })();
 
 /* ---------------- Auto-hide: only when there is something to read -------- */

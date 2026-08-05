@@ -48,6 +48,9 @@
     rt.composerEl.style.setProperty("display", "none", "important");
     document.body.classList.add("cit-composer-hidden");
     rt.composerHidden = true;
+    // An explicit hide is a decision; an automatic one is a guess. Only the
+    // guess may be undone by scrolling back to the bottom.
+    rt.hiddenManually = !opts.auto;
     if (S.rememberState) CALM.saveState();
     if (opts.auto && S.showHints) ui.showToast();
   }
@@ -57,6 +60,7 @@
     rt.composerEl.style.removeProperty("display");
     document.body.classList.remove("cit-composer-hidden");
     rt.composerHidden = false;
+    rt.hiddenManually = false;
     if (S.rememberState) CALM.saveState();
     restoreDraft();
     flushTypeAhead();
@@ -92,7 +96,15 @@
   function insertIntoInput(input, text, focusEnd) {
     if (!input || !text) return;
     if (input.tagName === "TEXTAREA") {
-      input.value = text;
+      // APPEND at the caret. This used to assign input.value outright, so
+      // flushing type-ahead over a half-written prompt erased it.
+      var start = input.selectionStart;
+      var end = input.selectionEnd;
+      if (input.setRangeText && typeof start === "number" && typeof end === "number") {
+        input.setRangeText(text, start, end, "end");
+      } else {
+        input.value = (input.value || "") + text;
+      }
       input.dispatchEvent(new Event("input", { bubbles: true }));
       return;
     }
@@ -130,7 +142,10 @@
     }
     var input = site.promptInput();
     // Composer was only display:none'd, so the input usually kept its text.
-    if (input && input.innerText && input.innerText.trim()) {
+    var kept = input
+      ? input.tagName === "TEXTAREA" ? input.value : input.innerText
+      : "";
+    if (kept && kept.trim()) {
       try {
         sessionStorage.removeItem(DRAFT_KEY);
       } catch (_) {}
@@ -157,15 +172,18 @@
   // nothing to gain by hiding the composer — the user is about to type into
   // it. Two independent signals, either of which is enough, so that a rotted
   // response selector can never silently disable auto-hide on a long thread.
+  function hasConversation() {
+    try {
+      return !site.responseSel || !!document.querySelector(site.responseSel);
+    } catch (_) {
+      return true; // selector rot must never disable the feature outright
+    }
+  }
   function worthHiding(el) {
     var range = el.scrollHeight - el.clientHeight;
     if (range < C.MIN_HIDE_RANGE) return false;
     if (range >= C.ASSUME_CONTENT_RANGE) return true;
-    try {
-      return !site.responseSel || !!document.querySelector(site.responseSel);
-    } catch (_) {
-      return true;
-    }
+    return hasConversation();
   }
 
   function handleScrollEl(el) {
@@ -178,6 +196,18 @@
     rt.lastScrollTop = cur;
     if (delta === 0) return;
 
+    var distFromBottom = el.scrollHeight - el.clientHeight - cur;
+
+    // Reveal is decided by POSITION, not by the size of the last movement:
+    // the site's own jump-to-bottom arrow moves a whole viewport at once, and
+    // arriving at the bottom should bring the input back however you got
+    // there. Hiding, below, is the part that must not be fooled by a jump.
+    if (rt.composerHidden && !rt.hiddenManually && distFromBottom < C.BOTTOM_THRESHOLD) {
+      rt.accUp = 0;
+      showComposer();
+      return;
+    }
+
     // A jump of more than a viewport in one event is the page relayouting or
     // snapping, not a hand on a wheel. Counting it as intent is how a single
     // flick used to add hundreds of pixels to the accumulator at once.
@@ -185,8 +215,6 @@
       rt.accUp = 0;
       return;
     }
-
-    var distFromBottom = el.scrollHeight - el.clientHeight - cur;
     clearTimeout(rt.accTimer);
     rt.accTimer = setTimeout(function () {
       rt.accUp = 0;
@@ -204,8 +232,7 @@
         hideComposer({ auto: true });
       }
     } else {
-      rt.accUp = 0;
-      if (rt.composerHidden && distFromBottom < C.BOTTOM_THRESHOLD) showComposer();
+      rt.accUp = 0; // handled by the position check above
     }
   }
   function onAnyScroll(e) {
@@ -442,9 +469,16 @@
       }
       // Zen re-entered above may have wanted the composer hidden but no-oped
       // because the composer didn't exist yet — honor it now.
+      //
+      // Remember-state is deliberately weaker than Zen here: restoring a
+      // hidden composer onto a BRAND-NEW chat reproduces the worst version of
+      // this feature — nothing to read, and the box you are about to type in
+      // is gone. Zen is a mode the user is currently in, so it still wins.
+      var remembered =
+        S.rememberState && !!(CALM.loadState() || {}).composerHidden;
       var wantHidden =
         (modes.isActive("zen") && S.zenComposer) ||
-        (S.rememberState && !!(CALM.loadState() || {}).composerHidden);
+        (remembered && hasConversation());
       if (wantHidden && !rt.composerHidden) hideComposer();
     })(0);
   }
