@@ -111,7 +111,12 @@
     if (CALM.console) CALM.console.toggle();
   }
 
-  function build() {
+  function build(opts) {
+    opts = opts || {};
+    // A rebuild triggered by the page moving (a resize, gaining or losing the
+    // margin gutter) must not close a menu the user is reading. A rebuild
+    // triggered by navigation still starts closed.
+    var reopen = opts.preserveOpen && CALM.console && CALM.console.isOpen();
     var old = document.getElementById(IDS.dock);
     if (old) old.remove();
 
@@ -137,6 +142,7 @@
         return;
       }
       CALM.margin.refresh();
+      if (reopen) CALM.console.open();
       return;
     }
 
@@ -174,6 +180,7 @@
     });
 
     refreshStatus();
+    if (reopen) CALM.console.open();
   }
 
   // ---------- Quiet pill (fades while you type; wakes on approach) ----------

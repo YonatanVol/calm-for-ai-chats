@@ -131,6 +131,7 @@
     scrollContainer: null,
     composerHidden: false,
     hiddenManually: false, // an explicit hide is not undone by scrolling
+    zenHidComposer: false, // Zen hid it, so Zen may reveal it again
     zenOn: false,
     zenHidden: [],
     activeModes: {}, // { modeId: true } — which modes are on

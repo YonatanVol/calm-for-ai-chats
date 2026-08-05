@@ -81,7 +81,12 @@
     }
     document.documentElement.classList.add("cit-zen");
     rt.zenOn = true;
-    if (S.zenComposer) CALM.core.hideComposer();
+    // Only claim the composer if it was visible: if the user had already hidden
+    // it themselves, Zen has nothing to restore on the way out.
+    if (S.zenComposer && !rt.composerHidden) {
+      rt.zenHidComposer = true;
+      CALM.core.hideComposer();
+    }
   }
   function zenExit() {
     document.documentElement.classList.remove("cit-zen");
@@ -97,7 +102,9 @@
     });
     rt.zenHidden = [];
     rt.zenOn = false;
-    if (S.zenComposer && rt.composerHidden) CALM.core.showComposer();
+    // Restore what ZEN hid, never what the user chose to hide.
+    if (rt.zenHidComposer && rt.composerHidden) CALM.core.showComposer();
+    rt.zenHidComposer = false;
   }
 
   // ---------- Reader (typography) ----------

@@ -40,8 +40,27 @@
   }
 
   // ---- Hide / show composer (instant, reliable) ----
+  // React re-renders the composer out from under us. Acting on the node we
+  // happened to capture at init means hiding a detached element: nothing moves
+  // on screen and the toggle looks broken. Always re-resolve when the held
+  // reference has left the document.
+  function currentComposer() {
+    if (rt.composerEl && rt.composerEl.isConnected === false) {
+      var fresh = site.composer();
+      if (fresh && fresh !== rt.composerEl) {
+        rt.composerEl = fresh;
+        // The replacement arrives visible, so a hide that was in force has to
+        // be re-applied or our state and the page disagree.
+        if (rt.composerHidden) {
+          fresh.style.setProperty("display", "none", "important");
+        }
+      }
+    }
+    return rt.composerEl;
+  }
+
   function hideComposer(opts) {
-    if (!rt.composerEl || rt.composerHidden) return;
+    if (!currentComposer() || rt.composerHidden) return;
     opts = opts || {};
     saveDraft();
     lockScroll();
@@ -55,7 +74,7 @@
     if (opts.auto && S.showHints) ui.showToast();
   }
   function showComposer() {
-    if (!rt.composerEl || !rt.composerHidden) return;
+    if (!currentComposer() || !rt.composerHidden) return;
     lockScroll();
     rt.composerEl.style.removeProperty("display");
     document.body.classList.remove("cit-composer-hidden");

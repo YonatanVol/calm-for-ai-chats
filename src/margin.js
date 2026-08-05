@@ -183,8 +183,9 @@
       place(dock); // just move it
       return;
     }
-    // Gained or lost the gutter: the dock has to change shape.
-    if (CALM.dock) CALM.dock.build();
+    // Gained or lost the gutter: the dock has to change shape, but keep the
+    // menu open if it was.
+    if (CALM.dock) CALM.dock.build({ preserveOpen: true });
   }
 
   // The column moves when the window resizes or the site opens its sidebar.
@@ -194,7 +195,10 @@
       if (S.menuStyle !== "margin") return;
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(function () {
-        if (CALM.dock) CALM.dock.build(); // re-measures, and falls back if it no longer fits
+        // reposition() moves the rail in place and only rebuilds when the
+        // gutter appears or disappears — a full rebuild on every resize threw
+        // away an open menu.
+        reposition();
       }, 180);
     },
     { passive: true }

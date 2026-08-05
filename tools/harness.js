@@ -141,9 +141,14 @@ function buildWorld(hostname, opts) {
   }
   world.makeEl = makeEl;
   var body = makeEl("body");
+  world.winLs = {};
   global.window = {
     getSelection: function () { return { removeAllRanges: noop, addRange: noop }; },
-    addEventListener: noop, innerWidth: 1400, innerHeight: 900, CALM: undefined,
+    // Window listeners were dropped on the floor, so anything that reacts to
+    // resize could not be tested at all.
+    addEventListener: function (t, fn) { (world.winLs[t] = world.winLs[t] || []).push(fn); },
+    removeEventListener: noop,
+    innerWidth: 1400, innerHeight: 900, CALM: undefined,
   };
   global.document = {
     // Tests set world.docQuery to simulate what the page contains. A function
@@ -652,6 +657,117 @@ section("Scenarios III");
   w3.C.core.init();
   check("remembered 'hidden' still applies to a real conversation",
     w3.C.rt.composerHidden);
+})();
+
+section("Scenarios IV");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  C.rt.composerEl = w.makeEl("div");
+
+  // SCENARIO 11 — "I opened the menu, then resized my window." Rebuilding the
+  // dock destroys the panel the user is looking at — the same failure as the
+  // old Reset-positions bug, arriving from a different direction.
+  C.settings.menuStyle = "margin";
+  C.rt.composerEl.__rect = { left: 350, right: 1050, width: 700, top: 0, bottom: 400, height: 400 };
+  C.dock.build();
+  C.console.open();
+  var wasOpen = C.console.isOpen();
+  global.window.innerWidth = 1500;
+  (w.winLs && w.winLs.resize ? w.winLs.resize : []).forEach(function (f) { f({}); });
+  check("resizing does not slam the menu shut in my face",
+    wasOpen && C.console.isOpen());
+  C.console.close();
+  C.settings.menuStyle = "console";
+  C.dock.build();
+
+  // SCENARIO 12 — "I typed while the input was hidden, then switched chats
+  // before revealing it." Buffered keystrokes belong to the conversation they
+  // were typed in, exactly like a draft.
+  C.rt.pendingText = "what about the second option";
+  C.rt.composerHidden = true;
+  w.nav("https://chatgpt.com/c/somewhere-else");
+  var landed = w.makeEl("div");
+  landed.tagName = "DIV";
+  landed.innerText = "";
+  C.site.promptInput = function () { return landed; };
+  C.rt.composerEl = w.makeEl("div");
+  C.rt.composerHidden = true;
+  C.core.showComposer();
+  check("buffered typing does not spill into a different conversation",
+    !/second option/.test(landed.innerText || ""), JSON.stringify(landed.innerText));
+
+  // SCENARIO 13 — "The site re-rendered its composer while Calm had it hidden.
+  // Now the toggle does nothing." Calm holds a reference to a node React has
+  // already thrown away.
+  var stale = w.makeEl("div");
+  var hiddenOn = null;
+  stale.style.setProperty = function (k) { hiddenOn = "stale"; };
+  stale.isConnected = false;                 // React replaced it
+  var live = w.makeEl("div");
+  live.style.setProperty = function (k) { hiddenOn = "live"; };
+  live.isConnected = true;
+  C.rt.composerEl = stale;
+  C.rt.composerHidden = false;
+  C.site.composer = function () { return live; };
+  C.core.manualToggleComposer();
+  check("hiding acts on the composer that is actually on the page",
+    hiddenOn === "live", "acted on " + hiddenOn);
+})();
+
+section("Scenarios V");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  C.rt.composerEl = w.makeEl("div");
+  C.rt.composerEl.isConnected = true;
+
+  // SCENARIO 14 — "I hid the input myself, then used Zen for a while. When I
+  // left Zen the input came back on its own." Same principle as scenario 1:
+  // Zen restores what IT changed, not what I chose.
+  C.settings.zenComposer = true;
+  C.rt.composerHidden = false;
+  C.core.manualToggleComposer();          // my decision
+  C.modes.enter("zen");
+  C.modes.exit("zen");
+  check("leaving Zen does not undo a hide I chose myself",
+    C.rt.composerHidden);
+  C.rt.composerHidden = false;
+
+  // ...and Zen's own hide is still restored on the way out.
+  C.modes.enter("zen");
+  var zenHid = C.rt.composerHidden;
+  C.modes.exit("zen");
+  check("leaving Zen does restore what Zen itself hid",
+    zenHid && !C.rt.composerHidden);
+
+  // SCENARIO 15 — "I paused auto-hide for 15 minutes and walked away." When
+  // it expires, auto-hide has to come back and the countdown chip has to go.
+  C.modes.enter("pause");
+  var pausedNow = C.rt.paused;
+  var tick = w.lastInterval();
+  // The countdown closes over a local end-time, so nudging rt.pauseEndTs does
+  // nothing — the clock itself has to move.
+  var realNow = Date.now;
+  Date.now = function () { return realNow() + 60 * 60 * 1000; };
+  if (tick) tick();
+  Date.now = realNow;
+  check("pause expires cleanly and auto-hide resumes",
+    pausedNow && !C.rt.paused && !C.modes.isActive("pause"));
+
+  // SCENARIO 16 — "Auto-scroll ran to the bottom of the page and stopped."
+  // The mode has to switch itself off, not just stop moving.
+  var sc = w.makeEl("div");
+  sc.clientHeight = 800; sc.scrollHeight = 1000; sc.scrollTop = 0;
+  C.rt.scrollContainer = sc;
+  C.modes.enter("autoscroll");
+  var t2 = w.lastInterval();
+  for (var i = 0; i < 300 && C.modes.isActive("autoscroll"); i++) {
+    sc.scrollTop = Math.min(sc.scrollHeight - sc.clientHeight, sc.scrollTop + 20);
+    if (t2) t2();
+  }
+  check("auto-scroll turns itself off at the bottom",
+    !C.modes.isActive("autoscroll"));
 })();
 
 /* ---------------- Auto-hide: only when there is something to read -------- */
