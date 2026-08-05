@@ -5,6 +5,26 @@
  * The verification gate. Runs the full stubbed-DOM behavioral suite plus
  * static checks. Exit 0 = safe to merge; anything else = do not merge.
  * No dependencies — plain Node. Usage: node tools/harness.js
+ *
+ * HOW TO ADD A TEST (this is the house style — see the "Scenarios" sections):
+ *   1. Describe what a PERSON does, not what a function does. "I hid the input
+ *      to read, and it came back on its own" beats "showComposer() is called".
+ *      Every bug worth finding here was found by asking that question.
+ *   2. Write it BEFORE the fix and watch it FAIL. A test that has never been
+ *      red has never been shown to test anything.
+ *   3. Be suspicious of a green you did not earn. Two tests here once passed
+ *      for the wrong reason — one scrolled further than the relayout guard
+ *      allows, one called a function that does not exist — and the second was
+ *      hiding a real bug. If a test passes first try, prove it can fail.
+ *   4. When the stub is what is wrong (innerHTML not clearing children,
+ *      remove() not forgetting descendants, querySelector answering every
+ *      selector alike), fix the STUB, not the assertion. A stub that lies is
+ *      worse than no stub.
+ *
+ * Two suites need a real browser and live beside this file, because a stub
+ * cannot prove a script did not run or a cascade did not repaint:
+ *   tools/sanitizer-test.html   16 XSS/injection attacks on the Focus Reader
+ *   tools/contrast-test.html    active-state colour + contrast ratios
  */
 "use strict";
 var fs = require("fs");

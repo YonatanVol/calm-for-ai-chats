@@ -138,3 +138,33 @@ Harness 87 -> 121 checks. manifest 3.1.0. Zip 60.4 KB.
   findable after detachment and teardown tests passed falsely.
 
 Harness 121 -> 144. Browser suites: sanitizer 16/16, contrast 7/7.
+
+## 2026-07-30 (evening) — TDD, and five more bugs of the same family
+
+The new-chat bug turned out to be one of a family: code that is correct in the
+happy path and wrong in a situation a person actually gets into. Switched to
+writing the scenario test first and watching it fail.
+
+Found and fixed, each red before green:
+1. A deliberate Ctrl+Shift+H was undone by the page scrolling to the bottom —
+   which happens on its own during streaming. Explicit beats implicit now.
+2. The site's jump-to-bottom arrow stopped revealing the input — MY regression
+   from the relayout guard, which discarded big movements in both directions.
+   Reveal is position-based now; the guard only protects the hide path.
+3. Type-ahead erased a half-written prompt in a textarea (value assignment
+   instead of caret insertion), and restoreDraft read innerText on textareas
+   where it is always empty.
+4. The margin rail did not follow the column when Zen removed the sidebar.
+5. Remember-state restored a HIDDEN composer onto a brand-new chat — the
+   original complaint arriving by another route.
+
+Two tests were passing for the wrong reason and were rewritten: one scrolled
+further in a single step than the relayout guard allows, one called a
+function that does not exist. The second was hiding bug 5. Lesson recorded in
+the harness header: prove a new test can fail before trusting it, and when the
+stub is what is wrong, fix the stub.
+
+Five other scenarios were tested and found already correct — worth the tests
+anyway, since they now pin that behaviour.
+
+Harness 151 -> 164.
