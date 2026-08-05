@@ -63,6 +63,7 @@
   }
 
   function apply(name) {
+    var before = { menuStyle: S.menuStyle };
     var p = find(name);
     if (!p) return;
     if (p.settings) {
@@ -78,6 +79,11 @@
     (p.modes || []).forEach(function (id) {
       CALM.modes.enter(id);
     });
+    // A preset snapshots EVERY setting now, so it can change the shape of the
+    // menu itself. Rebuild when it does, or the user keeps the old one.
+    if (before.menuStyle !== S.menuStyle && CALM.dock) {
+      CALM.dock.build({ preserveOpen: true });
+    }
     CALM.modes.applyWidth();
     CALM.modes.applyReaderType(); // was missed when `reader` stopped being a mode
     CALM.modes.refreshVars();

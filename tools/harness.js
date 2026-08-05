@@ -113,7 +113,7 @@ function buildWorld(hostname, opts) {
       },
       closest: function () { return null; },
       contains: function () { return false; },
-      offsetHeight: 40, offsetWidth: 120, childNodes: [],
+      offsetHeight: 40, offsetWidth: 120,
       innerText: "", focus: noop,
       scrollTop: 0, scrollHeight: 0, clientHeight: 0,
       nodeType: 1, parentElement: null,
@@ -123,7 +123,45 @@ function buildWorld(hostname, opts) {
         return el.__rect || { left: 1200, top: 800, right: 1320, bottom: 840, width: 120, height: 40 };
       },
       setPointerCapture: noop,
+      replaceChild: function (fresh, old) {
+        var i = el.children.indexOf(old);
+        if (i >= 0) el.children[i] = fresh;
+        else el.children.push(fresh);
+        if (fresh) fresh.__parent = el;
+        if (fresh && fresh.__id) world.bodyEls[fresh.__id] = fresh;
+        return old;
+      },
+      insertBefore: function (fresh, ref) {
+        var i = el.children.indexOf(ref);
+        if (i < 0) i = el.children.length;
+        el.children.splice(i, 0, fresh);
+        if (fresh) fresh.__parent = el;
+        return fresh;
+      },
+      // Real elements clone; the stub had no cloneNode at all, so the Focus
+      // Reader's render path could never be exercised end to end.
+      cloneNode: function () {
+        var copy = makeEl(el.tagName);
+        copy.className = el.className;
+        copy.textContent = el.textContent;
+        copy.__attrs = JSON.parse(JSON.stringify(el.__attrs || {}));
+        (el.children || []).forEach(function (c) {
+          // Text nodes are plain objects with no cloneNode, so they were
+          // silently dropped — the clone kept the structure and lost every
+          // word in it.
+          if (c.cloneNode) copy.appendChild(c.cloneNode(true));
+          else if (c.nodeType === 3) {
+            copy.appendChild({ nodeType: 3, textContent: c.textContent, children: [] });
+          }
+        });
+        copy.childNodes = copy.children;
+        return copy;
+      },
     };
+    // In a real DOM childNodes and children are two views of one list. The
+    // stub kept childNodes permanently empty, so any code that walks the tree
+    // the standard way (the Focus Reader does) saw nothing at all.
+    el.childNodes = el.children;
     Object.defineProperty(el, "innerHTML", {
       // Real DOM discards children when innerHTML is assigned. The stub used
       // to keep them, so a re-render appended instead of replacing and tests
@@ -133,6 +171,7 @@ function buildWorld(hostname, opts) {
           if (c.__id) delete world.bodyEls[c.__id];
         });
         el.children = [];
+        el.childNodes = el.children;
         el.__html = v;
       },
       get: function () { return el.__html || ""; },
@@ -159,7 +198,9 @@ function buildWorld(hostname, opts) {
         ? world.docQuery(sel)
         : world.docQuery || null;
     },
-    querySelectorAll: function () { return []; },
+    querySelectorAll: function (sel) {
+      return typeof world.docQueryAll === "function" ? world.docQueryAll(sel) : [];
+    },
     createElement: function (t) {
       var e = makeEl(t);
       Object.defineProperty(e, "id", {
@@ -768,6 +809,82 @@ section("Scenarios V");
   }
   check("auto-scroll turns itself off at the bottom",
     !C.modes.isActive("autoscroll"));
+})();
+
+section("Scenarios VI");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+
+  // SCENARIO 17 — "I opened the Focus Reader while the answer was still
+  // being written." It snapshots on open, so the pane showed a truncated
+  // answer and never filled in.
+  var resp = w.makeEl("div");
+  resp.tagName = "DIV";
+  resp.textContent = "The first part of the answer";
+  resp.childNodes = [{ nodeType: 3, textContent: "The first part of the answer" }];
+  var respSel = C.site.responseSel;
+  w.docQueryAll = function (sel) { return sel === respSel ? [resp] : []; };
+  C.modes.enter("focusreader");
+  var body = w.bodyEls["cit-reader-pane"].querySelector(".cit-fr-body");
+  function paneText() {
+    var out = "";
+    (function walk(n) {
+      (n.children || []).forEach(function (c) {
+        if (c.textContent) out += c.textContent;
+        walk(c);
+      });
+    })(body);
+    return out;
+  }
+  var streamed = "The first part of the answer and the rest of it";
+  resp.textContent = streamed;
+  resp.childNodes = [{ nodeType: 3, textContent: streamed }];
+  var t = w.lastInterval();
+  if (t) t();
+  check("the reader keeps up while the answer is still streaming",
+    /the rest of it/.test(paneText()), JSON.stringify(paneText().slice(0, 60)));
+  C.modes.exit("focusreader");
+
+  // SCENARIO 18 — "I saved a preset while using the margin menu, then applied
+  // it later from the corner pill." A preset now snapshots every setting,
+  // menuStyle included, so applying one has to rebuild the menu.
+  w.docQueryAll = null; // stop scenario 17's stub response from being the column
+  C.rt.composerEl = w.makeEl("div");
+  C.rt.composerEl.__rect = { left: 350, right: 1050, width: 700, top: 0, bottom: 400, height: 400 };
+  // Save the preset in the state it is meant to restore. (list() re-parses
+  // from storage, so mutating a returned object changes nothing — an earlier
+  // version of this test did exactly that and proved nothing.)
+  C.settings.menuStyle = "margin";
+  C.presets.saveCurrent("margin-setup");
+  C.settings.menuStyle = "console";
+  C.dock.build();
+  C.presets.apply("margin-setup");
+  check("applying a preset that changes the menu style rebuilds the menu",
+    C.settings.menuStyle === "margin" && !!w.bodyEls["cit-margin-rail"]);
+  C.presets.del("margin-setup");
+  C.settings.menuStyle = "console";
+  C.dock.build();
+
+  // SCENARIO 19 — "The input was hidden, so I hit Cmd+K and started typing in
+  // Calm's own search box." Type-ahead must not scoop those keystrokes into
+  // the chat composer.
+  C.rt.composerHidden = true;
+  C.rt.pendingText = "";
+  C.settings.typeAhead = "auto";
+  C.palette.open();
+  var palInput = w.bodyEls["cit-palette"].querySelector(".cit-pal-input");
+  var stolen = false;
+  (w.docLs.keydown || []).forEach(function (f) {
+    f({ key: "z", code: "KeyZ", ctrlKey: false, metaKey: false, altKey: false,
+        composedPath: function () { return [palInput]; },
+        preventDefault: function () { stolen = true; },
+        stopPropagation: function () {} });
+  });
+  check("typing in Calm's own search box is not scooped into the chat",
+    !stolen && !C.rt.pendingText);
+  C.palette.close();
+  C.rt.composerHidden = false;
 })();
 
 /* ---------------- Auto-hide: only when there is something to read -------- */

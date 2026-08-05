@@ -242,10 +242,31 @@
     if (S.frSpotlight) setCur(0);
   }
 
+  var lastSeen = "";   // fingerprint of what we last rendered
+  var followTimer = null;
+
   function load() {
     var src = latestResponse();
+    lastSeen = src ? (src.textContent || "") : "";
     cleanRoot = src ? sanitize(src) : null;
     render();
+  }
+
+  // Answers arrive a word at a time. Opening the pane mid-stream used to
+  // freeze whatever had been written so far, with no sign that more was
+  // coming — you had to guess that the Refresh button existed. While the pane
+  // is open, follow the source: re-render only when the text actually changed,
+  // and keep the reading position rather than snapping back to the top.
+  function follow() {
+    if (!paneEl()) return;
+    var src = latestResponse();
+    var now = src ? src.textContent || "" : "";
+    if (now === lastSeen) return;
+    var pane = paneEl();
+    var wasAtTop = !pane.scrollTop;
+    var prevBlock = curBlock;
+    load();
+    if (!wasAtTop && pane.scrollTop === 0 && prevBlock >= 0) setCur(prevBlock);
   }
 
   // ---------- Chrome ----------
@@ -378,6 +399,8 @@
     if (p && p.focus) p.focus(); // keyboard scroll/Esc belong to the pane
     keyHandler = onKey;
     document.addEventListener("keydown", keyHandler, true);
+    clearInterval(followTimer);
+    followTimer = setInterval(follow, 700);
     if (!unEsc && CALM.ui.registerEscape) {
       unEsc = CALM.ui.registerEscape(function () {
         if (!paneEl()) return false;
@@ -395,6 +418,9 @@
       keyHandler = null;
     }
     if (unEsc) { unEsc(); unEsc = null; }
+    clearInterval(followTimer);
+    followTimer = null;
+    lastSeen = "";
     cleanRoot = null;
   }
 
@@ -411,5 +437,6 @@
     refresh: load,
     _boldCount: boldCount, // exposed for the harness
     _sanitize: sanitize, // the one security-critical function — must be testable
+    _follow: follow,
   };
 })();
