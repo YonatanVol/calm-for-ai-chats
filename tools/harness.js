@@ -126,7 +126,9 @@ function buildWorld(hostname, opts) {
     addEventListener: noop, innerWidth: 1400, innerHeight: 900, CALM: undefined,
   };
   global.document = {
-    querySelector: function () { return null; },
+    // Tests set world.docQuery to simulate the page having (or not having)
+    // assistant responses, which auto-hide now consults.
+    querySelector: function () { return world.docQuery || null; },
     querySelectorAll: function () { return []; },
     createElement: function (t) {
       var e = makeEl(t);
@@ -404,6 +406,94 @@ section("Console");
   var nd = w.bodyEls["cit-dock"];
   check("nav rebuild keeps corner + Console",
     !!nd && nd.classList.contains("cit-corner-br") && !!w.bodyEls["cit-console"]);
+})();
+
+/* ---------------- Auto-hide: only when there is something to read -------- */
+section("Auto-hide");
+(function () {
+  var w = buildWorld("chatgpt.com", {});
+  var C = w.C;
+
+  function scroller(clientH, scrollH, top) {
+    var el = w.makeEl("div");
+    el.clientHeight = clientH;
+    el.scrollHeight = scrollH;
+    el.scrollTop = top;
+    el.closest = function () { return null; }; // not an excluded scroller
+    return el;
+  }
+  function scrollTo(el, top) {
+    el.scrollTop = top;
+    (w.docLs.scroll || []).forEach(function (f) { f({ target: el }); });
+  }
+  // NOTE: the stub fires sub-3s timers synchronously, so the 350ms
+  // accumulator reset lands between events and cross-event accumulation
+  // cannot be modelled here. Each scroll below is therefore ONE realistic
+  // wheel notch (~100px), which is what actually has to clear the threshold.
+  function adopt(el) {
+    C.rt.scrollContainer = null;
+    C.rt.accUp = 0;
+    C.rt.composerHidden = false;
+    C.rt.scrollLocked = false;
+    scrollTo(el, el.scrollTop); // first event adopts and is swallowed
+  }
+
+  C.rt.composerEl = w.makeEl("div");
+  C.settings.autoHideOnScroll = true;
+
+  // THE REPORTED BUG: a new chat. 250px of scrollable range means one flick
+  // covers the lot, which used to satisfy both thresholds at once.
+  w.docQuery = null; // no assistant responses on the page
+  var fresh = scroller(800, 1050, 250);
+  adopt(fresh);
+  scrollTo(fresh, 0); // flick the entire range upward
+  check("a new chat does NOT hide the composer on the first scroll",
+    !C.rt.composerHidden);
+  scrollTo(fresh, 250);
+  scrollTo(fresh, 0);
+  check("nor on repeated scrolling", !C.rt.composerHidden);
+
+  // A real conversation still behaves exactly as before.
+  w.docQuery = w.makeEl("div"); // responses exist
+  var real = scroller(800, 4000, 2000);
+  adopt(real);
+  scrollTo(real, 1900); // one wheel notch up
+  check("a long conversation still auto-hides", C.rt.composerHidden);
+
+  // A single jump larger than the viewport is a relayout, not a gesture.
+  C.rt.composerHidden = false;
+  var snap = scroller(800, 4000, 3000);
+  adopt(snap);
+  scrollTo(snap, 0); // -3000 in one event
+  check("a viewport-sized jump is ignored (relayout, not intent)",
+    !C.rt.composerHidden);
+
+  // Selector rot must never silently disable auto-hide on a long thread.
+  w.docQuery = null;
+  C.rt.composerHidden = false;
+  var longNoSel = scroller(800, 5000, 2500);
+  adopt(longNoSel);
+  scrollTo(longNoSel, 2400);
+  check("a very long page hides even if the response selector rots",
+    C.rt.composerHidden);
+
+  // Mid-length page with no conversation: still refuse.
+  w.docQuery = null;
+  C.rt.composerHidden = false;
+  var midEmpty = scroller(800, 1700, 700);
+  adopt(midEmpty);
+  scrollTo(midEmpty, 600);
+  check("a mid-length page with no responses refuses to hide",
+    !C.rt.composerHidden);
+
+  // ...but the same page WITH responses hides.
+  w.docQuery = w.makeEl("div");
+  C.rt.composerHidden = false;
+  var midReal = scroller(800, 1700, 700);
+  adopt(midReal);
+  scrollTo(midReal, 600);
+  check("the same page with responses does hide", C.rt.composerHidden);
+  w.docQuery = null;
 })();
 
 /* ---------------- The Margin ---------------- */

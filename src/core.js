@@ -153,6 +153,21 @@
         ' aside[class*="dframe-sidebar"], [class*="dframe-nav-scroll"]'
     );
   }
+  // Is there actually a conversation to read? On a brand-new chat there is
+  // nothing to gain by hiding the composer — the user is about to type into
+  // it. Two independent signals, either of which is enough, so that a rotted
+  // response selector can never silently disable auto-hide on a long thread.
+  function worthHiding(el) {
+    var range = el.scrollHeight - el.clientHeight;
+    if (range < C.MIN_HIDE_RANGE) return false;
+    if (range >= C.ASSUME_CONTENT_RANGE) return true;
+    try {
+      return !site.responseSel || !!document.querySelector(site.responseSel);
+    } catch (_) {
+      return true;
+    }
+  }
+
   function handleScrollEl(el) {
     if (!S.autoHideOnScroll || rt.scrollLocked || rt.paused) {
       rt.lastScrollTop = el.scrollTop;
@@ -162,6 +177,14 @@
     var delta = cur - rt.lastScrollTop;
     rt.lastScrollTop = cur;
     if (delta === 0) return;
+
+    // A jump of more than a viewport in one event is the page relayouting or
+    // snapping, not a hand on a wheel. Counting it as intent is how a single
+    // flick used to add hundreds of pixels to the accumulator at once.
+    if (Math.abs(delta) > el.clientHeight) {
+      rt.accUp = 0;
+      return;
+    }
 
     var distFromBottom = el.scrollHeight - el.clientHeight - cur;
     clearTimeout(rt.accTimer);
@@ -174,7 +197,8 @@
       if (
         rt.accUp >= upThreshold() &&
         !rt.composerHidden &&
-        distFromBottom > C.BOTTOM_THRESHOLD
+        distFromBottom > C.BOTTOM_THRESHOLD &&
+        worthHiding(el)
       ) {
         rt.accUp = 0;
         hideComposer({ auto: true });

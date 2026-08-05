@@ -97,7 +97,15 @@
 
   CALM.const = {
     BOTTOM_THRESHOLD: 90,
-    MIN_SCROLLABLE: 200,
+    MIN_SCROLLABLE: 200, // enough range to call an element "a scroller"
+    // Enough range for hiding to be WORTH anything. On a short page a single
+    // trackpad flick covers the whole range in one event, which trivially
+    // satisfies both the accumulate-upward and distance-from-bottom
+    // thresholds — so an empty new chat hid its composer on the first scroll.
+    MIN_HIDE_RANGE: 700,
+    // A conversation this long is real even if the adapter's response
+    // selector has rotted; used so selector rot can never disable auto-hide.
+    ASSUME_CONTENT_RANGE: 2000,
     ACC_RESET_MS: 350,
     SCROLL_GRACE_MS: 450,
     TOAST_MS: 2200,
