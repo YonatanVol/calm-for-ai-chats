@@ -887,6 +887,72 @@ section("Scenarios VI");
   C.rt.composerHidden = false;
 })();
 
+section("Onboarding");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+
+  // SCENARIO 20 — "I installed it. Something should tell me the pill is the
+  // menu and that Cmd+K exists, without a modal over the conversation."
+  check("a first-run tour appears, anchored to the menu, not over the chat",
+    !!w.bodyEls["cit-tour"] &&
+      w.bodyEls["cit-dock"].querySelectorAll(".cit-tour-card").length +
+      (w.bodyEls["cit-tour"] ? 1 : 0) > 0);
+  check("it is short and says which step you are on",
+    !!w.bodyEls["cit-tour"] &&
+      /1\s*\/\s*3/.test(JSON.stringify(
+        (w.bodyEls["cit-tour"].querySelector(".cit-tour-step") || {}).textContent || "")));
+
+  // SCENARIO 21 — "I clicked through it. It must never come back."
+  var next = w.bodyEls["cit-tour"] && w.bodyEls["cit-tour"].querySelector(".cit-tour-next");
+  if (next) {
+    next.__ls.click[0]({ stopPropagation: function () {} });
+    next.__ls.click[0]({ stopPropagation: function () {} });
+    next.__ls.click[0]({ stopPropagation: function () {} });
+  }
+  check("finishing the tour closes it", !w.bodyEls["cit-tour"]);
+  C.dock.build();
+  check("and it does not reappear on a rebuild", !w.bodyEls["cit-tour"]);
+  w.nav("https://chatgpt.com/c/next");
+  check("nor after navigating", !w.bodyEls["cit-tour"]);
+  var w2 = buildWorld("chatgpt.com", { lenient: true, seed: w.local });
+  check("nor on a fresh page load once dismissed", !w2.bodyEls["cit-tour"]);
+
+  // SCENARIO 22 — "Skip means skip."
+  var w3 = buildWorld("chatgpt.com", { lenient: true });
+  var skip = w3.bodyEls["cit-tour"] && w3.bodyEls["cit-tour"].querySelector(".cit-tour-skip");
+  check("there is a way out on the first card", !!skip);
+  if (skip) skip.__ls.click[0]({ stopPropagation: function () {} });
+  check("skipping closes it", !w3.bodyEls["cit-tour"]);
+  var w4 = buildWorld("chatgpt.com", { lenient: true, seed: w3.local });
+  check("skipping is remembered too", !w4.bodyEls["cit-tour"]);
+
+  // SCENARIO 23 — "I was mid-presentation when I first installed it." It must
+  // not appear over something the user is showing other people. The tour is a
+  // CHILD of the dock, so presentation's hide-all-Calm-UI rule covers it —
+  // that inheritance is the actual guarantee, so assert it rather than
+  // asserting the element is absent (it is only deferred, not dismissed).
+  var w5 = buildWorld("chatgpt.com", { lenient: true });
+  var tourEl = w5.bodyEls["cit-tour"];
+  check("the tour hangs off the dock, so Presentation hides it too",
+    !!tourEl && tourEl.__parent === w5.bodyEls["cit-dock"]);
+  var cssTxt = fs.readFileSync(path.join(ROOT, "content.css"), "utf8");
+  check("Presentation really does hide the dock",
+    /html\.cit-presentation[^{]*#cit-dock/.test(cssTxt));
+  // Starting a presentation while it is up must take it off screen at once.
+  w5.C.modes.enter("presentation");
+  check("entering Presentation does not leave the tour behind",
+    !w5.bodyEls["cit-tour"]);
+  w5.C.modes.exit("presentation");
+
+  // SCENARIO 24 — Escape closes it, like everything else in Calm.
+  var w6 = buildWorld("chatgpt.com", { lenient: true });
+  (w6.docLs.keydown || []).slice().forEach(function (f) {
+    f({ key: "Escape", stopPropagation: function () {}, preventDefault: function () {} });
+  });
+  check("Escape dismisses the tour", !w6.bodyEls["cit-tour"]);
+})();
+
 /* ---------------- Auto-hide: only when there is something to read -------- */
 section("Auto-hide");
 (function () {

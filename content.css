@@ -1803,3 +1803,102 @@ html.cit-presentation #cit-night-overlay {
   .cit-mark,
   .cit-mark-label { transition: none; }
 }
+
+/* ----------------------------------------
+   First run — three short cards, once, ever.
+   Hangs off the menu it describes rather than
+   covering the conversation.
+---------------------------------------- */
+.cit-tour-card {
+  position: absolute;
+  width: 244px;
+  padding: 12px 14px 10px;
+  border-radius: 16px;
+  background: linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
+  box-shadow:
+    inset 0 1px 0 var(--cit-tile-lip),
+    inset 0 0 0 1px var(--cit-hairline-gold),
+    0 24px 56px rgba(0, 0, 0, 0.55);
+  animation: cit-tour-in 0.34s var(--cit-spring);
+  z-index: 1;
+}
+@keyframes cit-tour-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+#cit-dock.cit-corner-br .cit-tour-card { right: 0; bottom: calc(100% + 11px); }
+#cit-dock.cit-corner-bl .cit-tour-card { left: 0; bottom: calc(100% + 11px); }
+#cit-dock.cit-corner-tr .cit-tour-card { right: 0; top: calc(100% + 11px); }
+#cit-dock.cit-corner-tl .cit-tour-card { left: 0; top: calc(100% + 11px); }
+#cit-dock.cit-margin .cit-tour-card { top: 50%; transform: translateY(-50%); }
+#cit-dock.cit-margin.cit-rail-right .cit-tour-card { right: calc(100% + 10px); }
+#cit-dock.cit-margin.cit-rail-left .cit-tour-card { left: calc(100% + 10px); }
+
+.cit-tour-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--cit-hairline);
+}
+.cit-tour-brand {
+  font-family: var(--cit-serif);
+  font-size: 9px;
+  letter-spacing: 0.38em;
+  text-indent: 0.38em;
+  color: var(--cit-ink-faint);
+}
+.cit-tour-step {
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--cit-ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.cit-tour-title {
+  font-family: var(--cit-serif);
+  font-size: 14.5px;
+  line-height: 1.3;
+  color: var(--cit-ink);
+  margin: 10px 0 5px;
+}
+.cit-tour-body {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--cit-ink-dim);
+}
+.cit-tour-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 9px;
+  border-top: 1px solid var(--cit-hairline);
+}
+.cit-tour-skip {
+  border: none;
+  background: transparent;
+  color: var(--cit-ink-faint);
+  font-size: 11.5px;
+  cursor: pointer;
+  padding: 5px 6px;
+  transition: color 0.18s ease;
+}
+.cit-tour-skip:hover { color: var(--cit-ink-dim); }
+.cit-tour-next {
+  border: none;
+  border-radius: 9px;
+  padding: 6px 16px;
+  font-family: var(--cit-serif);
+  font-size: 12.5px;
+  letter-spacing: 0.05em;
+  color: var(--cit-on-gold);
+  background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: transform 0.16s var(--cit-spring);
+}
+.cit-tour-next:active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .cit-tour-card { animation: none; }
+}

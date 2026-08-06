@@ -143,6 +143,7 @@
       }
       CALM.margin.refresh();
       if (reopen) CALM.console.open();
+      if (CALM.tour) CALM.tour.maybeShow(d);
       return;
     }
 
@@ -181,6 +182,8 @@
 
     refreshStatus();
     if (reopen) CALM.console.open();
+    // Only offer the tour once there is a menu to point at.
+    if (CALM.tour) CALM.tour.maybeShow(d);
   }
 
   // ---------- Quiet pill (fades while you type; wakes on approach) ----------

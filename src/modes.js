@@ -184,6 +184,9 @@
 
   // ---------- Presentation / Screenshot ----------
   function presentationEnter() {
+    // Take the first-run tour off screen immediately rather than relying on it
+    // being inside the dock — it stays un-dismissed and returns afterwards.
+    if (CALM.tour) CALM.tour.close();
     document.documentElement.classList.add("cit-presentation");
     rt.presentationEnteredZen = !rt.activeModes.zen;
     if (!rt.activeModes.zen) modeEnter("zen");

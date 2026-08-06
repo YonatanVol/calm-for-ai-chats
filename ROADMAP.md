@@ -8,9 +8,6 @@ position; demote, never delete.
 
 ## A — Release blockers (v3.0.0 to the Chrome Web Store)
 
-- [ ] Onboarding: first-run tour (3 quiet cards over the dock: pill → bloom →
-      Focus Reader) + a "what's new in 3.0" note for upgraders. No modals over
-      site content; dismiss = never again (localStorage).
 - [ ] Generate store screenshots: headless-render the 5 hero shots (Bloom
       tray, Focus Reader dark+RTL, Pomodoro, intention card, settings) at
       1280×800 into store-assets/ via a tools/store-shots.js script.
@@ -85,6 +82,11 @@ position; demote, never delete.
 - [ ] Firefox MV3 port (browser.* shims, background differences).
 
 ## Done
+
+- [x] 2026-07-30 — First-run tour: three short cards anchored to the menu
+      (never a modal over the conversation), Skip on every card, Escape
+      dismisses, remembered permanently, and it steps aside for Presentation.
+      Written test-first; 13 scenario checks.
 
 - [x] 2026-07-30 — H · Margin shipped (marginalia rail + automatic fallback),
       CSS review acted on, and the active-state colour regression from the
