@@ -122,6 +122,7 @@
     dock: "cit-dock",
     console: "cit-console",
     rail: "cit-margin-rail",
+    tour: "cit-tour",
     readerPane: "cit-reader-pane",
   };
 
