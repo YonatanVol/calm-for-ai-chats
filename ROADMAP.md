@@ -6,11 +6,13 @@ Items are ordered by (impact × feasibility) from a 13-agent audit + judge
 panel, deduplicated, release-blockers first. Add new findings in priority
 position; demote, never delete.
 
-## A — Release blockers (v3.0.0 to the Chrome Web Store)
+## A — Release blockers (v3.1.0 to the Chrome Web Store)
 
-- [ ] Generate store screenshots: headless-render the 5 hero shots (Bloom
-      tray, Focus Reader dark+RTL, Pomodoro, intention card, settings) at
-      1280×800 into store-assets/ via a tools/store-shots.js script.
+- [ ] OWNER: take one in-situ screenshot on a real conversation and drop it in
+      as store-assets/01-one-menu.png. The generated hero shots are honest but
+      show Calm on a neutral backdrop, not on a real chat — a reviewer and a
+      shopper both want to see the real thing. See store-assets/README.
+
 
 ## B — Flow features (highest-ranked new work)
 
@@ -82,6 +84,11 @@ position; demote, never delete.
 - [ ] Firefox MV3 port (browser.* shims, background differences).
 
 ## Done
+
+- [x] 2026-07-30 — Store assets: tools/store-shots.js renders five 1280×800
+      hero shots plus the 440×280 promo tile from the LIVE stylesheet and icon
+      set, so they cannot drift from the real UI. Documented honestly: these
+      are hero shots, not in-situ, and why.
 
 - [x] 2026-07-30 — First-run tour: three short cards anchored to the menu
       (never a modal over the conversation), Skip on every card, Escape
