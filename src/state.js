@@ -47,6 +47,8 @@
     menuStyle: "console", // console (corner pill) | margin (marks in the gutter)
     dockAutoCollapse: true, // dock folds back to the pill after 6s idle
     dockQuiet: true, // pill fades while typing; wakes on pointer approach
+    answerReady: true, // tab title says when a reply finished while you were away
+    answerReadyChime: false, // ...and optionally a soft chime. Off by default.
     showTimeOnPage: true, // "🕐 25m here" chip (from 5 minutes on)
     hyperfocusMin: 60, // nudge every N minutes; 0 = off
     showTimeBar: true, // thin focus-progress bar during Pomodoro blocks

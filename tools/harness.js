@@ -220,7 +220,7 @@ function buildWorld(hostname, opts) {
     head: makeEl("head"), body: body,
     getElementById: function (id) { return world.bodyEls[id] || null; },
     execCommand: function () { return true; },
-    nodeType: 9, activeElement: null,
+    nodeType: 9, activeElement: null, title: "", hidden: false,
   };
   global.getComputedStyle = function () { return { overflowY: "visible" }; };
   global.location = { hostname: hostname, href: "https://" + hostname + "/c/x" };
@@ -951,6 +951,86 @@ section("Onboarding");
     f({ key: "Escape", stopPropagation: function () {}, preventDefault: function () {} });
   });
   check("Escape dismisses the tour", !w6.bodyEls["cit-tour"]);
+})();
+
+section("Answer ready");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  var generating = false;
+  var stopSel = C.site.stopSel;
+  w.docQuery = function (sel) { return sel === stopSel && generating ? w.makeEl("button") : null; };
+  function tick() { var t = w.lastInterval(); if (t) t(); }
+  function poll() { Object.keys(w.intervals).forEach(function (k) { w.intervals[k](); }); }
+
+  // SCENARIO 25 — "I asked something long and switched to another tab. I want
+  // to know when it is done without going back to check."
+  global.document.title = "A question about tax — ChatGPT";
+  global.document.hidden = true;
+  generating = true;  poll();
+  generating = false; poll();
+  check("the tab tells me when the answer landed while I was away",
+    /ready/i.test(global.document.title), JSON.stringify(global.document.title));
+
+  // SCENARIO 26 — "The site renamed its own tab while the badge was up."
+  global.document.title = "A question about tax — ChatGPT";
+  poll();
+  check("the badge survives the site rewriting its own title",
+    /ready/i.test(global.document.title), JSON.stringify(global.document.title));
+
+  // SCENARIO 27 — "I came back to the tab." The badge must clear itself and
+  // leave the site's own title exactly as it was.
+  global.document.hidden = false;
+  (w.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  check("coming back clears the badge and restores the real title",
+    global.document.title === "A question about tax — ChatGPT",
+    JSON.stringify(global.document.title));
+
+  // SCENARIO 28 — "I never left the tab." Nothing should change: I watched it
+  // finish with my own eyes.
+  global.document.hidden = false;
+  global.document.title = "Still here — ChatGPT";
+  generating = true;  poll();
+  generating = false; poll();
+  check("nothing happens if I was watching the whole time",
+    global.document.title === "Still here — ChatGPT",
+    JSON.stringify(global.document.title));
+
+  // SCENARIO 29 — sound is off unless asked for, and never while I am looking.
+  var chimes = 0;
+  C.audio.playChime = function () { chimes++; };
+  global.document.hidden = true;
+  generating = true;  poll();
+  generating = false; poll();
+  check("no sound unless I turned it on", chimes === 0);
+  // Look at the tab and leave again — otherwise the badge is still armed from
+  // the case above and markReady() rightly refuses to fire a second time.
+  global.document.hidden = false;
+  (w.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  global.document.hidden = true;
+  C.settings.answerReadyChime = true;
+  generating = true;  poll();
+  generating = false; poll();
+  check("with it on, it chimes once", chimes === 1, "chimes=" + chimes);
+  // A second reply landing while I am STILL away must not chime again.
+  generating = true;  poll();
+  generating = false; poll();
+  check("but it does not keep chiming while I stay away", chimes === 1,
+    "chimes=" + chimes);
+  C.settings.answerReadyChime = false;
+  global.document.hidden = false;
+  (w.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+
+  // SCENARIO 30 — the whole thing can be switched off.
+  C.settings.answerReady = false;
+  global.document.title = "Off — ChatGPT";
+  global.document.hidden = true;
+  generating = true;  poll();
+  generating = false; poll();
+  check("turning the cue off really turns it off",
+    global.document.title === "Off — ChatGPT");
+  C.settings.answerReady = true;
+  global.document.hidden = false;
 })();
 
 /* ---------------- Auto-hide: only when there is something to read -------- */

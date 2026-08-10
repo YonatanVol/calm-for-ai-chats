@@ -98,6 +98,10 @@
       },
       // Reader typography target (message prose).
       // Assistant-response blocks for the Focus Reader (last one wins).
+      // The site's own stop-generating control: present ONLY while a reply
+      // is streaming. If it rots the cue never fires — a missed cue, never
+      // a false one.
+      stopSel: "[data-testid=\"stop-button\"], button[data-testid=\"composer-speech-button-container\"] ~ button[aria-label*=\"Stop\" i], button[aria-label*=\"Stop streaming\" i]",
       responseSel: "[data-message-author-role=\"assistant\"] .markdown",
       readerTargets: function () {
         return ".markdown, [class*='prose'], [data-message-author-role] .markdown";
@@ -166,6 +170,10 @@
         );
       },
       // Assistant-response blocks for the Focus Reader (last one wins).
+      // The site's own stop-generating control: present ONLY while a reply
+      // is streaming. If it rots the cue never fires — a missed cue, never
+      // a false one.
+      stopSel: "button[aria-label*=\"Stop\" i], .stop-icon, mat-icon[fonticon=\"stop\"]",
       responseSel: "message-content, .model-response-text",
       readerTargets: function () {
         return "message-content, .markdown, .model-response-text";
@@ -227,6 +235,10 @@
         );
       },
       // Assistant-response blocks for the Focus Reader (last one wins).
+      // The site's own stop-generating control: present ONLY while a reply
+      // is streaming. If it rots the cue never fires — a missed cue, never
+      // a false one.
+      stopSel: "button[aria-label*=\"Stop\" i], button[aria-label*=\"stop response\" i]",
       responseSel: ".font-claude-response",
       readerTargets: function () {
         return '.font-claude-response, [data-testid="user-message"]';

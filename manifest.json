@@ -26,6 +26,7 @@
         "src/dock.js",
         "src/palette.js",
         "src/tour.js",
+        "src/ready.js",
         "src/wellness.js",
         "src/intent.js",
         "src/core.js",
