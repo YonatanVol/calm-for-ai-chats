@@ -16,10 +16,6 @@ position; demote, never delete.
 
 ## B — Flow features (highest-ranked new work)
 
-- [ ] Answer-ready cue (S, score 4.77): while the tab is unfocused, detect
-      generation-complete (adapter: stop-button disappears / stream ends) and
-      flip document.title to "● Ready — Calm" + optional soft chime
-      (audio.js); restore on focus. Zero new permissions.
 - [ ] Where-was-I re-entry card (S, 4.13): returning to the tab after >5 min
       away shows a quiet card: your intention, parked thoughts count, and a
       "jump to where you stopped" scroll anchor. Session-local only.
@@ -84,6 +80,11 @@ position; demote, never delete.
 - [ ] Firefox MV3 port (browser.* shims, background differences).
 
 ## Done
+
+- [x] 2026-07-30 — Answer-ready cue: the tab title says when a reply finished
+      while you were away, and stops the moment you look. Optional chime, off
+      by default. Detects via the site's own stop-generating control, so a
+      rotted selector yields a MISSED cue, never a false one. 8 scenarios.
 
 - [x] 2026-07-30 — Store assets: tools/store-shots.js renders five 1280×800
       hero shots plus the 440×280 promo tile from the LIVE stylesheet and icon
