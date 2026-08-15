@@ -54,17 +54,12 @@ position; demote, never delete.
 
 ## C — Hardening (audit-confirmed rough edges)
 
-- [ ] insertIntoInput textarea path REPLACES value instead of inserting at
-      caret — type-ahead flush can clobber an existing draft (core.js). This is
-      the highest-value remaining correctness bug.
-- [ ] restoreDraft kept-text check reads innerText for textareas (always
-      empty) — rewrites + refires input events every show (core.js).
-- [ ] rt.scrollContainer staleness: React can replace the scroller node;
-      add an isConnected check before quick-nav/scroll use (core.js).
+- [ ] rt.scrollContainer staleness: React can replace the scroller node; add
+      an isConnected check before use, the same way currentComposer() already
+      re-resolves a detached composer (core.js).
 - [ ] Move the hard-coded excluded-scroller selectors from core.js into a
       per-adapter excludedScrollers() field (adapters.js).
 - [ ] Scroll-sensitivity thresholds (150/20px) into CALM.const.
-- [ ] Retry-loop cap for scroll discovery (symmetric with composer's 120).
 
 ## D — Growth & platform (needs owner input where marked)
 
@@ -80,6 +75,10 @@ position; demote, never delete.
 - [ ] Firefox MV3 port (browser.* shims, background differences).
 
 ## Done
+
+- [x] 2026-07-30 — Hardening items closed by the TDD rounds: the textarea
+      draft-clobber (now inserts at the caret), restoreDraft's textarea check,
+      and the uncapped scroll-discovery retry loop.
 
 - [x] 2026-07-30 — Answer-ready cue: the tab title says when a reply finished
       while you were away, and stops the moment you look. Optional chime, off
