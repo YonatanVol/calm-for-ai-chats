@@ -6,6 +6,28 @@ Items are ordered by (impact × feasibility) from a 13-agent audit + judge
 panel, deduplicated, release-blockers first. Add new findings in priority
 position; demote, never delete.
 
+## Timeline
+
+Assumes the 09:00 daily task keeps doing one item per day, S ≈ 1 day, M ≈ 2.
+Dates are relative because the only hard dependency is the owner, not the work.
+
+| When | What | Who |
+| --- | --- | --- |
+| **Now** | In-situ screenshot · CWS account ($5) · Submit | **owner** |
+| +3–14 days | Review wait. Meanwhile: 3 hardening items, then where-was-I card + chat spotlight | auto |
+| **~2 weeks** | **v3.1.0 live.** Launch posts, support channel | **owner** |
+| Weeks 3–4 | Declutter checklist · waypoints · prompt locker · stats tab · review loop | auto |
+| Weeks 5–6 | Hebrew + RTL chrome · adapter wave (Perplexity, Grok, DeepSeek) · Edge | auto (+owner for Edge) |
+| Weeks 7–8 | Paid tier — pricing and provider first, and only if usage justifies it | **owner** decides |
+
+Two things this ordering is deliberate about:
+
+- **Bug reports outrank everything below them.** The moment there are real
+  users, whatever they hit jumps the queue.
+- **Billing is last on purpose.** Auth and sync were deleted to reach zero
+  permissions, which is the strongest thing the listing says. Putting them
+  back costs that, so it should only happen once people are actually using it.
+
 ## A — Release blockers (v3.1.0 to the Chrome Web Store)
 
 - [ ] OWNER: take one in-situ screenshot on a real conversation and drop it in
