@@ -76,12 +76,6 @@ Two things this ordering is deliberate about:
 
 ## C — Hardening (audit-confirmed rough edges)
 
-- [ ] rt.scrollContainer staleness: React can replace the scroller node; add
-      an isConnected check before use, the same way currentComposer() already
-      re-resolves a detached composer (core.js).
-- [ ] Move the hard-coded excluded-scroller selectors from core.js into a
-      per-adapter excludedScrollers() field (adapters.js).
-- [ ] Scroll-sensitivity thresholds (150/20px) into CALM.const.
 
 ## D — Growth & platform (needs owner input where marked)
 
@@ -97,6 +91,11 @@ Two things this ordering is deliberate about:
 - [ ] Firefox MV3 port (browser.* shims, background differences).
 
 ## Done
+
+- [x] 2026-08-16 — Hardening batch: the scroll container is re-resolved when
+      the page replaces it (Scroll-to-top silently did nothing before), every
+      adapter now declares its own excluded scrollers so a fourth site needs
+      no engine changes, and the sensitivity thresholds moved into CALM.const.
 
 - [x] 2026-07-30 — Hardening items closed by the TDD rounds: the textarea
       draft-clobber (now inserts at the caret), restoreDraft's textarea check,

@@ -26,7 +26,7 @@
   // sensitivity -> upward px needed to hide (1=hard .. 10=easy)
   function upThreshold() {
     var s = Math.max(1, Math.min(10, S.sensitivity || 5));
-    return Math.round(150 - (s - 1) * (130 / 9)); // s1=150 .. s10=20
+    return Math.round(C.UP_MAX - (s - 1) * ((C.UP_MAX - C.UP_MIN) / 9));
   }
 
   function lockScroll() {
@@ -44,6 +44,20 @@
   // happened to capture at init means hiding a detached element: nothing moves
   // on screen and the toggle looks broken. Always re-resolve when the held
   // reference has left the document.
+  // React replaces the scroll container too, and a detached one silently
+  // swallows every scrollTo and reports a frozen scrollTop.
+  function currentScroller() {
+    var sc = rt.scrollContainer;
+    if (sc && sc.isConnected === false) {
+      var fresh = site.scrollRoot && site.scrollRoot();
+      if (fresh) {
+        rt.scrollContainer = fresh;
+        rt.lastScrollTop = fresh.scrollTop || 0;
+      }
+    }
+    return rt.scrollContainer;
+  }
+
   function currentComposer() {
     if (rt.composerEl && rt.composerEl.isConnected === false) {
       var fresh = site.composer();
@@ -181,11 +195,16 @@
 
   // ---- Scroll detection — ONE capture-phase listener on document ----
   function isExcludedScroller(el) {
-    return !!el.closest(
-      "bard-sidenav, conversations-list, #stage-slideover-sidebar," +
-        " #stage-sidebar-tiny-bar, nav[aria-label], #cit-console," +
-        ' aside[class*="dframe-sidebar"], [class*="dframe-nav-scroll"]'
-    );
+    // Calm's own surfaces, plus whatever this site says is chrome rather than
+    // conversation. The per-site half lives in the adapter so adding a fourth
+    // site means writing an adapter and touching nothing here.
+    var own = "#cit-console, #cit-palette, #cit-reader-pane";
+    var site_ = site.excludedScrollers ? site.excludedScrollers() : "";
+    try {
+      return !!el.closest(site_ ? own + ", " + site_ : own);
+    } catch (_) {
+      return false;
+    }
   }
   // Is there actually a conversation to read? On a brand-new chat there is
   // nothing to gain by hiding the composer — the user is about to type into
@@ -510,6 +529,7 @@
     restoreDraft: restoreDraft,
     insertIntoInput: insertIntoInput,
     discoverScroll: discoverScroll,
+    currentScroller: currentScroller,
     init: init,
   };
 

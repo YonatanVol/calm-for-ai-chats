@@ -107,6 +107,11 @@
         return ".markdown, [class*='prose'], [data-message-author-role] .markdown";
       },
       // Sidebar conversation titles to blur in Privacy/Share mode.
+      // Scrollers that must never drive auto-hide: the site's own sidebar
+      // and nav. Site knowledge belongs here, not in the engine.
+      excludedScrollers: function () {
+        return "#stage-slideover-sidebar, #stage-sidebar-tiny-bar, nav[aria-label]";
+      },
       privacyTargets: function () {
         return "#stage-slideover-sidebar a, nav a[href*='/c/']";
       },
@@ -178,6 +183,11 @@
       readerTargets: function () {
         return "message-content, .markdown, .model-response-text";
       },
+      // Scrollers that must never drive auto-hide: the site's own sidebar
+      // and nav. Site knowledge belongs here, not in the engine.
+      excludedScrollers: function () {
+        return "bard-sidenav, conversations-list, nav[aria-label]";
+      },
       privacyTargets: function () {
         return "conversations-list .conversation, gem-nav-list-item .title";
       },
@@ -242,6 +252,11 @@
       responseSel: ".font-claude-response",
       readerTargets: function () {
         return '.font-claude-response, [data-testid="user-message"]';
+      },
+      // Scrollers that must never drive auto-hide: the site's own sidebar
+      // and nav. Site knowledge belongs here, not in the engine.
+      excludedScrollers: function () {
+        return "aside[class*=\"dframe-sidebar\"], [class*=\"dframe-nav-scroll\"], nav[aria-label]";
       },
       privacyTargets: function () {
         return 'aside a[href^="/chat/"]';
