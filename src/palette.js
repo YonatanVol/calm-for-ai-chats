@@ -36,6 +36,7 @@
     autoScrollSpeed: [1, 10, 1],
     pauseMinutes: [5, 60, 5],
     hyperfocusMin: [0, 180, 15],
+    whereWasIMin: [5, 120, 5],
     pomoFocusMin: [5, 90, 1],
     pomoBreakMin: [1, 20, 1],
     pomoLongBreakMin: [5, 30, 5],

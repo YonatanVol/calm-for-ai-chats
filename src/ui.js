@@ -329,6 +329,8 @@
     c.appendChild(toggleRow("Focus progress bar", "showTimeBar"));
     c.appendChild(divider("Time awareness"));
     c.appendChild(toggleRow("Tell me when an answer lands", "answerReady"));
+    c.appendChild(toggleRow("Remind me what I was doing", "whereWasI"));
+    c.appendChild(sliderRow("...after this many minutes away", "whereWasIMin", 5, 120, 5));
     c.appendChild(toggleRow("...with a soft chime", "answerReadyChime"));
     c.appendChild(toggleRow("Time-on-page chip", "showTimeOnPage"));
     c.appendChild(sliderRow("Hyperfocus nudge (min, 0=off)", "hyperfocusMin", 0, 180, 15));

@@ -727,6 +727,7 @@ html[class*="light"], html[data-theme="light"] {
 /* Presentation mode hides ALL Calm UI for clean capture/sharing —
    except the toast, which carries the "press Esc to exit" hint. */
 html.cit-presentation #cit-dock,
+html.cit-presentation #cit-back,
 html.cit-presentation #cit-palette,
 html.cit-presentation #cit-reader-pane,
 html.cit-presentation #cit-type-chip,
@@ -1901,4 +1902,89 @@ html.cit-presentation #cit-night-overlay {
 .cit-tour-next:active { transform: scale(0.97); }
 @media (prefers-reduced-motion: reduce) {
   .cit-tour-card { animation: none; }
+}
+
+/* ----------------------------------------
+   "Where you were" — one quiet card on
+   returning after a real absence.
+---------------------------------------- */
+#cit-back {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147482950; /* under the reading pane; this is a reminder, not a wall */
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  padding: 12px 14px 11px;
+  border-radius: 16px;
+  background: linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
+  box-shadow:
+    inset 0 1px 0 var(--cit-tile-lip),
+    inset 0 0 0 1px var(--cit-hairline-gold),
+    0 24px 56px rgba(0, 0, 0, 0.5);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  animation: cit-back-in 0.4s var(--cit-spring);
+}
+@keyframes cit-back-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to { opacity: 1; transform: translateX(-50%); }
+}
+.cit-back-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--cit-hairline);
+}
+.cit-back-brand {
+  font-family: var(--cit-serif);
+  font-size: 9px;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  text-transform: uppercase;
+  color: var(--cit-ink-faint);
+}
+.cit-back-x {
+  border: none;
+  background: transparent;
+  color: var(--cit-ink-faint);
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  transition: color 0.18s ease;
+}
+.cit-back-x:hover { color: var(--cit-ink); }
+.cit-back-x .cit-svg { width: 12px; height: 12px; }
+.cit-back-goal {
+  font-family: var(--cit-serif);
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--cit-ink);
+  margin: 10px 0 2px;
+}
+.cit-back-goal[dir="auto"] { unicode-bidi: plaintext; }
+.cit-back-parked,
+.cit-back-jump {
+  display: block;
+  width: 100%;
+  text-align: start;
+  border: none;
+  border-radius: 9px;
+  margin-top: 7px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--cit-ink-dim);
+  background: var(--cit-fill-soft);
+  box-shadow: inset 0 0 0 1px var(--cit-tile-edge);
+  cursor: pointer;
+  transition: color 0.18s ease, box-shadow 0.18s ease;
+}
+.cit-back-parked:hover,
+.cit-back-jump:hover {
+  color: var(--cit-ink);
+  box-shadow: inset 0 0 0 1px var(--cit-hairline-strong);
+}
+@media (prefers-reduced-motion: reduce) {
+  #cit-back { animation: none; }
 }
