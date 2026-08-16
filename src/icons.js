@@ -59,6 +59,7 @@
     zen: I.zen,
     focusreader: I.book,
     ruler: I.ruler,
+    chatspot: I.focus,
     night: I.night,
     gray: I.gray,
     motion: I.motion,

@@ -38,9 +38,6 @@ Two things this ordering is deliberate about:
 
 ## B — Flow features (highest-ranked new work)
 
-- [ ] Chat spotlight (S, 4.0): stylesheet-gated mode that dims all turns
-      except the latest exchange (adapter turn selector + html.cit-chatspot);
-      the in-page sibling of the reader's Spotlight.
 - [ ] Conversation waypoints (M, 4.33): content-free minimap of turn
       POSITIONS (no text) down the pane edge; click = jump; ⌥↑/⌥↓ hop between
       your own prompts. Positions only — never reads message content.
@@ -88,6 +85,10 @@ Two things this ordering is deliberate about:
 - [ ] Firefox MV3 port (browser.* shims, background differences).
 
 ## Done
+
+- [x] 2026-08-16 — Chat spotlight: older turns recede so the exchange you are
+      in carries the page. Pure gated stylesheet with :nth-last-child, so the
+      host framework cannot reconcile it away; hover restores a dimmed turn.
 
 - [x] 2026-08-16 — Where-was-I card: after a real absence (20 min, tunable) one
       quiet card recalls the goal, the parked-thought count and offers to jump

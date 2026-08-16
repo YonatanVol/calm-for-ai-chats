@@ -1175,6 +1175,59 @@ section("Where was I");
   w3.C.modes.exit("presentation");
 })();
 
+section("Chat spotlight");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+
+  // SCENARIO 39 — "The backlog above the current answer keeps pulling my eye."
+  // Dim every turn except the exchange I am in.
+  check("there is a mode for it", !!C.modes.MODES.chatspot);
+  C.modes.enter("chatspot");
+  check("turning it on marks the page",
+    global.document.documentElement.classList.contains("cit-chatspot"));
+  var style = w.bodyEls["cit-chatspot-style"] ||
+    (global.document.head.children || []).filter(function (e) {
+      return e.__id === "cit-chatspot-style";
+    })[0];
+  check("it works by stylesheet, not by touching the site's own nodes", !!style);
+
+  C.modes.exit("chatspot");
+  check("turning it off removes both",
+    !global.document.documentElement.classList.contains("cit-chatspot"));
+
+  // It must be CSS-only. Adding classes to chat-owned elements is the one
+  // thing these frameworks reliably undo, which is why Zen works this way too.
+  var modesSrc = fs.readFileSync(path.join(ROOT, "src", "modes.js"), "utf8");
+  var block = modesSrc.slice(modesSrc.indexOf("function chatspotEnter"),
+    modesSrc.indexOf("function chatspotExit"));
+  check("it never adds classes to the site's own turns",
+    !/querySelectorAll[^;]*classList/.test(block) &&
+      block.indexOf("classList.add") === block.lastIndexOf("classList.add"));
+
+  // Every site must say what a "turn" is, or the mode silently does nothing.
+  check("all three adapters describe a conversation turn",
+    ["chatgpt.com", "gemini.google.com", "claude.ai"].every(function (h) {
+      var ww = buildWorld(h, { lenient: true });
+      var css = ww.C.site.spotlightCss && ww.C.site.spotlightCss();
+      return typeof css === "string" && css.indexOf("cit-chatspot") >= 0 &&
+        /nth-last-child/.test(css);
+    }));
+
+  // SCENARIO 40 — it is a reading aid, so it must not fight the reading pane.
+  var w2 = buildWorld("chatgpt.com", { lenient: true });
+  w2.C.modes.enter("chatspot");
+  w2.C.modes.enter("focusreader");
+  check("it can be on at the same time as the Focus Reader",
+    w2.C.modes.isActive("chatspot") && w2.C.modes.isActive("focusreader"));
+  w2.nav("https://chatgpt.com/c/next");
+  check("and it survives moving to another conversation",
+    w2.C.modes.isActive("chatspot") &&
+      global.document.documentElement.classList.contains("cit-chatspot"));
+  w2.C.modes.exit("chatspot");
+  w2.C.modes.exit("focusreader");
+})();
+
 /* ---------------- Auto-hide: only when there is something to read -------- */
 section("Auto-hide");
 (function () {
@@ -1451,10 +1504,14 @@ section("Mode registry");
   check("every mode declares a surface",
     M.ids().every(function (id) { return !!M.MODES[id].surface; }));
   var tiles = M.bySurface("tile");
-  check("five everyday modes surface as tiles",
-    tiles.length === 5 && tiles.indexOf("zen") >= 0 &&
-    tiles.indexOf("focusreader") >= 0 && tiles.indexOf("pomodoro") >= 0,
-    tiles.join(","));
+  // Named rather than counted: the count changes whenever a mode is promoted,
+  // and a magic number turns an intentional change into a false failure.
+  check("the everyday modes are the ones on tiles",
+    ["zen", "focusreader", "night", "ruler", "chatspot", "pomodoro"].every(
+      function (id) { return tiles.indexOf(id) >= 0; }
+    ), tiles.join(","));
+  check("and the tile row stays small enough to scan",
+    tiles.length <= 7, tiles.length + " tiles");
   check("niche modes still exist, just moved off the tiles",
     ["gray", "motion", "privacy", "autoscroll", "presentation"].every(function (id) {
       return !!M.MODES[id] && M.MODES[id].surface !== "tile";

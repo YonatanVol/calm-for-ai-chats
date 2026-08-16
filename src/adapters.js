@@ -109,6 +109,17 @@
       // Sidebar conversation titles to blur in Privacy/Share mode.
       // Scrollers that must never drive auto-hide: the site's own sidebar
       // and nav. Site knowledge belongs here, not in the engine.
+      // Chat spotlight: dim every turn except the last exchange. Pure
+      // CSS on purpose — a class added to these nodes is reconciled
+      // away by the site's own framework within a render or two.
+      spotlightCss: function () {
+        return (
+          "html.cit-chatspot article:not(:nth-last-child(-n+2)), html.cit-chatspot [data-message-author-role]:not(:nth-last-child(-n+2))" +
+          "{opacity:var(--cit-spot,0.3);transition:opacity .35s var(--cit-ease);}" +
+          "html.cit-chatspot article:hover, html.cit-chatspot [data-message-author-role]:hover" +
+          "{opacity:1;}"
+        );
+      },
       excludedScrollers: function () {
         return "#stage-slideover-sidebar, #stage-sidebar-tiny-bar, nav[aria-label]";
       },
@@ -185,6 +196,17 @@
       },
       // Scrollers that must never drive auto-hide: the site's own sidebar
       // and nav. Site knowledge belongs here, not in the engine.
+      // Chat spotlight: dim every turn except the last exchange. Pure
+      // CSS on purpose — a class added to these nodes is reconciled
+      // away by the site's own framework within a render or two.
+      spotlightCss: function () {
+        return (
+          "html.cit-chatspot .conversation-container:not(:nth-last-child(-n+2)), html.cit-chatspot model-response:not(:nth-last-child(-n+2)), html.cit-chatspot user-query:not(:nth-last-child(-n+2))" +
+          "{opacity:var(--cit-spot,0.3);transition:opacity .35s var(--cit-ease);}" +
+          "html.cit-chatspot .conversation-container:hover, html.cit-chatspot model-response:hover, html.cit-chatspot user-query:hover" +
+          "{opacity:1;}"
+        );
+      },
       excludedScrollers: function () {
         return "bard-sidenav, conversations-list, nav[aria-label]";
       },
@@ -255,6 +277,17 @@
       },
       // Scrollers that must never drive auto-hide: the site's own sidebar
       // and nav. Site knowledge belongs here, not in the engine.
+      // Chat spotlight: dim every turn except the last exchange. Pure
+      // CSS on purpose — a class added to these nodes is reconciled
+      // away by the site's own framework within a render or two.
+      spotlightCss: function () {
+        return (
+          "html.cit-chatspot [data-test-render-count]:not(:nth-last-child(-n+2)), html.cit-chatspot div[data-testid=\"conversation-turn\"]:not(:nth-last-child(-n+2))" +
+          "{opacity:var(--cit-spot,0.3);transition:opacity .35s var(--cit-ease);}" +
+          "html.cit-chatspot [data-test-render-count]:hover, html.cit-chatspot div[data-testid=\"conversation-turn\"]:hover" +
+          "{opacity:1;}"
+        );
+      },
       excludedScrollers: function () {
         return "aside[class*=\"dframe-sidebar\"], [class*=\"dframe-nav-scroll\"], nav[aria-label]";
       },
