@@ -1033,6 +1033,54 @@ section("Answer ready");
   global.document.hidden = false;
 })();
 
+section("Hardening");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+
+  // SCENARIO 31 — "The site re-rendered the conversation, then Scroll to top
+  // did nothing." Calm was holding the scroller React had already replaced —
+  // the same failure the composer had, in the other half of the engine.
+  var stale = w.makeEl("div");
+  stale.isConnected = false;
+  var scrolledOn = null;
+  stale.scrollTo = function () { scrolledOn = "stale"; };
+  var live = w.makeEl("div");
+  live.isConnected = true;
+  live.clientHeight = 800; live.scrollHeight = 4000;
+  live.scrollTo = function () { scrolledOn = "live"; };
+  C.rt.scrollContainer = stale;
+  C.site.scrollRoot = function () { return live; };
+  C.ui.smoothScrollTo(0);
+  check("scrolling acts on the scroller that is actually on the page",
+    scrolledOn === "live", "acted on " + scrolledOn);
+
+  // The same re-resolution must protect auto-hide, or it reads scrollTop off a
+  // node the page has thrown away.
+  check("the stale reference is replaced, not just worked around",
+    C.rt.scrollContainer === live);
+
+  // SCENARIO 32 — site knowledge belongs in the adapter, not the engine. A
+  // fourth site should be addable by writing an adapter and nothing else.
+  var coreSrc = fs.readFileSync(path.join(ROOT, "src", "core.js"), "utf8");
+  check("no site selectors are hard-coded in core.js",
+    !/bard-sidenav|dframe-sidebar|stage-slideover/.test(coreSrc));
+  check("every adapter declares what must not drive auto-hide",
+    ["chatgpt.com", "gemini.google.com", "claude.ai"].every(function (h) {
+      var ww = buildWorld(h, { lenient: true });
+      return typeof ww.C.site.excludedScrollers === "function" &&
+        typeof ww.C.site.excludedScrollers() === "string";
+    }));
+
+  // SCENARIO 33 — the tuning numbers live with the other tuning numbers.
+  var w2 = buildWorld("chatgpt.com", { lenient: true });
+  check("scroll thresholds are named constants, not literals in the logic",
+    typeof w2.C.const.UP_MAX === "number" && typeof w2.C.const.UP_MIN === "number");
+  var core2 = fs.readFileSync(path.join(ROOT, "src", "core.js"), "utf8");
+  check("the sensitivity formula reads them from CALM.const",
+    /C\.UP_MAX/.test(core2) && /C\.UP_MIN/.test(core2) && !/150 - \(s - 1\)/.test(core2));
+})();
+
 /* ---------------- Auto-hide: only when there is something to read -------- */
 section("Auto-hide");
 (function () {

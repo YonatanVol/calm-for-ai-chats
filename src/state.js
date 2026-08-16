@@ -108,6 +108,9 @@
     // A conversation this long is real even if the adapter's response
     // selector has rotted; used so selector rot can never disable auto-hide.
     ASSUME_CONTENT_RANGE: 2000,
+    // Upward pixels needed to hide, mapped from sensitivity 1..10.
+    UP_MAX: 150, // sensitivity 1 — needs a deliberate shove
+    UP_MIN: 20, // sensitivity 10 — hair trigger
     ACC_RESET_MS: 350,
     SCROLL_GRACE_MS: 450,
     TOAST_MS: 2200,

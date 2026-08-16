@@ -43,11 +43,15 @@
 
   // ---- Quick nav ----
   function smoothScrollTo(top) {
-    if (!rt.scrollContainer) return;
+    var sc =
+      CALM.core && CALM.core.currentScroller
+        ? CALM.core.currentScroller()
+        : rt.scrollContainer;
+    if (!sc) return;
     try {
-      rt.scrollContainer.scrollTo({ top: top, behavior: "smooth" });
+      sc.scrollTo({ top: top, behavior: "smooth" });
     } catch (_) {
-      rt.scrollContainer.scrollTop = top;
+      sc.scrollTop = top;
     }
   }
 
