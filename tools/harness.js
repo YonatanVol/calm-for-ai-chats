@@ -1081,6 +1081,100 @@ section("Hardening");
     /C\.UP_MAX/.test(core2) && /C\.UP_MIN/.test(core2) && !/150 - \(s - 1\)/.test(core2));
 })();
 
+section("Where was I");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  var realNow = Date.now;
+  function travel(min) { Date.now = function () { return realNow() + min * 60000; }; }
+  function comeBack() {
+    global.document.hidden = false;
+    (w.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  }
+  function leave() {
+    global.document.hidden = true;
+    (w.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  }
+
+  // SCENARIO 34 — "I came back to this tab an hour later and had no idea what
+  // I was doing." A quiet card, only after a real absence.
+  C.intent.state.goal = "draft the quarterly review";
+  leave();
+  travel(45);
+  comeBack();
+  var card = w.bodyEls["cit-back"];
+  check("after a long absence it reminds me what I was doing", !!card);
+  check("and it says the goal I set",
+    !!card && /quarterly review/.test(JSON.stringify(card.__text || textOf(card))),
+    card ? textOf(card).slice(0, 80) : "");
+  Date.now = realNow;
+
+  function textOf(n) {
+    var out = "";
+    (function walk(x) {
+      (x.children || []).forEach(function (c) {
+        if (c.textContent) out += c.textContent + " ";
+        walk(c);
+      });
+    })(n);
+    return out;
+  }
+
+  // SCENARIO 35 — "I switched tabs for thirty seconds." Nothing should happen;
+  // that is not being away, that is working.
+  if (card) card.remove();
+  leave();
+  travel(0.5);
+  comeBack();
+  check("a quick tab switch does not trigger it", !w.bodyEls["cit-back"]);
+  Date.now = realNow;
+
+  // SCENARIO 36 — "I dismissed it." It must go, and not come straight back on
+  // the next tab switch.
+  leave(); travel(45); comeBack();
+  var c2 = w.bodyEls["cit-back"];
+  var x = c2 && c2.querySelector(".cit-back-x");
+  if (x) x.__ls.click[0]({ stopPropagation: function () {} });
+  check("dismissing closes it", !w.bodyEls["cit-back"]);
+  Date.now = realNow;
+  // Dismissing restarts the clock: a quick flick after it must NOT bring it
+  // back. (An earlier version of this test travelled 45 minutes and expected
+  // silence — but that is a genuine new absence, and returning then is the
+  // whole point of the feature.)
+  leave(); travel(1); comeBack();
+  check("a flick right after dismissing does not bring it back",
+    !w.bodyEls["cit-back"]);
+  Date.now = realNow;
+  leave(); travel(45); comeBack();
+  check("but a real new absence does earn it again", !!w.bodyEls["cit-back"]);
+  if (w.bodyEls["cit-back"]) w.bodyEls["cit-back"].remove();
+  Date.now = realNow;
+
+  // SCENARIO 37 — nothing to say, so say nothing.
+  var w2 = buildWorld("chatgpt.com", { lenient: true });
+  w2.C.intent.state.goal = "";
+  global.document.hidden = true;
+  (w2.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  Date.now = function () { return realNow() + 45 * 60000; };
+  global.document.hidden = false;
+  (w2.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  check("with no goal and nothing parked it stays quiet", !w2.bodyEls["cit-back"]);
+  Date.now = realNow;
+
+  // SCENARIO 38 — never over a presentation, like everything else.
+  var w3 = buildWorld("chatgpt.com", { lenient: true });
+  w3.C.intent.state.goal = "something";
+  w3.C.modes.enter("presentation");
+  global.document.hidden = true;
+  (w3.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  Date.now = function () { return realNow() + 45 * 60000; };
+  global.document.hidden = false;
+  (w3.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  check("it never appears during Presentation", !w3.bodyEls["cit-back"]);
+  Date.now = realNow;
+  w3.C.modes.exit("presentation");
+})();
+
 /* ---------------- Auto-hide: only when there is something to read -------- */
 section("Auto-hide");
 (function () {

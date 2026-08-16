@@ -29,6 +29,7 @@
         "src/ready.js",
         "src/wellness.js",
         "src/intent.js",
+        "src/back.js",
         "src/core.js",
         "src/typeahead.js"
       ],

@@ -38,9 +38,6 @@ Two things this ordering is deliberate about:
 
 ## B — Flow features (highest-ranked new work)
 
-- [ ] Where-was-I re-entry card (S, 4.13): returning to the tab after >5 min
-      away shows a quiet card: your intention, parked thoughts count, and a
-      "jump to where you stopped" scroll anchor. Session-local only.
 - [ ] Chat spotlight (S, 4.0): stylesheet-gated mode that dims all turns
       except the latest exchange (adapter turn selector + html.cit-chatspot);
       the in-page sibling of the reader's Spotlight.
@@ -91,6 +88,11 @@ Two things this ordering is deliberate about:
 - [ ] Firefox MV3 port (browser.* shims, background differences).
 
 ## Done
+
+- [x] 2026-08-16 — Where-was-I card: after a real absence (20 min, tunable) one
+      quiet card recalls the goal, the parked-thought count and offers to jump
+      back to where you stopped reading. Silent when it has nothing to say,
+      never over a presentation, and dismissing restarts the clock.
 
 - [x] 2026-08-16 — Hardening batch: the scroll container is re-resolved when
       the page replaces it (Scroll-to-top silently did nothing before), every

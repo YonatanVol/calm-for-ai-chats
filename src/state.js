@@ -49,6 +49,8 @@
     dockQuiet: true, // pill fades while typing; wakes on pointer approach
     answerReady: true, // tab title says when a reply finished while you were away
     answerReadyChime: false, // ...and optionally a soft chime. Off by default.
+    whereWasI: true, // on returning after a long gap, remind me what I was doing
+    whereWasIMin: 20, // how long counts as "away" (minutes)
     showTimeOnPage: true, // "🕐 25m here" chip (from 5 minutes on)
     hyperfocusMin: 60, // nudge every N minutes; 0 = off
     showTimeBar: true, // thin focus-progress bar during Pomodoro blocks
@@ -128,6 +130,7 @@
     console: "cit-console",
     rail: "cit-margin-rail",
     tour: "cit-tour",
+    back: "cit-back",
     readerPane: "cit-reader-pane",
   };
 
