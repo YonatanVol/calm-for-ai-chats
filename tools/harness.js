@@ -930,6 +930,48 @@ section("Scenarios VI");
   check("typing in Calm's own search box is not scooped into the chat",
     !stolen && !C.rt.pendingText);
   C.palette.close();
+
+  // SCENARIO 19b — "Calm hid the input so I could read, and I hit Space to
+  // scroll down like I do on every other page."
+  //
+  // Space is a printable character AND the oldest scroll key on the web. When
+  // the composer is hidden there is nothing being typed yet, so a Space is a
+  // request to move down the page — never the first character of a message.
+  var body = w.makeEl("div"); // focus is on the page, not in any field
+  function press(key) {
+    var prevented = false;
+    (w.docLs.keydown || []).forEach(function (f) {
+      f({ key: key, code: key === " " ? "Space" : "Key" + key.toUpperCase(),
+          ctrlKey: false, metaKey: false, altKey: false,
+          composedPath: function () { return [body]; },
+          preventDefault: function () { prevented = true; },
+          stopPropagation: function () {} });
+    });
+    return prevented;
+  }
+  C.rt.composerHidden = true;
+  C.rt.pendingText = "";
+  C.settings.typeAhead = "auto";
+  check("Space still scrolls the page while the input is hidden", !press(" "));
+
+  // ...but a letter is someone starting to type, and must still be caught.
+  C.rt.composerHidden = true;
+  C.rt.pendingText = "";
+  check("a letter still starts a message", press("h"));
+
+  // In buffer mode the composer stays hidden while you keep typing, so once
+  // there IS a word in flight a Space belongs to the sentence.
+  C.rt.composerHidden = true;
+  C.settings.typeAhead = "buffer";
+  C.rt.pendingText = "";
+  press("h");
+  press("i");
+  check("(setup) buffer mode is holding a word", C.rt.pendingText === "hi");
+  check("a Space mid-sentence is typed, not swallowed as a scroll",
+    press(" ") && C.rt.pendingText === "hi ");
+
+  C.settings.typeAhead = "auto";
+  C.rt.pendingText = "";
   C.rt.composerHidden = false;
 })();
 
