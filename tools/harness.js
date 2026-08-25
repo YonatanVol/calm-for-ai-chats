@@ -1175,6 +1175,89 @@ section("Where was I");
   w3.C.modes.exit("presentation");
 })();
 
+/* ---------------- Adapters answer everything the engine asks ------------- */
+// The engine talks to each site through one object, and adding a site means
+// hand-writing that object again. Nothing checks that the new one answers
+// every question the engine asks — a missing method is a TypeError deep in a
+// scroll handler, and a method that answers with the wrong SHAPE is worse,
+// because it fails somewhere else entirely.
+//
+// So read the questions out of the engine rather than listing them here: any
+// site.x the source touches is part of the contract by definition, including
+// ones added after this test was written.
+section("Adapter contract");
+(function () {
+  var asked = {};
+  fs.readdirSync(path.join(ROOT, "src")).forEach(function (f) {
+    if (!/\.js$/.test(f) || f === "adapters.js") return;
+    var src = fs.readFileSync(path.join(ROOT, "src", f), "utf8");
+    var m, re = /\bsite\.([a-zA-Z_]+)/g;
+    while ((m = re.exec(src))) asked[m[1]] = true;
+  });
+  var names = Object.keys(asked).sort();
+  check("(setup) the engine asks the adapters something",
+    names.length >= 8, names.length + ": " + names.join(", "));
+
+  // What each answer has to look like. Anything the engine only passes
+  // straight to querySelector is checked as a string; the rest by use.
+  var SHAPE = {
+    id: "string",
+    composer: "element-or-null",
+    promptInput: "element-or-null",
+    scrollRoot: "element-or-null",
+    zenTargets: "array",
+    readerTargets: "selector",
+    privacyTargets: "selector",
+    zenCss: "string",
+    widthCss: "string",
+    spotlightCss: "string",
+    excludedScrollers: "string",
+    zenInline: "boolean",
+    responseSel: "selector",
+    stopSel: "selector",
+  };
+
+  ["chatgpt.com", "gemini.google.com", "claude.ai"].forEach(function (host) {
+    var w = buildWorld(host, { lenient: true });
+    var site = w.C.site;
+    names.forEach(function (n) {
+      var shape = SHAPE[n];
+      if (!shape) {
+        // A question the engine asks that this test has no opinion about is
+        // still a question the adapter must answer.
+        check(host + " answers site." + n, site[n] !== undefined);
+        return;
+      }
+      var v;
+      try {
+        v = typeof site[n] === "function" ? site[n]() : site[n];
+      } catch (e) {
+        check(host + " answers site." + n + " without throwing", false, e.message);
+        return;
+      }
+      var ok;
+      if (shape === "array") ok = Array.isArray(v);
+      else if (shape === "string") ok = typeof v === "string" && v.length > 0;
+      else if (shape === "boolean") ok = typeof v === "boolean";
+      else if (shape === "selector") ok = typeof v === "string" && v.length > 0;
+      else ok = v === null || (v && typeof v === "object");
+      check(host + " answers site." + n + " with a " + shape, ok,
+        Object.prototype.toString.call(v));
+    });
+
+    // A selector that cannot be parsed takes down whatever ran it. These two
+    // are handed to querySelector on a timer, so a typo is a silent, repeating
+    // exception rather than a visible failure.
+    ["responseSel", "stopSel"].forEach(function (n) {
+      if (!site[n]) return;
+      // No real DOM here to parse with, so check the shape that actually
+      // breaks querySelector in practice: an empty part from a stray comma.
+      check(host + "'s " + n + " has no empty selector parts",
+        !/(^|,)\s*($|,)/.test(site[n]), site[n]);
+    });
+  });
+})();
+
 /* ---------------- Auto-hide: only when there is something to read -------- */
 section("Auto-hide");
 (function () {
