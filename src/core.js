@@ -85,7 +85,9 @@
     // guess may be undone by scrolling back to the bottom.
     rt.hiddenManually = !opts.auto;
     if (S.rememberState) CALM.saveState();
-    if (opts.auto && S.showHints) ui.showToast();
+    // A restore is not news — it is the state you left. Hinting on every
+    // navigation would turn the hint into noise.
+    if (opts.auto && S.showHints && !opts.silent) ui.showToast();
   }
   function showComposer() {
     if (!currentComposer() || !rt.composerHidden) return;
@@ -513,12 +515,18 @@
       // hidden composer onto a BRAND-NEW chat reproduces the worst version of
       // this feature — nothing to read, and the box you are about to type in
       // is gone. Zen is a mode the user is currently in, so it still wins.
-      var remembered =
-        S.rememberState && !!(CALM.loadState() || {}).composerHidden;
-      var wantHidden =
-        (modes.isActive("zen") && S.zenComposer) ||
-        (remembered && hasConversation());
-      if (wantHidden && !rt.composerHidden) hideComposer();
+      var saved = (S.rememberState && CALM.loadState()) || {};
+      var remembered = !!saved.composerHidden;
+      var zenWants = modes.isActive("zen") && S.zenComposer;
+      var wantHidden = zenWants || (remembered && hasConversation());
+      if (wantHidden && !rt.composerHidden) {
+        // Zen hiding the composer is Zen's own decision. A remembered hide
+        // must come back as the KIND of hide it was, so an automatic one is
+        // still undone by scrolling to the bottom.
+        hideComposer(
+          zenWants ? {} : { auto: !saved.hiddenManually, silent: true }
+        );
+      }
     })(0);
   }
 
