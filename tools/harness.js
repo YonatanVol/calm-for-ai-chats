@@ -1312,6 +1312,64 @@ section("Presentation");
     toast ? toast.textContent : "(no toast)");
 })();
 
+/* ---------------- Every mode puts the page back ------------------------- */
+// A mode is a loan: whatever it changes about the page, leaving it must give
+// back. Each exit is written by hand next to its enter, so the pairs drift
+// one line at a time. Rather than trust twelve pairs, take a picture of the
+// page, enter, exit, and require the picture to match.
+section("Modes give the page back");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  var html = global.document.documentElement;
+
+  function snapshot() {
+    return {
+      els: Object.keys(w.bodyEls).filter(function (k) { return /^cit-/.test(k); }).sort(),
+      cls: Array.from(html.classList._s).filter(function (c) { return /^cit-/.test(c); }).sort(),
+    };
+  }
+  function diff(a, b) {
+    return b.filter(function (x) { return a.indexOf(x) < 0; });
+  }
+
+  // Two elements are CHANNELS, not surfaces: they are created once and reused
+  // by whoever needs to say something. What must go when a mode leaves is the
+  // mode's message, not the channel — and that is covered, because a chip or
+  // a pane carries its own id and would show up in the diff below. An empty
+  // chip stack and a toast still fading out are not residue.
+  var CHANNELS = ["cit-chip-stack", "cit-toast"];
+
+  var ids = C.modes.ids();
+  check("(setup) there are modes to check", ids.length >= 8, ids.length + " modes");
+
+  ids.forEach(function (id) {
+    var before = snapshot();
+    try { C.modes.enter(id); } catch (e) { check(id + " can be entered", false, e.message); return; }
+    try { C.modes.exit(id); } catch (e) { check(id + " can be exited", false, e.message); return; }
+    var after = snapshot();
+    var leftEls = diff(before.els, after.els).filter(function (k) {
+      return CHANNELS.indexOf(k) < 0;
+    });
+    var leftCls = diff(before.cls, after.cls);
+    check("leaving " + id + " takes its elements with it", !leftEls.length,
+      leftEls.join(", "));
+    check("leaving " + id + " takes its <html> classes with it", !leftCls.length,
+      leftCls.join(", "));
+  });
+
+  // ...and the channels themselves are handed back empty, which is the half
+  // the exclusion above would otherwise stop anyone from checking.
+  C.modes.enter("pause");
+  var stack = w.bodyEls["cit-chip-stack"];
+  check("(setup) Pause puts a chip in the stack",
+    !!stack && (stack.children || []).length > 0);
+  C.modes.exit("pause");
+  check("leaving Pause hands the chip stack back empty",
+    !!stack && (stack.children || []).length === 0,
+    stack ? (stack.children || []).length + " left" : "(no stack)");
+})();
+
 /* ---------------- Auto-hide: only when there is something to read -------- */
 section("Auto-hide");
 (function () {
