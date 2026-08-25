@@ -698,6 +698,52 @@ section("Scenarios III");
   w3.C.core.init();
   check("remembered 'hidden' still applies to a real conversation",
     w3.C.rt.composerHidden);
+
+  // SCENARIO 10c — "It hid itself while I was reading, so I scrolled to the
+  // bottom to get it back. Then I opened another conversation and scrolling
+  // to the bottom stopped working."
+  //
+  // Hiding remembers WHY: an automatic hide is a guess and scrolling back to
+  // the bottom undoes it; an explicit hide is a decision and does not. What
+  // is saved across a navigation is only the fact of being hidden, so the
+  // restore has to pick one — and picking "decision" quietly takes away the
+  // affordance the user just learned, with no toast to hint at the shortcut.
+  var w4 = buildWorld("chatgpt.com", {
+    lenient: true,
+    seed: { "cit-state-chatgpt": JSON.stringify({
+      composerHidden: true, hiddenManually: false, modes: {} }) },
+  });
+  w4.docQuery = function () { return w4.makeEl("div"); }; // a real conversation
+  w4.C.settings.rememberState = true;
+  w4.C.rt.composerHidden = false;
+  w4.C.core.init();
+  check("(setup) a remembered auto-hide is restored hidden",
+    w4.C.rt.composerHidden);
+  check("a remembered auto-hide can still be undone by scrolling to the bottom",
+    !w4.C.rt.hiddenManually);
+
+  // ...and the other half of the same rule: a hide the user ASKED for stays.
+  var w5 = buildWorld("chatgpt.com", {
+    lenient: true,
+    seed: { "cit-state-chatgpt": JSON.stringify({
+      composerHidden: true, hiddenManually: true, modes: {} }) },
+  });
+  w5.docQuery = function () { return w5.makeEl("div"); };
+  w5.C.settings.rememberState = true;
+  w5.C.rt.composerHidden = false;
+  w5.C.core.init();
+  check("a hide I asked for is not undone by scrolling after a navigation",
+    w5.C.rt.composerHidden && w5.C.rt.hiddenManually);
+
+  // The distinction has to survive the storage boundary or the restore above
+  // is guessing.
+  var w6 = buildWorld("chatgpt.com", { lenient: true });
+  w6.C.rt.composerHidden = true;
+  w6.C.rt.hiddenManually = true;
+  w6.C.settings.rememberState = true;
+  w6.C.saveState();
+  check("saved state records which kind of hide it was",
+    JSON.parse(w6.local["cit-state-chatgpt"]).hiddenManually === true);
 })();
 
 section("Scenarios IV");

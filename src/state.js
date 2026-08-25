@@ -229,6 +229,10 @@
         STATE_KEY,
         JSON.stringify({
           composerHidden: CALM.rt.composerHidden,
+          // WHY it is hidden, not just that it is: an automatic hide is a
+          // guess the user can undo by scrolling back to the bottom, and
+          // restoring it as a decision silently removes that affordance.
+          hiddenManually: CALM.rt.hiddenManually,
           modes: CALM.rt.activeModes,
         })
       );
