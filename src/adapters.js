@@ -106,12 +106,12 @@
       readerTargets: function () {
         return ".markdown, [class*='prose'], [data-message-author-role] .markdown";
       },
-      // Sidebar conversation titles to blur in Privacy/Share mode.
       // Scrollers that must never drive auto-hide: the site's own sidebar
       // and nav. Site knowledge belongs here, not in the engine.
       excludedScrollers: function () {
         return "#stage-slideover-sidebar, #stage-sidebar-tiny-bar, nav[aria-label]";
       },
+      // Sidebar conversation titles to blur in Privacy/Share mode.
       privacyTargets: function () {
         return "#stage-slideover-sidebar a, nav a[href*='/c/']";
       },
