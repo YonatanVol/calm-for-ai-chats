@@ -30,6 +30,7 @@
   var leftAt = null;
   var lastScrollTop = 0;
   var unEsc = null;
+  var autoClose = null;
 
   function el(tag, cls, text) {
     var e = document.createElement(tag);
@@ -45,6 +46,14 @@
       unEsc();
       unEsc = null;
     }
+    // The card lets itself out after 18s. If it left early — dismissed, or
+    // torn down by a navigation — that timer must go with it, or it fires
+    // over whatever card is up by then.
+    if (autoClose) {
+      clearTimeout(autoClose);
+      autoClose = null;
+    }
+    if (CALM.ui.unregisterPopover) CALM.ui.unregisterPopover(close);
   }
 
   function parkedCount() {
@@ -118,8 +127,14 @@
         return true;
       });
     }
+    // This card belongs to the conversation it was raised over: the jump
+    // button holds a scroll offset measured in THAT conversation. Registering
+    // with the popover registry is what takes it down on a navigation — and
+    // it is the same registry every other surface uses, so it also inherits
+    // the "close it and release its listeners together" contract.
+    if (CALM.ui.registerPopover) CALM.ui.registerPopover(close);
     // It is a reminder, not a demand: it lets itself out.
-    setTimeout(close, 18000);
+    autoClose = setTimeout(close, 18000);
   }
 
   document.addEventListener("visibilitychange", function () {

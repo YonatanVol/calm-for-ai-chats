@@ -403,7 +403,8 @@
     rt.composerEl = null;
     rt.scrollContainer = null;
     // Calm-owned singletons that popover-close doesn't cover.
-    ["cit-reader-pane", "cit-intent-pop", "cit-intent-chip"].forEach(function (id) {
+    ["cit-reader-pane", "cit-intent-pop", "cit-intent-chip",
+     "cit-back"].forEach(function (id) {
       var e = document.getElementById(id);
       if (e) e.remove();
     });

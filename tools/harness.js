@@ -1173,6 +1173,25 @@ section("Where was I");
   check("it never appears during Presentation", !w3.bodyEls["cit-back"]);
   Date.now = realNow;
   w3.C.modes.exit("presentation");
+
+  // SCENARIO 38b — "I came back after lunch, read the card, then clicked a
+  // different conversation in the sidebar." The card belongs to the
+  // conversation it was raised over. Its jump button remembers a scroll
+  // offset from THAT conversation, so leaving it up after a navigation is not
+  // merely stale decoration — pressing it scrolls a different conversation to
+  // a meaningless position.
+  var w4 = buildWorld("chatgpt.com", { lenient: true });
+  w4.C.intent.state.goal = "finish the migration notes";
+  global.document.hidden = true;
+  (w4.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  Date.now = function () { return realNow() + 45 * 60000; };
+  global.document.hidden = false;
+  (w4.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  Date.now = realNow;
+  check("(setup) the card is up before navigating", !!w4.bodyEls["cit-back"]);
+  w4.nav("https://chatgpt.com/c/another-conversation");
+  check("opening another conversation takes the card with it",
+    !w4.bodyEls["cit-back"]);
 })();
 
 /* ---------------- Auto-hide: only when there is something to read -------- */
