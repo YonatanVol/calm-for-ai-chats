@@ -1258,6 +1258,58 @@ section("Adapter contract");
   });
 })();
 
+/* ---------------- Every setting has a way to reach it -------------------- */
+// The palette is derived from defaultSettings so a new setting appears without
+// being registered twice — but only booleans come through automatically.
+// A NUMBER needs an entry in RANGES to say what its bounds are, and without
+// one it is not rejected or logged, it is simply skipped. The setting then
+// exists, is read by its feature, persists when written, and has no way for
+// anyone to change it. That is the quietest kind of dead code.
+section("Settings are reachable");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  var items = C.palette._items ? C.palette._items() : [];
+  if (!items.length) { try { C.palette.open(); C.palette.close(); } catch (_) {} }
+  items = C.palette._items();
+
+  var exposed = {};
+  items.forEach(function (it) { if (it.key) exposed[it.key] = it.kind; });
+
+  var defaults = C.defaultSettings;
+  var numbers = Object.keys(defaults).filter(function (k) {
+    return typeof defaults[k] === "number" && k !== "settingsVersion";
+  });
+  var strings = Object.keys(defaults).filter(function (k) {
+    return typeof defaults[k] === "string";
+  });
+  var bools = Object.keys(defaults).filter(function (k) {
+    return typeof defaults[k] === "boolean";
+  });
+
+  check("(setup) there are settings of each kind to check",
+    numbers.length >= 10 && bools.length >= 10 && strings.length >= 2,
+    numbers.length + " numbers / " + bools.length + " booleans / " +
+      strings.length + " strings");
+
+  numbers.forEach(function (k) {
+    check("the " + k + " slider can be reached", exposed[k] === "range");
+  });
+  bools.forEach(function (k) {
+    check("the " + k + " switch can be reached", exposed[k] === "toggle");
+  });
+
+  // Strings are the one kind the palette cannot derive — it has no way to
+  // know the allowed values — so they must be spelled out in the menu, and
+  // this is the assertion that notices when one is not.
+  var menu = fs.readFileSync(path.join(ROOT, "src", "console.js"), "utf8") +
+    fs.readFileSync(path.join(ROOT, "src", "ui.js"), "utf8");
+  strings.forEach(function (k) {
+    check("the " + k + " choice is offered in the menu",
+      menu.indexOf('"' + k + '"') >= 0);
+  });
+})();
+
 /* ---------------- Auto-hide: only when there is something to read -------- */
 section("Auto-hide");
 (function () {
