@@ -64,6 +64,12 @@
       var mode = S.typeAhead;
       if (mode === "off" || !mode) return;
       if (!isPrintable(e)) return;
+      // Space is a printable character and also the oldest scroll key on the
+      // web. With the composer hidden and nothing captured yet there is no
+      // sentence for it to belong to — the user is reading and wants to move
+      // down the page, which is the exact situation Calm hid the input for.
+      // Once buffer mode is holding a word, a Space is part of it again.
+      if (e.key === " " && !rt.pendingText) return;
       if (focusInEditable(e)) return;
 
       e.preventDefault();
