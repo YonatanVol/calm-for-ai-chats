@@ -191,7 +191,9 @@
     rt.presentationEnteredZen = !rt.activeModes.zen;
     if (!rt.activeModes.zen) modeEnter("zen");
     // Presentation hides all Calm buttons — tell the user how to get out.
-    if (CALM.ui.showToast) CALM.ui.showToast("Presentation — press Esc to exit", true);
+    if (CALM.ui.showToast) {
+      CALM.ui.showToast("Presentation — press Esc to exit", true, true);
+    }
   }
   function presentationExit() {
     document.documentElement.classList.remove("cit-presentation");

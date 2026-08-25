@@ -1194,6 +1194,78 @@ section("Where was I");
     !w4.bodyEls["cit-back"]);
 })();
 
+/* ---------------- Presentation hides every Calm surface ------------------ */
+// Presentation exists for one reason: other people are looking at this screen.
+// The rule is not "hide the menu", it is "hide ALL of Calm" — and it is
+// enforced by one CSS block listing surfaces by id, which is exactly the kind
+// of list that goes one entry stale without anyone noticing.
+//
+// So derive the list instead of trusting it: raise every body-level surface
+// the extension can put on the page, then require the CSS to name each one.
+// Only elements parented to <body> are considered — anything inside the dock
+// is already covered by hiding the dock, and demanding its own rule would be
+// a false alarm.
+section("Presentation");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  var css = fs.readFileSync(path.join(ROOT, "content.css"), "utf8");
+  var block = css.slice(css.indexOf("html.cit-presentation"));
+  block = block.slice(0, block.indexOf("}"));
+
+  C.modes.ids().forEach(function (id) {
+    if (id === "presentation") return;
+    try { C.modes.enter(id); } catch (_) {}
+  });
+  try { C.ui.showToast("hello", true); } catch (_) {}
+  try { C.ui.showChip("time", "25m here"); } catch (_) {}
+  try { C.intent.toggle(true); } catch (_) {}
+  try { C.palette.open(); } catch (_) {}
+  try { C.intent.state.goal = "x"; C.back.show(); } catch (_) {}
+
+  var onBody = (global.document.body.children || [])
+    .map(function (e) { return e && e.__id; })
+    .filter(function (id) { return id && /^cit-/.test(id); })
+    .filter(function (id, i, a) { return a.indexOf(id) === i; });
+
+  // A derivation that raised nothing would wave every assertion through.
+  check("the test actually got Calm's surfaces onto the page (guard against " +
+    "a derivation that observes nothing)",
+    onBody.length >= 8, onBody.length + " body-level surfaces");
+
+  onBody.forEach(function (id) {
+    // #cit-toast is the one deliberate exemption: Presentation hides every
+    // Calm control INCLUDING the menu, so the toast is the only channel left
+    // to say "press Esc to exit". Hiding it would make Presentation a trap.
+    // The messages that travel on it are gated instead — asserted below.
+    if (id === "cit-toast") return;
+    check("Presentation hides " + id, block.indexOf("#" + id) >= 0);
+  });
+
+  // The exemption above is on the CHANNEL. What must not happen is an
+  // unprompted message riding it in front of an audience — the hyperfocus
+  // nudge fires on a 30-second timer and does not care what you are doing.
+  var w2 = buildWorld("chatgpt.com", { lenient: true });
+  w2.C.modes.enter("presentation");
+  var toast = w2.bodyEls["cit-toast"];
+  check("(setup) Presentation tells you how to get out",
+    !!toast && /Esc/.test(toast.textContent || ""));
+  var hint = toast && toast.textContent;
+  w2.C.ui.showToast("🌿 1h on this site — stretch? water?", true);
+  check("a wellness nudge does not pop over a presentation",
+    !!toast && toast.textContent === hint,
+    toast ? toast.textContent : "(no toast)");
+  w2.C.ui.showToast();
+  check("nor does the input-hidden hint",
+    !!toast && toast.textContent === hint,
+    toast ? toast.textContent : "(no toast)");
+  w2.C.modes.exit("presentation");
+  w2.C.ui.showToast("back to normal", true);
+  check("and ordinary toasts work again once the presentation ends",
+    !!toast && toast.textContent === "back to normal",
+    toast ? toast.textContent : "(no toast)");
+})();
+
 /* ---------------- Auto-hide: only when there is something to read -------- */
 section("Auto-hide");
 (function () {
