@@ -1704,6 +1704,68 @@ section("Settings are reachable");
 })();
 
 /* ---------------- Auto-hide: only when there is something to read -------- */
+/* ---------------- The hint knows when to stop ---------------------------- */
+// "Input hidden · scroll down or ⌃⇧H" is worth saying the first time and
+// nagging every time after. It fired on EVERY auto-hide, which on a long
+// reading session is dozens of identical toasts about something the user
+// learned an hour ago.
+section("The hint");
+(function () {
+  var realNow = Date.now;
+  function at(days) { Date.now = function () { return realNow() + days * 86400000; }; }
+
+  function hideOnce(w) {
+    var C = w.C;
+    C.rt.composerEl = w.makeEl("div");
+    C.rt.composerHidden = false;
+    C.core.hideComposer({ auto: true });
+    var t = w.bodyEls["cit-toast"];
+    return !!t && /Input hidden/.test(t.textContent || "");
+  }
+  function clearToast(w) {
+    var t = w.bodyEls["cit-toast"];
+    if (t) t.textContent = "";
+    w.C.rt.lastToastAt = 0; // the 5s throttle is a different mechanism
+  }
+
+  // SCENARIO 40 — the first time, it should say so.
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  check("the first time the input hides, it tells me how to get it back",
+    hideOnce(w));
+
+  // SCENARIO 41 — the second time, I already know.
+  clearToast(w);
+  check("the next time it hides, it stays quiet", !hideOnce(w));
+
+  // ...and still quiet the next day. This is the one that matters: a session
+  // spans hours, and "once per session" would still nag across days.
+  clearToast(w);
+  at(1);
+  check("and the day after, still quiet", !hideOnce(w));
+  Date.now = realNow;
+
+  // SCENARIO 42 — but a week later I may well have forgotten.
+  clearToast(w);
+  at(8);
+  check("a week later it reminds me once more", hideOnce(w));
+  Date.now = realNow;
+
+  // SCENARIO 43 — the setting is still the master switch.
+  var w2 = buildWorld("chatgpt.com", { lenient: true });
+  w2.C.settings.showHints = false;
+  check("with hints turned off it never appears at all", !hideOnce(w2));
+
+  // SCENARIO 44 — this must not silence anything ELSE that uses the toast.
+  var w3 = buildWorld("chatgpt.com", { lenient: true });
+  hideOnce(w3);
+  clearToast(w3);
+  w3.C.ui.showToast("Positions reset", true);
+  var t3 = w3.bodyEls["cit-toast"];
+  check("a rate-limited hint does not rate-limit other messages",
+    !!t3 && t3.textContent === "Positions reset",
+    t3 ? t3.textContent : "(none)");
+})();
+
 section("Auto-hide");
 (function () {
   var w = buildWorld("chatgpt.com", {});

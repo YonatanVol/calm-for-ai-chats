@@ -118,6 +118,10 @@
     SCROLL_GRACE_MS: 450,
     TOAST_MS: 2200,
     TOAST_THROTTLE_MS: 5000,
+    // How long a one-off hint stays learned before it is worth repeating.
+    // The throttle above stops two toasts colliding; this stops the same
+    // lesson being taught every time you scroll for the rest of your life.
+    HINT_EVERY_DAYS: 7,
     RETRY_MS: 1500,
   };
 
@@ -216,6 +220,31 @@
         return [];
       }
     },
+  };
+
+  // Hints that should be said once and then left alone. Device-local, and a
+  // separate key from settings so clearing one does not reset the other.
+  var HINT_KEY = "cit-hint-shown";
+  function hintLog() {
+    try { return JSON.parse(localStorage.getItem(HINT_KEY) || "{}") || {}; }
+    catch (_) { return {}; }
+  }
+  CALM.hints = {
+    // Unknown storage state errs toward SHOWING: a hint the user has already
+    // learned is a small annoyance, a hint they never see is a lost feature.
+    shouldShow: function (key, days) {
+      var last = hintLog()[key];
+      if (!last) return true;
+      return Date.now() - last >= (days || 0) * 86400000;
+    },
+    markShown: function (key) {
+      try {
+        var log = hintLog();
+        log[key] = Date.now();
+        localStorage.setItem(HINT_KEY, JSON.stringify(log));
+      } catch (_) {}
+    },
+    _key: HINT_KEY,
   };
 
   CALM.loadState = function () {
