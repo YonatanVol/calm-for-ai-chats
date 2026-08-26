@@ -287,6 +287,28 @@
     }
   }
 
+  // ---------- Chat spotlight (attention on the current exchange) ----------
+  // The in-page sibling of the reading pane's Spotlight: everything above the
+  // exchange you are in recedes. Implemented entirely as a gated stylesheet,
+  // so React and Angular can re-render the thread as often as they like and
+  // the effect survives — the same reason Zen works this way.
+  function chatspotVars() {
+    document.documentElement.style.setProperty(
+      "--cit-spot",
+      String((S.spotDim | 0) / 100)
+    );
+  }
+  function chatspotEnter() {
+    if (!site.spotlightCss) return; // site has not described its turns
+    injectStyle("cit-chatspot-style", site.spotlightCss());
+    chatspotVars();
+    document.documentElement.classList.add("cit-chatspot");
+  }
+  function chatspotExit() {
+    document.documentElement.classList.remove("cit-chatspot");
+    removeEl("cit-chatspot-style");
+  }
+
   // ---------- Grayscale (stimulation regulation) ----------
   // Drains the dopamine-bait colors from the site; Calm's own UI is excluded.
   function grayVars() {
@@ -356,6 +378,14 @@
     },
     night: { label: "Night", icon: "☾", surface: "tile", enter: nightEnter, exit: nightExit, vars: nightVars },
     ruler: { label: "Reading ruler", icon: "▬", surface: "tile", enter: rulerEnter, exit: rulerExit, vars: rulerVars },
+    chatspot: {
+      label: "Chat spotlight",
+      icon: "◉",
+      surface: "tile",
+      enter: chatspotEnter,
+      exit: chatspotExit,
+      vars: chatspotVars,
+    },
     pomodoro: { label: "Pomodoro", icon: "◴", surface: "tile", enter: pomodoroEnter, exit: pomodoroExit },
     pause: { label: "Pause", icon: "⏸", surface: "live", enter: pauseEnter, exit: pauseExit },
     gray: { label: "Grayscale", icon: "◐", surface: "advanced", enter: grayEnter, exit: grayExit, vars: grayVars },

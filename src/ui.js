@@ -351,6 +351,7 @@
     c.appendChild(sliderRow("Night dim %", "nightLevel", 10, 70, 5, CALM.modes.refreshVars));
     c.appendChild(sliderRow("Ruler height px", "rulerHeight", 50, 160, 10, CALM.modes.refreshVars));
     c.appendChild(sliderRow("Ruler dim %", "rulerDim", 15, 70, 5, CALM.modes.refreshVars));
+    c.appendChild(sliderRow("Chat spotlight dim %", "spotDim", 10, 70, 5, CALM.modes.refreshVars));
     c.appendChild(sliderRow("Grayscale %", "grayLevel", 40, 100, 5, CALM.modes.refreshVars));
   }
   function buildBehaviorTab(c) {

@@ -36,6 +36,7 @@
     rulerHeight: 90, // reading-ruler band height in px (50..160)
     rulerDim: 45, // reading-ruler surround dim % (15..70)
     grayLevel: 85, // grayscale mode strength % (40..100)
+    spotDim: 30, // chat spotlight: how far older turns recede (10..70)
     // Focus Reader (the Calm-owned reading pane)
     frBionic: true, // bold word-starts (fixation anchors)
     frFixation: 40, // % of each word bolded (20..60)
@@ -186,6 +187,7 @@
     "mode:pause": "free",
     "mode:pomodoro": "free",
     "mode:ruler": "free",
+    "mode:chatspot": "free",
     "mode:gray": "free",
     "mode:motion": "free",
   };
