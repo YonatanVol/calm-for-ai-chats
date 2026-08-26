@@ -486,6 +486,11 @@
     sw.className = "cit-toggle-switch" + (S[key] ? " cit-on" : "");
     sw.setAttribute("role", "switch");
     sw.setAttribute("aria-checked", String(!!S[key]));
+    // The switch's only child is the knob, so there is no text for a screen
+    // reader to name it by — without this it announces "switch, checked" and
+    // never says WHAT is switched. The visible label sits in a sibling span,
+    // which nothing associates with the control on its own.
+    sw.setAttribute("aria-label", label);
     var knob = document.createElement("div");
     knob.className = "cit-toggle-knob";
     sw.appendChild(knob);
@@ -511,6 +516,7 @@
     span.textContent = label;
     var sel = document.createElement("select");
     sel.className = "cit-select";
+    sel.setAttribute("aria-label", label);
     options.forEach(function (o) {
       var op = document.createElement("option");
       op.value = o.value;
@@ -544,6 +550,7 @@
     span.textContent = label;
     var sel = document.createElement("select");
     sel.className = "cit-select";
+    sel.setAttribute("aria-label", label);
     var exact = options.some(function (o) { return o.value === (S[key] | 0); });
     options.forEach(function (o) {
       var op = document.createElement("option");
@@ -599,6 +606,12 @@
     sw.type = "button";
     sw.className = "cit-toggle-switch" + (CALM.modes.isActive(id) ? " cit-on" : "");
     sw.setAttribute("data-cit-mode", id);
+    // Same control as a settings toggle, and it was missing all three things
+    // that make one usable without sight: what it is, that it is a switch,
+    // and whether it is on.
+    sw.setAttribute("role", "switch");
+    sw.setAttribute("aria-checked", String(!!CALM.modes.isActive(id)));
+    sw.setAttribute("aria-label", m.label);
     var knob = document.createElement("div");
     knob.className = "cit-toggle-knob";
     sw.appendChild(knob);
@@ -606,6 +619,7 @@
       e.preventDefault();
       e.stopPropagation();
       CALM.modes.toggle(id);
+      sw.setAttribute("aria-checked", String(!!CALM.modes.isActive(id)));
       sw.classList.toggle("cit-on", CALM.modes.isActive(id));
     });
     r.appendChild(span);
@@ -619,6 +633,12 @@
       var on = CALM.modes.isActive(id);
       list[i].classList.toggle("cit-on", on);
       list[i].classList.toggle("cit-active", on);
+      // Sync the announced state with the shown one. Updating only the class
+      // is worse than updating neither: the row looks correct while telling a
+      // screen reader the opposite, and nothing on screen hints at it.
+      if (list[i].getAttribute("role") === "switch") {
+        list[i].setAttribute("aria-checked", String(!!on));
+      }
     }
   }
 
@@ -690,5 +710,11 @@
     makeDraggable: makeDraggable,
     toggleRow: toggleRow,
     selectRow: selectRow,
+    // Introspection for the suite: both of these are stacks that surfaces
+    // push onto when they open and must pop from when they close, and the
+    // only way to catch one that forgets is to be able to count them.
+    _openSurfaces: function () {
+      return { popovers: popovers.length, escapers: escapers.length };
+    },
   };
 })();
