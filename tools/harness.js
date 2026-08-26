@@ -54,6 +54,38 @@ function buildWorld(hostname, opts) {
   opts = opts || {};
   var noop = function () {};
   var world = { bodyEls: {}, local: {}, sess: {}, observers: [], docLs: {}, intervals: {} };
+
+  // The stub understood ".class" and nothing else, which quietly made
+  // document.querySelectorAll("[data-cit-mode]") return NOTHING — so
+  // refreshModeButtons, the function every mode toggle calls to re-sync the
+  // rows, ran against an empty list in every test that has ever touched it.
+  // It was not that the tests disagreed with the code; they could not reach
+  // it. Attribute selectors are supported now, because the alternative is
+  // asserting around a stub's blind spot.
+  function matches(el, sel) {
+    sel = String(sel).trim();
+    if (sel.charAt(0) === ".") {
+      return String(el.className || "").split(" ").indexOf(sel.slice(1)) >= 0;
+    }
+    var attr = sel.match(/^\[([a-zA-Z-]+)(?:=["']?([^"'\]]*)["']?)?\]$/);
+    if (attr) {
+      var v = el.getAttribute ? el.getAttribute(attr[1]) : null;
+      if (v == null) return false;
+      return attr[2] === undefined || v === attr[2];
+    }
+    if (sel.charAt(0) === "#") return el.__id === sel.slice(1);
+    return (el.tagName || "").toLowerCase() === sel.toLowerCase();
+  }
+  function collect(root, sel) {
+    var out = [];
+    (function walk(n) {
+      (n.children || []).forEach(function (ch) {
+        if (matches(ch, sel)) out.push(ch);
+        walk(ch);
+      });
+    })(root);
+    return out;
+  }
   var iid = 0;
   function makeEl(tag) {
     var el = {
@@ -96,17 +128,7 @@ function buildWorld(hostname, opts) {
       __attrs: {},
       setAttribute: function (k, v) { el.__attrs[k] = v; },
       getAttribute: function (k) { return el.__attrs[k] == null ? null : el.__attrs[k]; },
-      querySelectorAll: function (sel) {
-        var out = [];
-        (function walk(n) {
-          (n.children || []).forEach(function (ch) {
-            if (sel.charAt(0) === "." &&
-                String(ch.className || "").split(" ").indexOf(sel.slice(1)) >= 0) out.push(ch);
-            walk(ch);
-          });
-        })(el);
-        return out;
-      },
+      querySelectorAll: function (sel) { return collect(el, sel); },
       querySelector: function (sel) {
         var hit = el.querySelectorAll(sel)[0] || null;
         return hit || (opts.lenient ? makeEl() : null);
@@ -199,7 +221,10 @@ function buildWorld(hostname, opts) {
         : world.docQuery || null;
     },
     querySelectorAll: function (sel) {
-      return typeof world.docQueryAll === "function" ? world.docQueryAll(sel) : [];
+      // A test's own stand-in wins — several set docQueryAll to describe a
+      // page this world does not actually build.
+      if (typeof world.docQueryAll === "function") return world.docQueryAll(sel);
+      return collect(global.document.body, sel);
     },
     createElement: function (t) {
       var e = makeEl(t);
@@ -1985,6 +2010,40 @@ section("Surfaces let go");
     "popovers " + base1b.popovers + "→" + after1b.popovers +
       ", escapers " + base1b.escapers + "→" + after1b.escapers);
 
+  // SCENARIO 51c — the same rule for every OTHER surface, because the two
+  // faults above were not special to the intention card: they are what
+  // happens whenever a surface owns cleanup in more than one place. Open and
+  // close each one ten times; the stacks must come back to where they started.
+  var SURFACES = [
+    ["the Console", function (C) { C.console.open(); }, function (C) { C.console.close(); }],
+    ["⌘K", function (C) { C.palette.open(); }, function (C) { C.palette.close(); }],
+    ["the reading pane", function (C) { C.modes.enter("focusreader"); },
+      function (C) { C.modes.exit("focusreader"); }],
+    ["the where-was-I card", function (C) {
+      C.intent.state.goal = "something"; C.back.show();
+    }, function (C) { C.back.close(); }],
+  ];
+  SURFACES.forEach(function (surface) {
+    var ws = buildWorld("chatgpt.com", { lenient: true });
+    ws.C.dock.build();
+    var b = ws.C.ui._openSurfaces();
+    var clicks = (ws.docLs.click || []).length;
+    for (var k = 0; k < 10; k++) {
+      try { surface[1](ws.C); surface[2](ws.C); } catch (e) {
+        check("opening and closing " + surface[0] + " does not throw", false, e.message);
+        return;
+      }
+    }
+    var a = ws.C.ui._openSurfaces();
+    check("opening and closing " + surface[0] + " leaves the stacks where it found them",
+      a.popovers === b.popovers && a.escapers === b.escapers,
+      "popovers " + b.popovers + "→" + a.popovers +
+        ", escapers " + b.escapers + "→" + a.escapers);
+    check("...and unbinds its document listeners",
+      (ws.docLs.click || []).length === clicks,
+      clicks + " → " + (ws.docLs.click || []).length);
+  });
+
   // SCENARIO 52 — and the same when a navigation closes it instead. This is
   // the path that actually leaks: the registry holds whatever reference it
   // was handed at open time, and if the module later wraps that function,
@@ -2000,6 +2059,81 @@ section("Surfaces let go");
     after2.popovers === base2.popovers && after2.escapers === base2.escapers,
     "popovers " + base2.popovers + "→" + after2.popovers +
       ", escapers " + base2.escapers + "→" + after2.escapers);
+})();
+
+/* ---------------- Every control says what it is -------------------------- */
+// A control with no accessible name is announced as "button" or "combo box"
+// and nothing else, which makes the settings drawer unusable with a screen
+// reader. Buttons can take their name from their text; a <select> cannot —
+// its options are its VALUES, never its name — so every select needs one
+// stated explicitly. Derived rather than listed, so a new row cannot skip it.
+section("Controls are named");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  var adv = w.makeEl("div");
+  // In the document, because refreshModeButtons scans the DOCUMENT for mode
+  // rows — a detached container is invisible to it, and the test would be
+  // asserting against a function that never ran.
+  global.document.body.appendChild(adv);
+  C.ui.buildAdvancedSections(adv);
+
+  var selects = [], buttons = [];
+  (function walk(n) {
+    (n.children || []).forEach(function (ch) {
+      var tag = (ch.tagName || "").toLowerCase();
+      if (tag === "select") selects.push(ch);
+      if (tag === "button") buttons.push(ch);
+      walk(ch);
+    });
+  })(adv);
+
+  check("(setup) the drawer has controls to check",
+    selects.length >= 5 && buttons.length >= 5,
+    selects.length + " selects / " + buttons.length + " buttons");
+
+  var unnamedSel = selects.filter(function (s) {
+    return !(s.getAttribute && s.getAttribute("aria-label"));
+  });
+  check("every dropdown states what it is for", !unnamedSel.length,
+    unnamedSel.length + " unnamed");
+
+  // A mode can be turned on from ⌘K, from a tile, or from its own row, and
+  // every one of those calls refreshModeButtons to re-sync the rows. If that
+  // sync updates only the CLASS, the row still looks right and announces the
+  // opposite of the truth — the worst of both, because nothing on screen
+  // suggests anything is wrong.
+  var modeSwitch = null;
+  (function walk(n) {
+    (n.children || []).forEach(function (ch) {
+      if (!modeSwitch && ch.getAttribute && ch.getAttribute("data-cit-mode")) {
+        modeSwitch = ch;
+      }
+      walk(ch);
+    });
+  })(adv);
+  if (modeSwitch) {
+    var mid = modeSwitch.getAttribute("data-cit-mode");
+    C.modes.enter(mid);
+    C.ui.refreshModeButtons();
+    var onOk = modeSwitch.getAttribute("aria-checked") === "true" &&
+      modeSwitch.classList.contains("cit-on");
+    C.modes.exit(mid);
+    C.ui.refreshModeButtons();
+    var offOk = modeSwitch.getAttribute("aria-checked") === "false" &&
+      !modeSwitch.classList.contains("cit-on");
+    check("a mode row announces the state it is showing", onOk && offOk,
+      "on:" + onOk + " off:" + offOk);
+  }
+
+  var unnamedBtn = buttons.filter(function (b) {
+    var lbl = b.getAttribute && b.getAttribute("aria-label");
+    return !lbl && !String(b.textContent || "").trim();
+  });
+  check("every button has a name or visible text", !unnamedBtn.length,
+    unnamedBtn.length + " unnamed: " + unnamedBtn.map(function (b) {
+      return (b.className || "?") + "[" + (b.children || []).length + " kids]";
+    }).join(", "));
 })();
 
 section("Auto-hide");
