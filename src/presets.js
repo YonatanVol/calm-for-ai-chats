@@ -14,18 +14,13 @@
   var rt = CALM.rt;
 
   var CUSTOM_KEY = "cit-presets";
-  var PRESET_KEYS = [
-    "readingWidth",
-    "sensitivity",
-    "readerFontScale",
-    "readerLineHeight",
-    "nightLevel",
-    "autoScrollSpeed",
-    "pauseMinutes",
-    "zenComposer",
-    "typeAhead",
-    "autoHideOnScroll",
-  ];
+  // A preset snapshots EVERY user-facing setting. It used to capture 10 of
+  // them and silently discard the rest, so "save current as preset" lied.
+  function presetKeys() {
+    return Object.keys(CALM.defaultSettings).filter(function (k) {
+      return k !== "settingsVersion";
+    });
+  }
 
   var BUILTINS = [
     { name: "Default", builtin: true, settings: { readingWidth: 0 }, modes: [] },
@@ -33,7 +28,7 @@
       name: "Deep Reading",
       builtin: true,
       settings: { readingWidth: 1000, readerFontScale: 120, readerLineHeight: 18, nightLevel: 25 },
-      modes: ["reader"],
+      modes: [],
     },
     { name: "Study", builtin: true, settings: {}, modes: ["zen", "pomodoro"] },
     { name: "Present", builtin: true, settings: {}, modes: ["presentation"] },
@@ -41,7 +36,7 @@
       name: "Night Owl",
       builtin: true,
       settings: { nightLevel: 45, readerFontScale: 115 },
-      modes: ["night", "reader"],
+      modes: ["night"],
     },
   ];
 
@@ -68,6 +63,7 @@
   }
 
   function apply(name) {
+    var before = { menuStyle: S.menuStyle };
     var p = find(name);
     if (!p) return;
     if (p.settings) {
@@ -83,8 +79,16 @@
     (p.modes || []).forEach(function (id) {
       CALM.modes.enter(id);
     });
+    // A preset snapshots EVERY setting now, so it can change the shape of the
+    // menu itself. Rebuild when it does, or the user keeps the old one.
+    if (before.menuStyle !== S.menuStyle && CALM.dock) {
+      CALM.dock.build({ preserveOpen: true });
+    }
     CALM.modes.applyWidth();
+    CALM.modes.applyReaderType(); // was missed when `reader` stopped being a mode
     CALM.modes.refreshVars();
+    if (CALM.reader && CALM.reader.refreshVars) CALM.reader.refreshVars();
+    if (CALM.console) CALM.console.render();
     if (CALM.ui && CALM.ui.refreshModeButtons) CALM.ui.refreshModeButtons();
   }
 
@@ -95,7 +99,7 @@
       return x.name !== name;
     });
     var snap = {};
-    PRESET_KEYS.forEach(function (k) {
+    presetKeys().forEach(function (k) {
       snap[k] = S[k];
     });
     var modes = Object.keys(rt.activeModes).filter(function (id) {

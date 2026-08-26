@@ -1,0 +1,148 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Calm — adapter selector parse</title>
+<!--
+  Calm — tools/selector-test.html
+  Copyright © 2026 Yonatan Volsky. All rights reserved.
+
+  Every selector each adapter hands the engine, run through the browser's own
+  querySelector in a try/catch. This is the DEFINITIVE check: the merge gate
+  (tools/harness.js) runs a conservative structural validator instead, because
+  Node has no DOM and this repo has no dependencies — that validator can miss a
+  broken selector but cannot invent one. This page cannot miss anything.
+
+  Open it in a browser. Nothing here touches the network or any chat site; it
+  loads src/adapters.js and asks each adapter what it would query.
+
+  Why this matters: these selectors run inside scroll handlers and on 700-800ms
+  timers. A selector that fails to parse throws every time it runs, and the
+  visible symptom is a mode that quietly does nothing — not an error anyone
+  sees.
+-->
+<style>
+  :root { color-scheme: dark light; }
+  body {
+    font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    max-width: 900px; margin: 40px auto; padding: 0 20px;
+    background: #131417; color: #e8e8ea;
+  }
+  h1 { font: 600 20px/1.3 Georgia, serif; letter-spacing: 0.01em; }
+  p.lede { color: #9a9ba0; margin-bottom: 28px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.14em;
+       color: #9a9ba0; margin: 28px 0 8px; }
+  table { border-collapse: collapse; width: 100%; }
+  td { padding: 7px 10px; border-bottom: 1px solid #26272b; vertical-align: top; }
+  td.k { white-space: nowrap; color: #9a9ba0; width: 1%; }
+  td.s { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+         font-size: 12px; word-break: break-all; }
+  .ok { color: #7fd0a3; } .bad { color: #ff8a80; }
+  #summary { margin-top: 28px; padding: 14px 16px; border-radius: 10px;
+             background: #1b1c20; font-weight: 600; }
+  @media (prefers-color-scheme: light) {
+    body { background: #fbfbfc; color: #1c1d20; }
+    td { border-color: #e4e4e7; } #summary { background: #f0f0f2; }
+    p.lede, h2, td.k { color: #66676c; }
+  }
+</style>
+
+<h1>Adapter selector parse</h1>
+<p class="lede">
+  Every selector-bearing field of every adapter, run through the browser's own
+  <code>querySelector</code>. A failure here is a selector that throws each time
+  the engine uses it — in a scroll handler, or on a timer.
+</p>
+<div id="out"></div>
+<div id="summary">running…</div>
+
+<script src="../src/adapters.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // Fields whose value is a selector string handed to querySelector/closest,
+  // or spliced into a CSS rule. Deliberately NOT included:
+  //   zenTargets  — returns resolved elements, not a selector
+  //   zenCss / widthCss / spotlightCss — return whole stylesheets
+  var FIELDS = ["responseSel", "stopSel", "readerTargets", "privacyTargets",
+                "excludedScrollers"];
+
+  var SITES = window.CALM && window.CALM.ADAPTERS;
+  var out = document.getElementById("out");
+  var summary = document.getElementById("summary");
+
+  if (!SITES) {
+    summary.textContent =
+      "Could not read the adapters. src/adapters.js publishes them under a " +
+      "different name than this page expects — fix the name here, do not " +
+      "assume the selectors are fine.";
+    summary.className = "bad";
+    return;
+  }
+
+  var pass = 0, fail = 0, skipped = 0;
+
+  Object.keys(SITES).forEach(function (id) {
+    var site = SITES[id];
+    var h2 = document.createElement("h2");
+    h2.textContent = id;
+    out.appendChild(h2);
+    var table = document.createElement("table");
+
+    FIELDS.forEach(function (field) {
+      if (site[field] === undefined) { skipped++; return; }
+      var sel;
+      try {
+        sel = typeof site[field] === "function" ? site[field]() : site[field];
+      } catch (e) {
+        row(table, field, "(threw: " + e.message + ")", false);
+        fail++;
+        return;
+      }
+      if (typeof sel !== "string" || !sel) { skipped++; return; }
+
+      var ok = true, why = "";
+      try {
+        document.querySelector(sel);      // the real parse
+        document.querySelectorAll(sel);
+        // closest() is how excludedScrollers is actually consumed, and it
+        // parses on its own — a selector can pass one and fail the other.
+        document.body.closest(sel);
+      } catch (e) {
+        ok = false;
+        why = " — " + e.message;
+      }
+      row(table, field, sel + why, ok);
+      ok ? pass++ : fail++;
+    });
+
+    out.appendChild(table);
+  });
+
+  function row(table, key, text, ok) {
+    var tr = document.createElement("tr");
+    var a = document.createElement("td");
+    a.className = "k " + (ok ? "ok" : "bad");
+    a.textContent = (ok ? "PASS" : "FAIL") + "  " + key;
+    var b = document.createElement("td");
+    b.className = "s";
+    b.textContent = text;
+    tr.appendChild(a);
+    tr.appendChild(b);
+    table.appendChild(tr);
+  }
+
+  // A run that checked nothing would otherwise show a reassuring green zero.
+  if (pass + fail === 0) {
+    summary.textContent =
+      "Nothing was checked — no adapter exposed any selector field. That is a " +
+      "failure of this page, not a clean result.";
+    summary.className = "bad";
+    return;
+  }
+  summary.className = fail ? "bad" : "ok";
+  summary.textContent = fail
+    ? fail + " selector(s) failed to parse, " + pass + " passed."
+    : "All " + pass + " selectors parse." +
+      (skipped ? " (" + skipped + " field(s) not selector-bearing.)" : "");
+})();
+</script>

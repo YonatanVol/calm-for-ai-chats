@@ -1,0 +1,38 @@
+name: Something is broken
+description: A mode does nothing, the menu misbehaves, or a site changed under it
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The three sites redesign themselves regularly. When they do, Calm's
+        selectors stop matching and the usual symptom is a mode that **quietly
+        does nothing** rather than an error — so "X stopped working on Gemini"
+        is a genuinely useful report, not a vague one.
+  - type: dropdown
+    id: site
+    attributes:
+      label: Which site?
+      options: [ChatGPT, Gemini, Claude, More than one]
+    validations: { required: true }
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect instead?
+      placeholder: |
+        I pressed Ctrl+Shift+H and the input bar stayed where it was.
+        I expected it to disappear.
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes:
+      label: Calm version
+      description: On the card at chrome://extensions
+      placeholder: "3.2.0"
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: |
+        Console errors, a screenshot, whether a reload fixes it. Please do not
+        paste your conversation — nothing about its content is ever needed.

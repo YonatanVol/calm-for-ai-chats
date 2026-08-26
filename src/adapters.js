@@ -77,6 +77,8 @@
           largestScroller(),
         ]);
       },
+      // ChatGPT: stylesheet zen (stable IDs) + inline fallback (zenInline).
+      zenInline: true,
       zenTargets: function () {
         return [
           q("#page-header"),
@@ -85,9 +87,40 @@
           q('[class*="bottom-of-thread"]'),
         ].filter(Boolean);
       },
+      zenCss: function () {
+        return (
+          "html.cit-zen #page-header," +
+          "html.cit-zen #stage-slideover-sidebar," +
+          "html.cit-zen #stage-sidebar-tiny-bar," +
+          'html.cit-zen [class*="bottom-of-thread"]' +
+          "{display:none !important;}"
+        );
+      },
       // Reader typography target (message prose).
+      // Assistant-response blocks for the Focus Reader (last one wins).
+      // The site's own stop-generating control: present ONLY while a reply
+      // is streaming. If it rots the cue never fires — a missed cue, never
+      // a false one.
+      stopSel: "[data-testid=\"stop-button\"], button[data-testid=\"composer-speech-button-container\"] ~ button[aria-label*=\"Stop\" i], button[aria-label*=\"Stop streaming\" i]",
+      responseSel: "[data-message-author-role=\"assistant\"] .markdown",
       readerTargets: function () {
         return ".markdown, [class*='prose'], [data-message-author-role] .markdown";
+      },
+      // Scrollers that must never drive auto-hide: the site's own sidebar
+      // and nav. Site knowledge belongs here, not in the engine.
+      // Chat spotlight: dim every turn except the last exchange. Pure
+      // CSS on purpose — a class added to these nodes is reconciled
+      // away by the site's own framework within a render or two.
+      spotlightCss: function () {
+        return (
+          "html.cit-chatspot article:not(:nth-last-child(-n+2)), html.cit-chatspot [data-message-author-role]:not(:nth-last-child(-n+2))" +
+          "{opacity:var(--cit-spot,0.3);transition:opacity .35s var(--cit-ease);}" +
+          "html.cit-chatspot article:hover, html.cit-chatspot [data-message-author-role]:hover" +
+          "{opacity:1;}"
+        );
+      },
+      excludedScrollers: function () {
+        return "#stage-slideover-sidebar, #stage-sidebar-tiny-bar, nav[aria-label]";
       },
       // Sidebar conversation titles to blur in Privacy/Share mode.
       privacyTargets: function () {
@@ -127,16 +160,55 @@
         }
         return firstOf([s, largestScroller()]);
       },
+      // Gemini: stylesheet-only zen (Angular re-renders make inline styles and
+      // saved refs go stale — the old ".closest('div')" ancestor walk hid
+      // arbitrary layout containers and could never be undone reliably).
+      // Only known, self-contained custom elements are targeted.
+      zenInline: false,
       zenTargets: function () {
         return [
           q("bard-sidenav"),
-          q("bard-mode-switcher") &&
-            q("bard-mode-switcher").closest("header, toolbar, .top-bar, div"),
+          q("bard-mode-switcher"),
+          q("chat-app-side-nav-menu-button"),
           q("modular-zero-state"),
         ].filter(Boolean);
       },
+      zenCss: function () {
+        return (
+          "html.cit-zen bard-sidenav," +
+          "html.cit-zen bard-mode-switcher," +
+          "html.cit-zen chat-app-side-nav-menu-button," +
+          "html.cit-zen modular-zero-state," +
+          "html.cit-zen bot-banner," +
+          "html.cit-zen chat-app-banners," +
+          "html.cit-zen chat-app-announcement-banners" +
+          "{display:none !important;}"
+        );
+      },
+      // Assistant-response blocks for the Focus Reader (last one wins).
+      // The site's own stop-generating control: present ONLY while a reply
+      // is streaming. If it rots the cue never fires — a missed cue, never
+      // a false one.
+      stopSel: "button[aria-label*=\"Stop\" i], .stop-icon, mat-icon[fonticon=\"stop\"]",
+      responseSel: "message-content, .model-response-text",
       readerTargets: function () {
         return "message-content, .markdown, .model-response-text";
+      },
+      // Scrollers that must never drive auto-hide: the site's own sidebar
+      // and nav. Site knowledge belongs here, not in the engine.
+      // Chat spotlight: dim every turn except the last exchange. Pure
+      // CSS on purpose — a class added to these nodes is reconciled
+      // away by the site's own framework within a render or two.
+      spotlightCss: function () {
+        return (
+          "html.cit-chatspot .conversation-container:not(:nth-last-child(-n+2)), html.cit-chatspot model-response:not(:nth-last-child(-n+2)), html.cit-chatspot user-query:not(:nth-last-child(-n+2))" +
+          "{opacity:var(--cit-spot,0.3);transition:opacity .35s var(--cit-ease);}" +
+          "html.cit-chatspot .conversation-container:hover, html.cit-chatspot model-response:hover, html.cit-chatspot user-query:hover" +
+          "{opacity:1;}"
+        );
+      },
+      excludedScrollers: function () {
+        return "bard-sidenav, conversations-list, nav[aria-label]";
       },
       privacyTargets: function () {
         return "conversations-list .conversation, gem-nav-list-item .title";
@@ -148,6 +220,85 @@
           "html.cit-width .response-container{" +
           "max-width: var(--cit-reading-width) !important;" +
           "width: 100% !important;}"
+        );
+      },
+    },
+    claude: {
+      id: "claude",
+      host: /(^|\.)claude\.ai$/,
+      // Live-probed 2026-07: input = [data-testid="chat-input"] (TipTap/
+      // ProseMirror), composer = its enclosing <fieldset>, sidebar =
+      // aside.dframe-sidebar, header = header.dframe-header, assistant prose =
+      // .font-claude-response, conversation scroller = scrollable ancestor of
+      // a message (sidebar has its own .dframe-nav-scroll — excluded in core).
+      composer: function () {
+        var input = this.promptInput();
+        return firstOf([
+          input && input.closest("fieldset"),
+          input && input.closest("form"),
+        ]);
+      },
+      promptInput: function () {
+        return firstOf([
+          q('[data-testid="chat-input"]'),
+          q('div.ProseMirror[contenteditable="true"]'),
+          q('[contenteditable="true"]'),
+        ]);
+      },
+      scrollRoot: function () {
+        return firstOf([
+          scrollableAncestor(q('[data-testid="user-message"]')),
+          scrollableAncestor(q(".font-claude-response")),
+          largestScroller(),
+        ]);
+      },
+      zenInline: false, // stylesheet-only: React re-renders, same as Gemini
+      zenTargets: function () {
+        return [
+          q('aside[class*="dframe-sidebar"]'),
+          q('header[class*="dframe-header"]'),
+        ].filter(Boolean);
+      },
+      zenCss: function () {
+        return (
+          'html.cit-zen aside[class*="dframe-sidebar"],' +
+          'html.cit-zen header[class*="dframe-header"]' +
+          "{display:none !important;}"
+        );
+      },
+      // Assistant-response blocks for the Focus Reader (last one wins).
+      // The site's own stop-generating control: present ONLY while a reply
+      // is streaming. If it rots the cue never fires — a missed cue, never
+      // a false one.
+      stopSel: "button[aria-label*=\"Stop\" i], button[aria-label*=\"stop response\" i]",
+      responseSel: ".font-claude-response",
+      readerTargets: function () {
+        return '.font-claude-response, [data-testid="user-message"]';
+      },
+      // Scrollers that must never drive auto-hide: the site's own sidebar
+      // and nav. Site knowledge belongs here, not in the engine.
+      // Chat spotlight: dim every turn except the last exchange. Pure
+      // CSS on purpose — a class added to these nodes is reconciled
+      // away by the site's own framework within a render or two.
+      spotlightCss: function () {
+        return (
+          "html.cit-chatspot [data-test-render-count]:not(:nth-last-child(-n+2)), html.cit-chatspot div[data-testid=\"conversation-turn\"]:not(:nth-last-child(-n+2))" +
+          "{opacity:var(--cit-spot,0.3);transition:opacity .35s var(--cit-ease);}" +
+          "html.cit-chatspot [data-test-render-count]:hover, html.cit-chatspot div[data-testid=\"conversation-turn\"]:hover" +
+          "{opacity:1;}"
+        );
+      },
+      excludedScrollers: function () {
+        return "aside[class*=\"dframe-sidebar\"], [class*=\"dframe-nav-scroll\"], nav[aria-label]";
+      },
+      privacyTargets: function () {
+        return 'aside a[href^="/chat/"]';
+      },
+      widthCss: function () {
+        return (
+          'html.cit-width [data-testid="user-message"],' +
+          "html.cit-width .font-claude-response" +
+          "{max-width: var(--cit-reading-width) !important;}"
         );
       },
     },

@@ -2,9 +2,12 @@ Calm — Reading Mode for AI Chats
 Copyright © 2026 Yonatan Volsky. All rights reserved.
 
 This software, including its source code, design, and associated assets
-(the "Software"), is the proprietary and confidential property of
-Yonatan Volsky (the "Author"). The Software is made source-available for
-transparency and evaluation only. It is NOT open-source software.
+(the "Software"), is the proprietary property of Yonatan Volsky (the
+"Author"). The Software is published publicly and made source-available so
+that anyone may read exactly what it does before running it — a claim about
+privacy is worth little if the code backing it cannot be inspected. It is
+NOT open-source software, and publication grants no licence beyond the
+permissions below.
 
 YOU MAY:
   • View and inspect the source code for personal, educational, and

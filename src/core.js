@@ -26,7 +26,7 @@
   // sensitivity -> upward px needed to hide (1=hard .. 10=easy)
   function upThreshold() {
     var s = Math.max(1, Math.min(10, S.sensitivity || 5));
-    return Math.round(150 - (s - 1) * (130 / 9)); // s1=150 .. s10=20
+    return Math.round(C.UP_MAX - (s - 1) * ((C.UP_MAX - C.UP_MIN) / 9));
   }
 
   function lockScroll() {
@@ -40,25 +40,73 @@
   }
 
   // ---- Hide / show composer (instant, reliable) ----
+  // React re-renders the composer out from under us. Acting on the node we
+  // happened to capture at init means hiding a detached element: nothing moves
+  // on screen and the toggle looks broken. Always re-resolve when the held
+  // reference has left the document.
+  // React replaces the scroll container too, and a detached one silently
+  // swallows every scrollTo and reports a frozen scrollTop.
+  function currentScroller() {
+    var sc = rt.scrollContainer;
+    if (sc && sc.isConnected === false) {
+      var fresh = site.scrollRoot && site.scrollRoot();
+      if (fresh) {
+        rt.scrollContainer = fresh;
+        rt.lastScrollTop = fresh.scrollTop || 0;
+      }
+    }
+    return rt.scrollContainer;
+  }
+
+  function currentComposer() {
+    if (rt.composerEl && rt.composerEl.isConnected === false) {
+      var fresh = site.composer();
+      if (fresh && fresh !== rt.composerEl) {
+        rt.composerEl = fresh;
+        // The replacement arrives visible, so a hide that was in force has to
+        // be re-applied or our state and the page disagree.
+        if (rt.composerHidden) {
+          fresh.style.setProperty("display", "none", "important");
+        }
+      }
+    }
+    return rt.composerEl;
+  }
+
   function hideComposer(opts) {
-    if (!rt.composerEl || rt.composerHidden) return;
+    if (!currentComposer() || rt.composerHidden) return;
     opts = opts || {};
     saveDraft();
     lockScroll();
     rt.composerEl.style.setProperty("display", "none", "important");
     document.body.classList.add("cit-composer-hidden");
     rt.composerHidden = true;
-    ui.updateQuickNav();
+    // An explicit hide is a decision; an automatic one is a guess. Only the
+    // guess may be undone by scrolling back to the bottom.
+    rt.hiddenManually = !opts.auto;
     if (S.rememberState) CALM.saveState();
-    if (opts.auto && S.showHints) ui.showToast();
+    // A restore is not news — it is the state you left. Hinting on every
+    // navigation would turn the hint into noise.
+    //
+    // Neither is the fiftieth auto-hide of a long reading session. The first
+    // one teaches you where the input went; after that the same sentence is
+    // just something moving at the edge of your vision while you read, which
+    // is the precise thing this extension exists to remove. Say it once, then
+    // not again for a week — long enough to have forgotten, rare enough not
+    // to be noise.
+    if (opts.auto && S.showHints && !opts.silent &&
+        CALM.hints.shouldShow("composerHidden", C.HINT_EVERY_DAYS)) {
+      CALM.hints.markShown("composerHidden");
+      ui.showToast();
+    }
   }
   function showComposer() {
-    if (!rt.composerEl || !rt.composerHidden) return;
+    if (!currentComposer() || !rt.composerHidden) return;
     lockScroll();
     rt.composerEl.style.removeProperty("display");
     document.body.classList.remove("cit-composer-hidden");
     rt.composerHidden = false;
-    ui.updateQuickNav();
+    rt.hiddenManually = false;
     if (S.rememberState) CALM.saveState();
     restoreDraft();
     flushTypeAhead();
@@ -94,7 +142,15 @@
   function insertIntoInput(input, text, focusEnd) {
     if (!input || !text) return;
     if (input.tagName === "TEXTAREA") {
-      input.value = text;
+      // APPEND at the caret. This used to assign input.value outright, so
+      // flushing type-ahead over a half-written prompt erased it.
+      var start = input.selectionStart;
+      var end = input.selectionEnd;
+      if (input.setRangeText && typeof start === "number" && typeof end === "number") {
+        input.setRangeText(text, start, end, "end");
+      } else {
+        input.value = (input.value || "") + text;
+      }
       input.dispatchEvent(new Event("input", { bubbles: true }));
       return;
     }
@@ -132,7 +188,10 @@
     }
     var input = site.promptInput();
     // Composer was only display:none'd, so the input usually kept its text.
-    if (input && input.innerText && input.innerText.trim()) {
+    var kept = input
+      ? input.tagName === "TEXTAREA" ? input.value : input.innerText
+      : "";
+    if (kept && kept.trim()) {
       try {
         sessionStorage.removeItem(DRAFT_KEY);
       } catch (_) {}
@@ -149,11 +208,35 @@
 
   // ---- Scroll detection — ONE capture-phase listener on document ----
   function isExcludedScroller(el) {
-    return !!el.closest(
-      "bard-sidenav, conversations-list, #stage-slideover-sidebar," +
-        " #stage-sidebar-tiny-bar, nav[aria-label], #cit-settings-panel"
-    );
+    // Calm's own surfaces, plus whatever this site says is chrome rather than
+    // conversation. The per-site half lives in the adapter so adding a fourth
+    // site means writing an adapter and touching nothing here.
+    var own = "#cit-console, #cit-palette, #cit-reader-pane";
+    var site_ = site.excludedScrollers ? site.excludedScrollers() : "";
+    try {
+      return !!el.closest(site_ ? own + ", " + site_ : own);
+    } catch (_) {
+      return false;
+    }
   }
+  // Is there actually a conversation to read? On a brand-new chat there is
+  // nothing to gain by hiding the composer — the user is about to type into
+  // it. Two independent signals, either of which is enough, so that a rotted
+  // response selector can never silently disable auto-hide on a long thread.
+  function hasConversation() {
+    try {
+      return !site.responseSel || !!document.querySelector(site.responseSel);
+    } catch (_) {
+      return true; // selector rot must never disable the feature outright
+    }
+  }
+  function worthHiding(el) {
+    var range = el.scrollHeight - el.clientHeight;
+    if (range < C.MIN_HIDE_RANGE) return false;
+    if (range >= C.ASSUME_CONTENT_RANGE) return true;
+    return hasConversation();
+  }
+
   function handleScrollEl(el) {
     if (!S.autoHideOnScroll || rt.scrollLocked || rt.paused) {
       rt.lastScrollTop = el.scrollTop;
@@ -165,6 +248,24 @@
     if (delta === 0) return;
 
     var distFromBottom = el.scrollHeight - el.clientHeight - cur;
+
+    // Reveal is decided by POSITION, not by the size of the last movement:
+    // the site's own jump-to-bottom arrow moves a whole viewport at once, and
+    // arriving at the bottom should bring the input back however you got
+    // there. Hiding, below, is the part that must not be fooled by a jump.
+    if (rt.composerHidden && !rt.hiddenManually && distFromBottom < C.BOTTOM_THRESHOLD) {
+      rt.accUp = 0;
+      showComposer();
+      return;
+    }
+
+    // A jump of more than a viewport in one event is the page relayouting or
+    // snapping, not a hand on a wheel. Counting it as intent is how a single
+    // flick used to add hundreds of pixels to the accumulator at once.
+    if (Math.abs(delta) > el.clientHeight) {
+      rt.accUp = 0;
+      return;
+    }
     clearTimeout(rt.accTimer);
     rt.accTimer = setTimeout(function () {
       rt.accUp = 0;
@@ -175,14 +276,14 @@
       if (
         rt.accUp >= upThreshold() &&
         !rt.composerHidden &&
-        distFromBottom > C.BOTTOM_THRESHOLD
+        distFromBottom > C.BOTTOM_THRESHOLD &&
+        worthHiding(el)
       ) {
         rt.accUp = 0;
         hideComposer({ auto: true });
       }
     } else {
-      rt.accUp = 0;
-      if (rt.composerHidden && distFromBottom < C.BOTTOM_THRESHOLD) showComposer();
+      rt.accUp = 0; // handled by the position check above
     }
   }
   function onAnyScroll(e) {
@@ -198,7 +299,6 @@
     if (el !== rt.scrollContainer) {
       rt.scrollContainer = el;
       rt.lastScrollTop = el.scrollTop;
-      ui.updateQuickNav();
       return;
     }
     handleScrollEl(el);
@@ -213,15 +313,20 @@
     if (sc) {
       rt.scrollContainer = sc;
       rt.lastScrollTop = sc.scrollTop;
-      ui.updateQuickNav();
       stopRetry();
     } else startRetry();
   }
   function startRetry() {
     if (rt.retryTimer) return;
+    // Capped like the composer probe. Uncapped, a rotted scrollRoot selector on
+    // a non-scrolling route re-ran largestScroller() — getComputedStyle on every
+    // div under <main> — every 1.5s for the life of the tab. The capture-phase
+    // scroll listener still adopts a container the moment the user scrolls, so
+    // giving up here costs nothing.
+    var tries = 0;
     rt.retryTimer = setInterval(function () {
-      if (!rt.scrollContainer) discoverScroll();
-      else stopRetry();
+      if (rt.scrollContainer || ++tries > 40) return stopRetry();
+      discoverScroll();
     }, C.RETRY_MS);
   }
   function stopRetry() {
@@ -232,7 +337,70 @@
   }
 
   // ---- SPA navigation ----
+  // Full teardown. SPA navs re-render the page under us: any mode artifact left
+  // behind (inline display:none, injected styles, overlays, running intervals)
+  // becomes an un-removable ghost — this was the root cause of the "extension
+  // disappeared but still affects the page" bug on Gemini.
   function resetState() {
+    rt.tearingDown = true;
+
+    // 0. Snapshot stateful timers so navigation does NOT reset them: a
+    //    Pomodoro 20 minutes into a block resumes at 20 minutes, and a Pause
+    //    keeps its original end time (it must not re-arm a fresh countdown).
+    var ps = CALM.pomodoro && CALM.pomodoro.state;
+    rt.resumePomodoro =
+      ps && ps.running
+        ? {
+            phase: ps.phase,
+            remaining: ps.remaining,
+            cycle: ps.cycle,
+            paused: ps.paused,
+            enteredZen: ps.enteredZen,
+          }
+        : null;
+    rt.resumePauseEnd = rt.pauseEndTs || null;
+
+    // 0b. Close every open popover through its own close() (removes the
+    //     element AND its document listeners — no ghost panels after nav).
+    if (ui.closeAllPopovers) ui.closeAllPopovers();
+
+    // 1. Remember which modes were on, then exit them PROPERLY (each exit
+    //    clears its own timers/styles/refs while they are still valid).
+    rt.pendingModes = Object.keys(rt.activeModes).filter(function (id) {
+      return rt.activeModes[id];
+    });
+    rt.pendingModes.forEach(function (id) {
+      try {
+        modes.exit(id);
+      } catch (_) {}
+    });
+
+    // 2. Hard-clean any residue in case an exit had stale refs.
+    ["cit-zen-style", "cit-reader-style", "cit-privacy-style", "cit-night-overlay",
+     "cit-pomo-widget", "cit-pomo-overlay", "cit-ruler", "cit-gray-style",
+     "cit-motion-style", "cit-timebar"].forEach(function (id) {
+      var e = document.getElementById(id);
+      if (e) e.remove();
+    });
+    ["cit-zen", "cit-reader", "cit-night", "cit-privacy", "cit-presentation",
+     "cit-gray", "cit-motion"].forEach(function (cls) {
+      document.documentElement.classList.remove(cls);
+    });
+    if (rt.rulerHandler) {
+      document.removeEventListener("mousemove", rt.rulerHandler);
+      rt.rulerHandler = null;
+    }
+    Object.keys(rt.modeTimers).forEach(function (k) {
+      if (rt.modeTimers[k]) {
+        clearInterval(rt.modeTimers[k]);
+        rt.modeTimers[k] = null;
+      }
+    });
+    var chips = document.getElementById("cit-chip-stack");
+    if (chips) chips.innerHTML = "";
+    if (ui.hideTypeChip) ui.hideTypeChip();
+
+    // 3. Composer / scroll / misc.
     clearTimeout(rt.accTimer);
     clearTimeout(rt.scrollLockTimer);
     clearTimeout(rt.toastTimer);
@@ -242,11 +410,21 @@
     rt.composerHidden = false;
     rt.scrollLocked = false;
     rt.draftSaved = false;
+    rt.pendingText = "";
     rt.initialized = false;
     rt.accUp = 0;
+    rt.jumpIdx = 0;
+    rt.jumpTotal = -1; // forces a re-anchor to the newest answer
     rt.composerEl = null;
     rt.scrollContainer = null;
+    // Calm-owned singletons that popover-close doesn't cover.
+    ["cit-reader-pane", "cit-intent-pop", "cit-intent-chip",
+     "cit-back"].forEach(function (id) {
+      var e = document.getElementById(id);
+      if (e) e.remove();
+    });
     stopRetry();
+    rt.tearingDown = false;
   }
   function startNavObserver() {
     if (rt.navObserver) rt.navObserver.disconnect();
@@ -265,12 +443,69 @@
     rt.navObserver.observe(document.body, { childList: true, subtree: true });
   }
 
+  // ---- Back to the top of the answer ----
+  // A long answer finishes and the view is parked at its END, because that is
+  // where the streaming left you. Reading it means hunting upward for where it
+  // started. This puts you on its first line instead, and pressing again walks
+  // back through earlier answers — which is how people actually re-read a
+  // conversation: by turn, not by pixel.
+  function answers() {
+    try {
+      if (!site.responseSel) return [];
+      return Array.prototype.slice.call(
+        document.querySelectorAll(site.responseSel)
+      );
+    } catch (_) {
+      return [];
+    }
+  }
+  function jumpToAnswerStart() {
+    var list = answers();
+    if (!list.length) return; // a new chat has nothing to go back to
+
+    // A new turn makes the walk-back position stale: you are asking about the
+    // conversation as it is now, not as it was three answers ago.
+    if (rt.jumpTotal !== list.length) {
+      rt.jumpTotal = list.length;
+      rt.jumpIdx = list.length - 1;
+    }
+    var el = list[rt.jumpIdx];
+    if (!el || !el.getBoundingClientRect) return;
+
+    var sc = currentScroller();
+    if (!sc) return;
+    // The scroller may be the page itself, whose rect is already the viewport.
+    var base = 0;
+    try {
+      if (sc !== document.scrollingElement && sc !== document.documentElement &&
+          sc !== document.body && sc.getBoundingClientRect) {
+        base = sc.getBoundingClientRect().top || 0;
+      }
+    } catch (_) {}
+    var target = (sc.scrollTop || 0) + (el.getBoundingClientRect().top - base) -
+      C.JUMP_MARGIN;
+    var max = Math.max(0, (sc.scrollHeight || 0) - (sc.clientHeight || 0));
+    CALM.ui.smoothScrollTo(Math.max(0, Math.min(max, target)));
+
+    // Step back for next time, and STOP at the first answer rather than
+    // wrapping — wrapping would fling you to the bottom of a long
+    // conversation just as you reached the top of it.
+    if (rt.jumpIdx > 0) rt.jumpIdx--;
+  }
+
   // ---- Keyboard ----
   document.addEventListener(
     "keydown",
     function (e) {
+      // Escape ALWAYS leaves Presentation, even with shortcuts switched off:
+      // Presentation hides every Calm surface including the menu that turned
+      // it on, so gating this made it an unrecoverable trap that "remember
+      // state" could persist across reloads.
+      if (e.code === "Escape" && CALM.modes.isActive("presentation")) {
+        CALM.modes.exit("presentation");
+        return;
+      }
       if (!S.keyboardShortcut) return;
-      // Escape leaves Presentation mode (its buttons are hidden).
       if (e.code === "Escape" && modes.isActive && modes.isActive("presentation")) {
         modes.exit("presentation");
         return;
@@ -288,35 +523,78 @@
         e.preventDefault();
         e.stopPropagation();
         modes.toggle("presentation");
+      } else if (e.code === "KeyJ") {
+        e.preventDefault();
+        e.stopPropagation();
+        CALM.core.jumpToAnswerStart();
       }
     },
     true
   );
 
   // ---- Init ----
+  // UI is created IMMEDIATELY (never leave the page button-less — routes like
+  // Gemini's /library have no composer at all). Composer discovery continues in
+  // the background and composer-dependent features light up when it lands.
+  // A generation token aborts stale attempt-loops from previous navigations.
   function init() {
-    var tries = 0;
-    (function attempt() {
+    var gen = ++rt.initGen;
+    rt.initialized = true;
+    ui.createUI();
+    discoverScroll();
+    modes.applyWidth();
+    modes.applyReaderType();
+
+    // Re-enter modes that were active before the navigation (fresh DOM), then
+    // fall back to remember-state for full page loads.
+    var reentry = rt.pendingModes || [];
+    rt.pendingModes = null;
+    if (!reentry.length && S.rememberState) {
+      var st = CALM.loadState();
+      if (st.modes) {
+        reentry = Object.keys(st.modes).filter(function (id) {
+          return st.modes[id];
+        });
+      }
+    }
+    reentry.forEach(function (id) {
+      try {
+        modes.enter(id);
+      } catch (_) {}
+    });
+    // Consume unclaimed timer snapshots (mode wasn't re-entered after all).
+    rt.resumePomodoro = null;
+    rt.resumePauseEnd = null;
+    // Floating goal chip is a body-level singleton — re-render it after nav.
+    if (CALM.intent && CALM.intent.renderChip) CALM.intent.renderChip();
+
+    (function attempt(tries) {
+      if (gen !== rt.initGen) return; // superseded by a newer navigation
       rt.composerEl = site.composer();
       if (!rt.composerEl) {
-        if (++tries > 40) return;
-        setTimeout(attempt, 500);
+        if (tries < 120) setTimeout(function () { attempt(tries + 1); }, 500);
         return;
       }
-      rt.initialized = true;
-      ui.createUI();
-      discoverScroll();
-      modes.applyWidth();
-      if (S.rememberState) {
-        var st = CALM.loadState();
-        if (st.modes) {
-          Object.keys(st.modes).forEach(function (id) {
-            if (st.modes[id]) modes.enter(id);
-          });
-        }
-        if (st.composerHidden && !rt.composerHidden) hideComposer();
+      // Zen re-entered above may have wanted the composer hidden but no-oped
+      // because the composer didn't exist yet — honor it now.
+      //
+      // Remember-state is deliberately weaker than Zen here: restoring a
+      // hidden composer onto a BRAND-NEW chat reproduces the worst version of
+      // this feature — nothing to read, and the box you are about to type in
+      // is gone. Zen is a mode the user is currently in, so it still wins.
+      var saved = (S.rememberState && CALM.loadState()) || {};
+      var remembered = !!saved.composerHidden;
+      var zenWants = modes.isActive("zen") && S.zenComposer;
+      var wantHidden = zenWants || (remembered && hasConversation());
+      if (wantHidden && !rt.composerHidden) {
+        // Zen hiding the composer is Zen's own decision. A remembered hide
+        // must come back as the KIND of hide it was, so an automatic one is
+        // still undone by scrolling to the bottom.
+        hideComposer(
+          zenWants ? {} : { auto: !saved.hiddenManually, silent: true }
+        );
       }
-    })();
+    })(0);
   }
 
   CALM.core = {
@@ -327,6 +605,8 @@
     restoreDraft: restoreDraft,
     insertIntoInput: insertIntoInput,
     discoverScroll: discoverScroll,
+    currentScroller: currentScroller,
+    jumpToAnswerStart: jumpToAnswerStart,
     init: init,
   };
 

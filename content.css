@@ -3,80 +3,528 @@
  * Proprietary and source-available; see LICENSE. Not open-source.
  */
 
+/* ================= Calm Maison — design tokens ================= */
+html {
+  --cit-surface: #1c1d20;          /* graphite panel */
+  --cit-glass: rgba(26, 27, 30, 0.88); /* graphite glass */
+  --cit-ink: #ececee;              /* soft near-white */
+  --cit-ink-dim: rgba(236, 236, 238, 0.56);
+  --cit-ink-faint: rgba(236, 236, 238, 0.32);
+  --cit-accent: #c7c8cc;             /* quiet neutral emphasis */
+  --cit-accent-bright: #ececed;      /* raised active fill — lit end */
+  --cit-accent-deep: #cfd0d3;        /* raised active fill — low end */
+  --cit-accent-soft: rgba(255, 255, 255, 0.07);
+  --cit-hairline: rgba(255, 255, 255, 0.08);
+  --cit-hairline-strong: rgba(255, 255, 255, 0.15);
+  /* WCAG 1.4.11 asks 3:1 for a UI component. Measured, not guessed:
+     off knob 3.4:1 (light) and 4.1:1 (dark) against its own track; on
+     knob ~15:1; off track vs on track 10:1 and 11.4:1.
+     A switch reads as ON by INVERTING, not by changing hue. Off is a dark
+     track with a light knob; on is a light track with a dark knob. Both
+     halves flip, so the state is legible at a glance and from the corner of
+     the eye — which is where a settings list is actually read. */
+  --cit-toggle-off-bg: rgba(255, 255, 255, 0.13);
+  --cit-toggle-off-knob: #9a9ba0;
+  --cit-toggle-on-bg: #f0f0f2;
+  --cit-toggle-on-knob: #1b1c1f;
+  /* OPAQUE on purpose. A translucent select background lets the browser's own
+     control canvas — which is white unless told otherwise — show through, so
+     the dark panel grew light native-looking dropdowns. */
+  --cit-select-bg: #26272b;
+  --cit-hairline-accent: rgba(255, 255, 255, 0.18);
+  --cit-fill-soft: rgba(255, 255, 255, 0.045);
+  --cit-break: #9aa8b8;            /* muted steel for breaks */
+  --cit-night-tint: #ff9b3d;
+  --cit-on-accent: #1b1c1f;          /* dark ink on the raised active fill */
+  --cit-accent-ink: #dcdce0;         /* neutral emphasis text/icon */
+  --cit-ring: rgba(255, 255, 255, 0.16);
+  --cit-tray-a: #212226;           /* tray: lit top … */
+  --cit-tray-b: #16171a;           /* … to shadowed base */
+  --cit-tile-a: rgba(255, 255, 255, 0.05);
+  --cit-tile-b: rgba(255, 255, 255, 0.014);
+  --cit-tile-lip: rgba(255, 255, 255, 0.07);
+  --cit-tile-edge: rgba(255, 255, 255, 0.05);
+  --cit-tile-label: rgba(236, 236, 238, 0.4);
+  --cit-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  --cit-serif: Georgia, "Iowan Old Style", "Times New Roman", ui-serif, serif;
+  --cit-ease: cubic-bezier(0.22, 1, 0.36, 1); /* expo-out: graceful, no bounce */
+  --cit-spring: linear(
+    0, 0.19, 0.4, 0.61, 0.77, 0.885, 0.955, 0.99,
+    1.004 82%, 1.001 92%, 1
+  ); /* near-critically damped: 0.4% overshoot, smooth settle */
+}
+html[class*="light"], html[data-theme="light"] {
+  --cit-surface: #f4f4f6;          /* soft paper */
+  --cit-glass: rgba(244, 244, 246, 0.9);
+  --cit-ink: #1c1d20;              /* graphite text */
+  --cit-ink-dim: rgba(28, 29, 32, 0.6);
+  --cit-ink-faint: rgba(28, 29, 32, 0.38);
+  --cit-accent: #48494e;             /* quiet neutral emphasis */
+  --cit-accent-bright: #303134;      /* dark active fill — lit end */
+  --cit-accent-deep: #232427;        /* dark active fill — low end */
+  --cit-accent-soft: rgba(28, 29, 32, 0.05);
+  --cit-hairline: rgba(28, 29, 32, 0.1);
+  --cit-hairline-strong: rgba(28, 29, 32, 0.17);
+  --cit-toggle-off-bg: rgba(28, 29, 32, 0.15);
+  --cit-toggle-off-knob: #6e6f74;
+  --cit-toggle-on-bg: #1c1d20;
+  --cit-toggle-on-knob: #f7f7f8;
+  --cit-select-bg: #ffffff;
+  --cit-hairline-accent: rgba(28, 29, 32, 0.2);
+  --cit-fill-soft: rgba(28, 29, 32, 0.045);
+  --cit-shadow: 0 18px 44px rgba(20, 22, 28, 0.16);
+  --cit-on-accent: #f4f4f6;          /* light ink on the dark active fill */
+  --cit-accent-ink: #303134;
+  --cit-ring: rgba(28, 29, 32, 0.2);
+  --cit-tray-a: #fbfbfc;
+  --cit-tray-b: #eeeef1;
+  --cit-tile-a: rgba(255, 255, 255, 0.9);
+  --cit-tile-b: rgba(28, 29, 32, 0.022);
+  --cit-tile-lip: rgba(255, 255, 255, 0.95);
+  --cit-tile-edge: rgba(28, 29, 32, 0.08);
+  --cit-tile-label: rgba(28, 29, 32, 0.52);
+}
+
+/* Calm's surfaces declare their own scheme, so the native dropdown a <select>
+   opens matches the panel it came from. Deliberately NOT on :root — that is
+   the host page's element, and setting it there would restyle the site's own
+   form controls, which is precisely the bleed the isolation block below
+   exists to prevent. */
+#cit-dock, #cit-console, #cit-palette, #cit-intent-pop, #cit-reader-pane,
+#cit-pomo-widget, #cit-pomo-overlay { color-scheme: dark; }
+html[class*="light"] #cit-dock, html[data-theme="light"] #cit-dock,
+html[class*="light"] #cit-console, html[data-theme="light"] #cit-console,
+html[class*="light"] #cit-palette, html[data-theme="light"] #cit-palette,
+html[class*="light"] #cit-intent-pop, html[data-theme="light"] #cit-intent-pop,
+html[class*="light"] #cit-reader-pane, html[data-theme="light"] #cit-reader-pane {
+  color-scheme: light;
+}
+
+/* ================= Host isolation =================
+   Calm's UI lives inside pages we do not control (React/Tailwind on ChatGPT
+   and Claude, Angular Material on Gemini). Everything inherited — line-height,
+   letter-spacing, direction, white-space, text-indent — reaches our elements
+   unless we stop it. A small inherited line-height was collapsing the live
+   tile's label into a clipped sliver, and a host `dir=rtl` mirrored the whole
+   Console and scrambled its bidi.
+
+   Written with :where() so the whole reset has ZERO specificity: every real
+   rule below wins over it without needing !important. ============== */
+:where(
+  #cit-dock, #cit-console, #cit-palette, #cit-intent-pop, #cit-intent-chip,
+  #cit-pomo-widget, #cit-pomo-overlay, #cit-toast, #cit-chip-stack,
+  #cit-type-chip, #cit-timebar, .cit-fr-bar
+),
+:where(
+  #cit-dock, #cit-console, #cit-palette, #cit-intent-pop, #cit-intent-chip,
+  #cit-pomo-widget, #cit-pomo-overlay, #cit-toast, #cit-chip-stack,
+  #cit-type-chip, #cit-timebar, .cit-fr-bar
+) * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  float: none;
+  vertical-align: baseline;
+  font-style: normal;
+  font-variant: normal;
+  font-stretch: normal;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-indent: 0;
+  text-align: start;
+  text-transform: none;
+  text-decoration: none;
+  text-shadow: none;
+  white-space: normal;
+  /* Calm's own chrome is English and always reads left-to-right, whatever the
+     host page's direction is. Content surfaces are handled separately below. */
+  direction: ltr;
+  unicode-bidi: isolate;
+  writing-mode: horizontal-tb;
+}
+
+/* Typography and colour are set on the ROOTS only, never on descendants:
+   `color: …` on a descendant is a DECLARATION, and a declaration beats
+   inheritance — which silently broke every active control, painting its icon
+   with the base ink on top of the active fill instead of inheriting the
+   active foreground. Elements that must not be crushed by a hostile host
+   declare their own line-height/font-size in their own rule below, which
+   outranks any `*` or type selector the page can write. */
+:where(
+  #cit-dock, #cit-console, #cit-palette, #cit-intent-pop, #cit-intent-chip,
+  #cit-pomo-widget, #cit-pomo-overlay, #cit-toast, #cit-chip-stack,
+  #cit-type-chip, #cit-timebar, .cit-fr-bar
+) {
+  color: var(--cit-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+/* The Focus Reader shows the user's own conversation, so it gets the same
+   protection MINUS anything bidi- or whitespace-related: those must stay free
+   for Hebrew/Arabic paragraphs (dir=auto per block) and for code blocks. */
+:where(#cit-reader-pane, #cit-reader-pane *) {
+  box-sizing: border-box;
+  min-width: 0;
+  float: none;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-indent: 0;
+  text-transform: none;
+  text-shadow: none;
+  font-stretch: normal;
+  writing-mode: horizontal-tb;
+}
+
+/* Every range input Calm owns follows the graphite palette — without this the
+   browser paints its default blue, which is jarring in a monochrome menu. */
+#cit-console input[type="range"],
+#cit-reader-pane input[type="range"],
+.cit-settings-row input[type="range"] {
+  accent-color: var(--cit-accent);
+}
+
 /* ----------------------------------------
-   Floating buttons (shared)
+   The Console — Calm's one menu.
+   A corner-anchored pill that opens a single
+   panel; Advanced slides in as a drawer of the
+   same panel, never a second window.
 ---------------------------------------- */
-.cit-btn {
+#cit-dock {
   position: fixed;
+  bottom: 20px;
   right: 20px;
   z-index: 2147483000;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(52, 53, 65, 0.82);
-  color: #ececf1;
-  font-size: 15px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 0.3s var(--cit-ease);
+}
+#cit-dock.cit-dragging { transition: none !important; }
+#cit-dock.cit-dragging .cit-dock-pill { cursor: grabbing; }
+#cit-dock.cit-quiet {
+  opacity: 0.35;
+  transition: opacity 0.45s var(--cit-ease);
+}
+
+#cit-console {
+  position: absolute;
+  width: 268px;
+  max-width: calc(100vw - 24px);
+  padding: 10px;
+  border-radius: 18px;
+  background: linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
+  box-shadow:
+    inset 0 1px 0 var(--cit-tile-lip),
+    inset 0 0 0 1px var(--cit-hairline-accent),
+    0 26px 60px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transform: scale(0.97);
+  pointer-events: none;
+  transition: opacity 0.24s var(--cit-spring), transform 0.36s var(--cit-spring);
+}
+#cit-dock.cit-corner-br #cit-console { right: 0; bottom: calc(100% + 11px); transform-origin: bottom right; }
+#cit-dock.cit-corner-bl #cit-console { left: 0; bottom: calc(100% + 11px); transform-origin: bottom left; }
+#cit-dock.cit-corner-tr #cit-console { right: 0; top: calc(100% + 11px); transform-origin: top right; }
+#cit-dock.cit-corner-tl #cit-console { left: 0; top: calc(100% + 11px); transform-origin: top left; }
+#cit-dock.cit-dock-open #cit-console {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+/* Live tile — the widest thing in the menu, so it reads first. */
+.cit-live {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.cit-live-main {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 13px;
+  background: linear-gradient(163deg, var(--cit-tile-a), var(--cit-tile-b));
+  box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-tile-edge);
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+.cit-live-main:hover { box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-accent); }
+.cit-live-on .cit-live-main {
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
+}
+.cit-live-time {
+  font-family: var(--cit-serif);
+  font-size: 25px;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  color: var(--cit-ink);
+  font-variant-numeric: tabular-nums;
+}
+.cit-live-on .cit-live-time,
+.cit-live-on .cit-live-sub { color: var(--cit-on-accent); }
+.cit-live-idle[dir="auto"] { unicode-bidi: plaintext; }
+.cit-live-idle {
+  font-family: var(--cit-serif);
+  font-size: 14px;
+  line-height: 1.3;
+  color: var(--cit-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cit-live-sub {
+  margin-top: 3px;
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--cit-tile-label);
+}
+.cit-live-side { display: flex; flex-direction: column; gap: 6px; }
+.cit-live-btn {
+  width: 40px;
+  flex: 1;
+  border: none;
+  border-radius: 11px;
+  background: linear-gradient(163deg, var(--cit-tile-a), var(--cit-tile-b));
+  box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-tile-edge);
+  color: var(--cit-ink);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.32);
-  transition: background 0.2s ease, transform 0.12s ease, opacity 0.2s ease;
   padding: 0;
-  margin: 0;
-  line-height: 1;
-  user-select: none;
-  -webkit-user-select: none;
+  transition: box-shadow 0.18s ease;
 }
-.cit-btn:hover {
-  background: rgba(52, 53, 65, 1);
+.cit-live-btn:hover { box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-accent); }
+.cit-live-btn.cit-active {
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
+  color: var(--cit-on-accent);
 }
-.cit-btn:active {
-  transform: scale(0.92);
-}
-.cit-btn.cit-active {
-  background: #10a37f;
-  border-color: #10a37f;
-  color: #fff;
-}
+.cit-live-btn .cit-svg { width: 16px; height: 16px; }
 
-/* Stack: settings (bottom) → toggle → zen; quick-nav above when composer hidden */
-#cit-settings-btn {
-  bottom: 20px;
+/* Quick tiles — the three things reached most often. */
+.cit-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.cit-qt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 58px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(163deg, var(--cit-tile-a), var(--cit-tile-b));
+  box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-tile-edge);
+  color: var(--cit-ink);
+  cursor: pointer;
+  padding: 0;
+  transition: box-shadow 0.18s ease, transform 0.16s var(--cit-spring);
+}
+.cit-qt:hover { box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-accent); }
+.cit-qt:active { transform: scale(0.97); }
+.cit-qt.cit-active {
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
+  color: var(--cit-on-accent);
+}
+.cit-qt .cit-svg { width: 18px; height: 18px; }
+.cit-qt-label {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  text-indent: 0.15em;
+  color: var(--cit-tile-label);
+}
+.cit-qt.cit-active .cit-qt-label { color: var(--cit-on-accent); }
+
+/* Inline sliders — the two most-adjusted values, no drawer needed. */
+.cit-con-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px 3px;
+}
+.cit-con-slabel {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--cit-tile-label);
+  width: 34px;
+  flex-shrink: 0;
+}
+.cit-con-slider input[type="range"] { flex: 1; }
+.cit-con-sval {
+  font-family: var(--cit-serif);
+  font-size: 11px;
+  color: var(--cit-ink-dim);
   width: 30px;
-  height: 30px;
-  font-size: 13px;
-  background: rgba(52, 53, 65, 0.55);
-  color: rgba(236, 236, 241, 0.55);
-}
-#cit-settings-btn:hover {
-  background: rgba(52, 53, 65, 0.95);
-  color: #ececf1;
-}
-#cit-toggle-btn {
-  bottom: 58px;
-}
-#cit-zen-btn {
-  bottom: 98px;
-}
-#cit-nav-bottom {
-  bottom: 138px;
-  display: none;
-}
-#cit-nav-top {
-  bottom: 178px;
-  display: none;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
-#cit-toggle-btn .cit-icon {
-  display: inline-block;
-  transition: transform 0.3s ease;
+/* Mode chips — small, from the registry. */
+.cit-modes-row { display: flex; flex-wrap: wrap; gap: 5px; padding: 4px 0 2px; }
+.cit-chipm {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border: none;
+  border-radius: 9px;
+  background: var(--cit-fill-soft);
+  box-shadow: inset 0 0 0 1px var(--cit-tile-edge);
+  color: var(--cit-ink-dim);
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
-body.cit-composer-hidden #cit-toggle-btn .cit-icon {
-  transform: rotate(180deg);
+.cit-chipm:hover { color: var(--cit-ink); box-shadow: inset 0 0 0 1px var(--cit-hairline-strong); }
+.cit-chipm.cit-active {
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
+  color: var(--cit-on-accent);
+}
+.cit-chipm-ic { display: inline-flex; }
+.cit-chipm .cit-svg { width: 13px; height: 13px; }
+
+/* Footer + the Advanced drawer */
+.cit-con-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--cit-hairline);
+}
+.cit-con-hint {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--cit-ink-faint);
+}
+.cit-con-adv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: var(--cit-ink-dim);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  padding: 4px 2px;
+  transition: color 0.18s ease;
+}
+.cit-con-adv-btn:hover { color: var(--cit-ink); }
+.cit-con-adv-btn .cit-svg { width: 12px; height: 12px; transform: rotate(180deg); }
+.cit-con-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--cit-hairline);
+}
+.cit-con-back {
+  border: none;
+  background: transparent;
+  color: var(--cit-ink-dim);
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+}
+.cit-con-back:hover { color: var(--cit-ink); }
+.cit-con-back .cit-svg { width: 14px; height: 14px; }
+.cit-con-title {
+  font-family: var(--cit-serif);
+  font-size: 10px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--cit-ink-faint);
+}
+.cit-con-scroll {
+  max-height: 58vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+
+@keyframes cit-spring-in {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+
+.cit-dock-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--cit-hairline-strong);
+  background: var(--cit-glass);
+  color: var(--cit-ink);
+  cursor: grab;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  line-height: 1;
+}
+.cit-dock-pill:hover {
+  background: var(--cit-glass);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+}
+/* The seal answers when the tray is open. */
+#cit-dock.cit-dock-open .cit-dock-pill {
+  border-color: var(--cit-hairline-accent);
+  box-shadow: 0 0 0 3px var(--cit-ring), 0 8px 26px rgba(0, 0, 0, 0.5);
+}
+#cit-dock.cit-dock-open .cit-dock-mark {
+  color: var(--cit-accent-bright);
+}
+.cit-dock-mark {
+  font-size: 15px;
+  color: var(--cit-accent);
+  transition: color 0.25s var(--cit-ease);
+}
+.cit-dock-status {
+  font-size: 12px;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--cit-ink);
+}
+
+/* Drag affordances */
+.cit-dragging {
+  transition: none !important;
+  cursor: grabbing !important;
+}
+#cit-intent-chip {
+  cursor: grab;
+}
+#cit-pomo-widget {
+  cursor: grab;
+}
+
+/* Reduced motion: kill Calm's own animations too */
+@media (prefers-reduced-motion: reduce) {
+  #cit-dock .cit-qt,
+  #cit-console,
+      #cit-intent-pop {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 /* ----------------------------------------
@@ -86,15 +534,15 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   position: fixed;
   bottom: 92px;
   right: 62px;
-  z-index: 2147483002;
+  z-index: 2147482900; /* below the Focus Reader */
   padding: 8px 13px;
   border-radius: 999px;
-  background: rgba(20, 21, 28, 0.92);
-  color: #ececf1;
+  background: var(--cit-glass);
+  color: var(--cit-ink);
   font-size: 12.5px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--cit-hairline);
   opacity: 0;
   transform: translateY(6px);
   pointer-events: none;
@@ -109,72 +557,20 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
 /* ----------------------------------------
    Settings panel
 ---------------------------------------- */
-#cit-settings-panel {
-  position: fixed;
-  bottom: 58px;
-  right: 14px;
-  z-index: 2147483001;
-  width: 290px;
-  max-height: 80vh;
-  overflow-y: auto;
-  background: #2a2b36;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  padding: 12px 16px 14px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  animation: cit-panel-in 0.16s ease;
-}
-@keyframes cit-panel-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-.cit-settings-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
-.cit-settings-title {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(236, 236, 241, 0.5);
-}
-.cit-settings-close {
-  width: 22px;
-  height: 22px;
-  border: none;
-  background: transparent;
-  color: rgba(236, 236, 241, 0.45);
-  font-size: 13px;
-  cursor: pointer;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.cit-settings-close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ececf1;
-}
 .cit-settings-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 9px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--cit-fill-soft);
 }
 .cit-settings-row:last-child {
   border-bottom: none;
 }
 .cit-settings-row > span {
   font-size: 13px;
-  color: #ececf1;
+  color: var(--cit-ink);
   user-select: none;
 }
 
@@ -184,7 +580,7 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   width: 38px;
   height: 22px;
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--cit-toggle-off-bg);
   cursor: pointer;
   flex-shrink: 0;
   border: none;
@@ -192,7 +588,7 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   transition: background 0.2s ease;
 }
 .cit-toggle-switch.cit-on {
-  background: #10a37f;
+  background: var(--cit-toggle-on-bg);
 }
 .cit-toggle-knob {
   position: absolute;
@@ -201,12 +597,13 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #fff;
-  transition: transform 0.2s ease;
+  background: var(--cit-toggle-off-knob);
+  transition: transform 0.2s ease, background 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 .cit-toggle-switch.cit-on .cit-toggle-knob {
   transform: translateX(16px);
+  background: var(--cit-toggle-on-knob);
 }
 
 /* slider rows */
@@ -222,58 +619,17 @@ body.cit-composer-hidden #cit-toggle-btn .cit-icon {
 }
 .cit-slider-top span {
   font-size: 13px;
-  color: #ececf1;
+  color: var(--cit-ink);
 }
 .cit-slider-val {
-  color: #10a37f !important;
+  color: var(--cit-accent) !important;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
 .cit-slider {
   width: 100%;
-  accent-color: #10a37f;
+  accent-color: var(--cit-accent);
   cursor: pointer;
-}
-
-/* ----------------------------------------
-   Light mode
----------------------------------------- */
-html[class*="light"] .cit-btn,
-html[data-theme="light"] .cit-btn {
-  background: rgba(255, 255, 255, 0.9);
-  color: #343541;
-  border-color: rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14);
-}
-html[class*="light"] .cit-btn:hover,
-html[data-theme="light"] .cit-btn:hover {
-  background: #fff;
-}
-html[class*="light"] .cit-btn.cit-active,
-html[data-theme="light"] .cit-btn.cit-active {
-  background: #10a37f;
-  color: #fff;
-}
-html[class*="light"] #cit-settings-panel,
-html[data-theme="light"] #cit-settings-panel {
-  background: #f7f7f8;
-  border-color: rgba(0, 0, 0, 0.1);
-}
-html[class*="light"] .cit-settings-title,
-html[class*="light"] .cit-settings-row > span,
-html[class*="light"] .cit-slider-top span,
-html[data-theme="light"] .cit-settings-title,
-html[data-theme="light"] .cit-settings-row > span,
-html[data-theme="light"] .cit-slider-top span {
-  color: #343541;
-}
-html[class*="light"] .cit-settings-row,
-html[data-theme="light"] .cit-settings-row {
-  border-color: rgba(0, 0, 0, 0.07);
-}
-html[class*="light"] .cit-toggle-switch,
-html[data-theme="light"] .cit-toggle-switch {
-  background: rgba(0, 0, 0, 0.18);
 }
 
 /* ----------------------------------------
@@ -289,12 +645,12 @@ html[data-theme="light"] .cit-toggle-switch {
   gap: 6px;
   padding: 7px 12px;
   border-radius: 999px;
-  background: rgba(20, 21, 28, 0.94);
-  color: #ececf1;
+  background: var(--cit-glass);
+  color: var(--cit-ink);
   font-size: 12.5px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--cit-hairline);
   opacity: 0;
   transform: translateY(6px);
   pointer-events: none;
@@ -310,7 +666,7 @@ html[data-theme="light"] .cit-toggle-switch {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #10a37f;
+  background: var(--cit-accent);
   animation: cit-pulse 1s ease-in-out infinite;
   flex-shrink: 0;
 }
@@ -327,35 +683,41 @@ html[data-theme="light"] .cit-toggle-switch {
   margin-left: 4px;
   padding: 1px 6px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--cit-hairline-strong);
   font-size: 11px;
-  color: rgba(236, 236, 241, 0.7);
+  color: var(--cit-ink);
 }
 
 .cit-select {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ececf1;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* Without appearance:none the platform paints its OWN control and ignores
+     every colour below it — which is why these read as light native widgets
+     on a dark panel. Now that the settings drawer is built almost entirely
+     out of selects, that is the difference between a designed panel and a
+     form. The chevron is inlined as a data: URI, so nothing is fetched. */
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: var(--cit-select-bg);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239a9ba0' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  color: var(--cit-ink);
+  border: 1px solid var(--cit-hairline-strong);
   border-radius: 7px;
-  padding: 4px 8px;
+  padding: 4px 26px 4px 9px;
   font-size: 12.5px;
   cursor: pointer;
   outline: none;
+  max-width: 62%;
+  text-overflow: ellipsis;
+}
+.cit-select:hover { border-color: var(--cit-hairline-accent); }
+.cit-select:focus-visible {
+  border-color: var(--cit-ink-dim);
+  box-shadow: 0 0 0 2px var(--cit-hairline-strong);
 }
 .cit-select option {
-  background: #2a2b36;
-  color: #ececf1;
-}
-html[class*="light"] .cit-select,
-html[data-theme="light"] .cit-select {
-  background: rgba(0, 0, 0, 0.06);
-  color: #343541;
-  border-color: rgba(0, 0, 0, 0.15);
-}
-html[class*="light"] .cit-select option,
-html[data-theme="light"] .cit-select option {
-  background: #fff;
-  color: #343541;
+  background: var(--cit-surface);
+  color: var(--cit-ink);
 }
 
 /* ----------------------------------------
@@ -366,26 +728,371 @@ html[data-theme="light"] .cit-select option {
   inset: 0;
   z-index: 2147482000; /* below Calm's own UI so buttons stay bright */
   pointer-events: none;
-  background: #ff9b3d;
+  background: var(--cit-night-tint);
   mix-blend-mode: multiply;
   opacity: var(--cit-night-opacity, 0.35);
   transition: opacity 0.25s ease;
 }
 
-/* Presentation mode hides ALL Calm UI for clean capture/sharing. */
-html.cit-presentation .cit-btn,
-html.cit-presentation #cit-settings-panel,
+/* ----------------------------------------
+   Focus time bar — time as a shape.
+---------------------------------------- */
+#cit-timebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 2147483001;
+  background: var(--cit-hairline);
+  pointer-events: none;
+}
+#cit-timebar .cit-timebar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--cit-accent);
+  transition: width 1s linear;
+}
+#cit-timebar.cit-timebar-break .cit-timebar-fill {
+  background: var(--cit-break);
+}
+
+/* ----------------------------------------
+   Reading ruler (ADHD attention anchor):
+   a cursor-following band; the huge box-
+   shadows dim everything above and below.
+---------------------------------------- */
+#cit-ruler {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 40vh;
+  height: var(--cit-ruler-h, 90px);
+  z-index: 2147481500; /* above site content, below Calm buttons */
+  pointer-events: none;
+  box-shadow:
+    0 -100vh 0 100vh rgba(8, 10, 16, var(--cit-ruler-dim, 0.45)),
+    0 100vh 0 100vh rgba(8, 10, 16, var(--cit-ruler-dim, 0.45));
+  border-top: 1px solid var(--cit-hairline);
+  border-bottom: 1px solid var(--cit-hairline);
+}
+
+/* Presentation mode hides ALL Calm UI for clean capture/sharing —
+   except the toast, which carries the "press Esc to exit" hint. */
+html.cit-presentation #cit-dock,
+html.cit-presentation #cit-back,
+html.cit-presentation #cit-palette,
+html.cit-presentation #cit-reader-pane,
 html.cit-presentation #cit-type-chip,
 html.cit-presentation #cit-chip-stack,
-html.cit-presentation #cit-toast {
+html.cit-presentation #cit-intent-chip,
+html.cit-presentation #cit-intent-pop,
+html.cit-presentation #cit-timebar,
+html.cit-presentation #cit-pomo-widget,
+html.cit-presentation #cit-pomo-overlay,
+html.cit-presentation #cit-ruler,
+html.cit-presentation #cit-night-overlay {
   display: none !important;
 }
+
+/* ----------------------------------------
+   Focus panel: intention chip + popover
+---------------------------------------- */
+#cit-intent-chip {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483000;
+  max-width: 46vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--cit-hairline-strong);
+  background: var(--cit-glass);
+  color: var(--cit-ink);
+  font-size: 12.5px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+#cit-intent-chip:hover {
+  background: var(--cit-glass);
+}
+#cit-intent-chip.cit-intent-empty {
+  color: var(--cit-ink-dim);
+}
+#cit-intent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.cit-intent-chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cit-intent-x {
+  display: none;
+  color: var(--cit-ink-dim);
+  font-size: 11px;
+  padding: 1px 3px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+#cit-intent-chip:hover .cit-intent-x {
+  display: inline;
+}
+.cit-intent-x:hover {
+  background: var(--cit-hairline-strong);
+  color: var(--cit-ink);
+}
+
+#cit-intent-pop {
+  position: fixed;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483002;
+  width: 296px;
+  max-width: calc(100vw - 24px);
+  /* Same lacquer as the bloom tray — one family of objects. */
+  background:
+    radial-gradient(120% 62% at 50% -8%, rgba(255, 255, 255, 0.05), transparent 62%),
+    linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
+  border: none;
+  border-radius: 18px;
+  padding: 13px 14px 12px;
+  box-shadow:
+    inset 0 1px 0 var(--cit-tile-lip),
+    inset 0 0 0 1px var(--cit-hairline-accent),
+    0 28px 64px rgba(0, 0, 0, 0.6);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  animation: cit-panel-in 0.2s var(--cit-spring);
+}
+
+/* Engraved lid */
+.cit-intent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--cit-hairline);
+  font-family: var(--cit-serif);
+  font-size: 9.5px;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  text-transform: uppercase;
+  color: var(--cit-ink-faint);
+}
+.cit-intent-close {
+  border: none;
+  background: transparent;
+  color: var(--cit-ink-faint);
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  transition: color 0.18s ease;
+}
+.cit-intent-close:hover { color: var(--cit-ink); }
+.cit-intent-close .cit-svg { width: 13px; height: 13px; }
+
+.cit-intent-title {
+  font-family: var(--cit-serif);
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--cit-ink);
+  margin: 11px 0 8px;
+}
+
+/* Section rule: tracked micro-label, meta on the right */
+.cit-intent-sec {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 13px 0 6px;
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.17em;
+  color: var(--cit-ink-faint);
+}
+.cit-intent-meta {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+.cit-kbd {
+  font-family: inherit;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  padding: 2px 5px;
+  border-radius: 5px;
+  color: var(--cit-ink-faint);
+  background: var(--cit-fill-soft);
+  box-shadow: inset 0 0 0 1px var(--cit-tile-edge);
+}
+
+/* Fields carry the tile material; the goal is the loudest by design. */
+.cit-intent-goal,
+.cit-intent-add,
+.cit-intent-park {
+  width: 100%;
+  box-sizing: border-box;
+  background: linear-gradient(163deg, var(--cit-tile-a), var(--cit-tile-b));
+  border: none;
+  box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-tile-edge);
+  border-radius: 10px;
+  color: var(--cit-ink);
+  outline: none;
+  transition: box-shadow 0.2s ease;
+}
+.cit-intent-goal[dir="auto"],
+.cit-intent-chip-text[dir="auto"] { unicode-bidi: plaintext; }
+.cit-intent-goal {
+  font-family: var(--cit-serif);
+  font-size: 14px;
+  padding: 9px 11px;
+}
+.cit-intent-add,
+.cit-intent-park {
+  font-size: 12px;
+  padding: 7px 10px;
+}
+.cit-intent-goal::placeholder,
+.cit-intent-add::placeholder,
+.cit-intent-park::placeholder {
+  color: var(--cit-ink-faint);
+}
+.cit-intent-goal:focus,
+.cit-intent-add:focus,
+.cit-intent-park:focus {
+  box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-accent),
+    0 0 0 3px var(--cit-ring);
+}
+
+.cit-intent-tasks { margin-bottom: 6px; }
+.cit-intent-task {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 2px;
+  color: var(--cit-ink);
+  font-size: 12.5px;
+}
+.cit-intent-task.cit-done span {
+  text-decoration: line-through;
+  color: var(--cit-ink-faint);
+}
+.cit-intent-task span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cit-intent-box {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  border: none;
+  box-shadow: inset 0 0 0 1.2px var(--cit-hairline-strong);
+  background: transparent;
+  color: var(--cit-on-accent);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: box-shadow 0.18s ease, background 0.18s ease;
+}
+.cit-intent-box:hover { box-shadow: inset 0 0 0 1.2px var(--cit-accent); }
+.cit-intent-task.cit-done .cit-intent-box {
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
+  box-shadow: inset 0 0 0 1px var(--cit-accent-bright);
+}
+.cit-intent-del {
+  border: none;
+  background: transparent;
+  color: var(--cit-ink-faint);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 3px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.18s ease, color 0.18s ease;
+}
+.cit-intent-task:hover .cit-intent-del,
+.cit-intent-note:hover .cit-intent-del { opacity: 1; }
+.cit-intent-del:hover { color: var(--cit-ink); }
+
+.cit-intent-notes { margin-bottom: 6px; }
+.cit-intent-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px 4px 9px;
+  font-size: 12px;
+  color: var(--cit-ink-dim);
+  border-left: 1px solid var(--cit-hairline-accent);
+  margin-bottom: 3px;
+}
+.cit-intent-note span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A card that asks for a commitment offers a way to make one. */
+.cit-intent-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid var(--cit-hairline);
+}
+.cit-intent-later {
+  border: none;
+  background: transparent;
+  color: var(--cit-ink-faint);
+  font-size: 11.5px;
+  cursor: pointer;
+  padding: 6px 8px;
+  transition: color 0.18s ease;
+}
+.cit-intent-later:hover { color: var(--cit-ink-dim); }
+.cit-intent-begin {
+  border: none;
+  border-radius: 9px;
+  padding: 7px 18px;
+  font-family: var(--cit-serif);
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  color: var(--cit-on-accent);
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 4px 14px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.16s var(--cit-spring), box-shadow 0.2s ease;
+}
+.cit-intent-begin:hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+.cit-intent-begin:active { transform: scale(0.97); }
 
 #cit-chip-stack {
   position: fixed;
   right: 20px;
   bottom: 224px;
-  z-index: 2147483002;
+  z-index: 2147482900; /* below the Focus Reader: a nag must never cover it */
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -395,8 +1102,10 @@ html.cit-presentation #cit-toast {
 .cit-chip {
   padding: 7px 13px;
   border-radius: 999px;
-  background: rgba(16, 163, 127, 0.95);
-  color: #fff;
+  background: var(--cit-accent);
+  /* --cit-accent is a light grey since the monochrome pass; ink on it measured
+     1.42:1. The on-accent token is the readable counterpart. */
+  color: var(--cit-on-accent);
   font-size: 12.5px;
   font-weight: 600;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -414,15 +1123,10 @@ html.cit-presentation #cit-toast {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(236, 236, 241, 0.4);
+  color: var(--cit-ink-dim);
   margin: 12px 0 2px;
   padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-html[class*="light"] .cit-settings-divider,
-html[data-theme="light"] .cit-settings-divider {
-  color: rgba(52, 53, 65, 0.45);
-  border-color: rgba(0, 0, 0, 0.08);
+  border-top: 1px solid var(--cit-hairline);
 }
 
 /* ----------------------------------------
@@ -438,8 +1142,8 @@ html[data-theme="light"] .cit-settings-divider {
   gap: 10px;
   padding: 8px 14px 8px 8px;
   border-radius: 999px;
-  background: rgba(20, 21, 28, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--cit-glass);
+  border: 1px solid var(--cit-hairline-strong);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -457,7 +1161,7 @@ html[data-theme="light"] .cit-settings-divider {
   position: absolute;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  color: #fff;
+  color: var(--cit-ink);
 }
 #cit-pomo-widget .cit-pomo-time {
   font-size: 12px;
@@ -470,22 +1174,22 @@ html[data-theme="light"] .cit-settings-divider {
 .cit-pomo-meta .cit-pomo-label {
   font-size: 12.5px;
   font-weight: 600;
-  color: #ececf1;
+  color: var(--cit-ink);
 }
 .cit-pomo-meta .cit-pomo-expand {
   font-size: 10.5px;
-  color: rgba(236, 236, 241, 0.5);
+  color: var(--cit-ink-dim);
 }
 
 /* Ring */
 .cit-pomo-ring .cit-pomo-track {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.14);
+  stroke: var(--cit-hairline-strong);
   stroke-width: 5;
 }
 .cit-pomo-ring .cit-pomo-prog {
   fill: none;
-  stroke: #10a37f;
+  stroke: var(--cit-accent);
   stroke-width: 5;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.95s linear, stroke 0.4s ease;
@@ -506,7 +1210,7 @@ html[data-theme="light"] .cit-settings-divider {
   justify-content: center;
   background: radial-gradient(
       1200px 800px at 50% 40%,
-      rgba(16, 163, 127, 0.12),
+      rgba(255, 255, 255, 0.06),
       transparent 60%
     ),
     rgba(12, 13, 18, 0.9);
@@ -539,7 +1243,7 @@ html[data-theme="light"] .cit-settings-divider {
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(236, 236, 241, 0.65);
+  color: var(--cit-ink-dim);
 }
 .cit-pomo-ringwrap-lg {
   animation: cit-breathe 5s ease-in-out infinite;
@@ -560,10 +1264,10 @@ html[data-theme="light"] .cit-settings-divider {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--cit-hairline-strong);
 }
 .cit-pomo-dots .cit-dot-on {
-  background: #10a37f;
+  background: var(--cit-accent);
 }
 .cit-pomo-break .cit-pomo-dots .cit-dot-on {
   background: #f59e0b;
@@ -576,9 +1280,9 @@ html[data-theme="light"] .cit-settings-divider {
   margin-top: 6px;
 }
 .cit-pomo-btn {
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  color: #ececf1;
+  border: 1px solid var(--cit-hairline-strong);
+  background: var(--cit-fill-soft);
+  color: var(--cit-ink);
   border-radius: 10px;
   padding: 9px 15px;
   font-size: 13px;
@@ -586,7 +1290,7 @@ html[data-theme="light"] .cit-settings-divider {
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 .cit-pomo-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--cit-hairline-strong);
 }
 .cit-pomo-close:hover {
   background: #b3261e;
@@ -602,9 +1306,9 @@ html[data-theme="light"] .cit-settings-divider {
   align-items: center;
 }
 .cit-mini-btn {
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.08);
-  color: #ececf1;
+  border: 1px solid var(--cit-hairline-strong);
+  background: var(--cit-hairline);
+  color: var(--cit-ink);
   border-radius: 7px;
   padding: 3px 10px;
   font-size: 12px;
@@ -612,24 +1316,25 @@ html[data-theme="light"] .cit-settings-divider {
   transition: background 0.15s ease;
 }
 .cit-mini-btn:hover {
-  background: #10a37f;
-  border-color: #10a37f;
+  background: var(--cit-accent);
+  border-color: var(--cit-accent);
+  color: var(--cit-on-accent); /* ink on this fill measured 1.42:1 */
 }
 .cit-mini-btn.cit-del {
   padding: 3px 7px;
-  color: rgba(236, 236, 241, 0.6);
+  color: var(--cit-ink-dim);
 }
 .cit-mini-btn.cit-del:hover {
   background: #b3261e;
   border-color: #b3261e;
-  color: #fff;
+  color: var(--cit-ink);
 }
 .cit-save-preset {
   width: 100%;
   margin-top: 8px;
-  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border: 1px dashed var(--cit-hairline-strong);
   background: transparent;
-  color: rgba(236, 236, 241, 0.7);
+  color: var(--cit-ink);
   border-radius: 9px;
   padding: 8px;
   font-size: 12.5px;
@@ -637,57 +1342,16 @@ html[data-theme="light"] .cit-settings-divider {
   transition: background 0.15s ease, color 0.15s ease;
 }
 .cit-save-preset:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #ececf1;
-}
-html[class*="light"] .cit-mini-btn,
-html[data-theme="light"] .cit-mini-btn {
-  background: rgba(0, 0, 0, 0.05);
-  color: #343541;
-  border-color: rgba(0, 0, 0, 0.15);
-}
-html[class*="light"] .cit-save-preset,
-html[data-theme="light"] .cit-save-preset {
-  color: rgba(52, 53, 65, 0.7);
-  border-color: rgba(0, 0, 0, 0.2);
+  background: var(--cit-fill-soft);
+  color: var(--cit-ink);
 }
 
 /* ----------------------------------------
    Tabbed settings
 ---------------------------------------- */
-.cit-tabbar {
-  display: flex;
-  gap: 2px;
-  margin: 4px 0 10px;
-  padding: 3px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
-}
-.cit-tab {
-  flex: 1;
-  border: none;
-  background: transparent;
-  color: rgba(236, 236, 241, 0.6);
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 6px 4px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.cit-tab:hover {
-  color: #ececf1;
-}
-.cit-tab.cit-tab-on {
-  background: rgba(16, 163, 127, 0.9);
-  color: #fff;
-}
-.cit-tab-content {
-  min-height: 60px;
-}
 .cit-about {
   padding: 6px 2px;
-  color: #ececf1;
+  color: var(--cit-ink);
 }
 .cit-about-name {
   font-size: 22px;
@@ -696,77 +1360,669 @@ html[data-theme="light"] .cit-save-preset {
 }
 .cit-about-ver {
   font-size: 12px;
-  color: rgba(236, 236, 241, 0.5);
+  color: var(--cit-ink-dim);
   margin-bottom: 10px;
 }
 .cit-about p {
   font-size: 12.5px;
   line-height: 1.5;
   margin: 8px 0;
-  color: rgba(236, 236, 241, 0.8);
+  color: var(--cit-ink);
 }
 .cit-about .cit-about-dim {
-  color: rgba(236, 236, 241, 0.5);
+  color: var(--cit-ink-dim);
 }
-.cit-about .cit-about-pro {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(16, 163, 127, 0.15);
-  color: #10a37f;
-  font-weight: 600;
-  font-size: 12px;
-}
-html[class*="light"] .cit-tabbar,
-html[data-theme="light"] .cit-tabbar {
-  background: rgba(0, 0, 0, 0.05);
-}
-html[class*="light"] .cit-tab,
-html[data-theme="light"] .cit-tab {
-  color: rgba(52, 53, 65, 0.6);
-}
-html[class*="light"] .cit-about,
-html[data-theme="light"] .cit-about {
-  color: #343541;
-}
-html[class*="light"] .cit-about p,
-html[data-theme="light"] .cit-about p {
-  color: rgba(52, 53, 65, 0.8);
-}
-
+.cit-about 
 /* ----------------------------------------
    Responsive
 ---------------------------------------- */
 @media (max-width: 480px) {
-  .cit-btn {
-    right: 12px;
-    width: 32px;
-    height: 32px;
-  }
-  #cit-settings-panel {
-    right: 8px;
-    width: calc(100vw - 16px);
-  }
-  #cit-toast {
-    right: 12px;
-    bottom: 116px;
-    max-width: calc(100vw - 24px);
-    white-space: normal;
-  }
+  #cit-console { width: calc(100vw - 24px); }
+  #cit-toast { left: 12px; right: 12px; transform: none; text-align: center; }
 }
 
 /* ----------------------------------------
    Account tab (cloud sync)
 ---------------------------------------- */
-.cit-account {
-  padding: 4px 2px;
+
+/* ================= Calm Maison — finishing layer =================
+   Typography, gold hairlines, shimmer, and SVG sizing. Appended last so
+   the cascade lets these refine the component rules above. */
+
+/* SVG icon sizing */
+.cit-svg { width: 16px; height: 16px; display: block; }
+.cit-svg-mark { width: 20px; height: 20px; }
+.cit-row-ic { display: inline-flex; margin-right: 9px; color: var(--cit-accent); vertical-align: middle; }
+.cit-row-ic .cit-svg { width: 15px; height: 15px; }
+.cit-row-label { display: inline-flex; align-items: center; }
+.cit-dock-mark { display: inline-flex; }
+#cit-intent-chip .cit-row-ic { margin-right: 2px; }
+
+/* Hairline + deep shadow on every raised surface */
+.cit-dock-pill,
+#cit-intent-chip,
+#cit-pomo-widget,
+.cit-pomo-card,
+.cit-chip,
+#cit-toast,
+#cit-type-chip {
+  box-shadow: inset 0 0 0 1px var(--cit-hairline-accent), var(--cit-shadow);
+  border-color: transparent;
 }
-.cit-account-who {
+
+/* Serif voice: titles, dock status, pomodoro numerals */
+.cit-dock-status { font-family: var(--cit-serif); }
+.cit-pomo-time { font-family: var(--cit-serif) !important; letter-spacing: 0.05em; }
+/* Scoped so it cannot override the break ring, which is deliberately warm. */
+.cit-pomo-ring .cit-pomo-prog { stroke: var(--cit-accent); }
+
+/* Uppercase spaced tabs with an active underline */
+
+/* Panel breathing room + control accents */
+.cit-settings-row { padding: 11px 0; }
+.cit-slider { accent-color: var(--cit-accent); }
+.cit-settings-divider { color: var(--cit-accent-deep); border-color: var(--cit-hairline-accent); letter-spacing: 0.14em; }
+.cit-slider-val { color: var(--cit-accent) !important; font-family: var(--cit-serif); }
+
+
+/* Timebar */
+#cit-timebar .cit-timebar-fill { background: linear-gradient(90deg, var(--cit-accent-deep), var(--cit-accent-bright)); }
+#cit-timebar.cit-timebar-break .cit-timebar-fill { background: var(--cit-break); }
+
+/* ----------------------------------------
+   Focus Reader — Calm's own reading surface.
+   Full-screen quiet pane; typography we own.
+---------------------------------------- */
+#cit-reader-pane {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483001;
+  overscroll-behavior: contain; /* never scroll-chain into the chat behind */
+  outline: none;
+  background:
+    radial-gradient(120% 50% at 50% -8%, rgba(255, 255, 255, 0.04), transparent 60%),
+    var(--cit-tray-b);
+  overflow-y: auto;
+  font-family: var(--cit-serif);
+  animation: cit-fr-in 0.32s var(--cit-ease);
+}
+@keyframes cit-fr-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.cit-fr-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--cit-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--cit-hairline);
+}
+.cit-fr-brand {
+  font-family: var(--cit-serif);
+  font-size: 10px;
+  letter-spacing: 0.38em;
+  text-indent: 0.38em;
+  text-transform: uppercase;
+  color: var(--cit-ink-faint);
+  white-space: nowrap;
+}
+.cit-fr-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.cit-fr-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 10px;
   font-weight: 600;
-  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--cit-ink-dim);
+  background: var(--cit-fill-soft);
+  box-shadow: inset 0 0 0 1px var(--cit-tile-edge);
+  cursor: pointer;
+  transition: color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
-.cit-account-err {
-  margin-top: 8px;
-  color: #e5484d;
+.cit-fr-btn:hover {
+  color: var(--cit-ink);
+  box-shadow: inset 0 0 0 1px var(--cit-hairline-strong);
+}
+.cit-fr-btn.cit-active {
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
+  color: var(--cit-on-accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.cit-fr-ic {
+  border: none;
+  background: transparent;
+  color: var(--cit-ink-dim);
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  transition: color 0.18s ease;
+}
+.cit-fr-ic:hover { color: var(--cit-ink); }
+.cit-fr-ic .cit-svg { width: 15px; height: 15px; }
+.cit-fr-range {
+  width: 84px;
+  accent-color: var(--cit-accent);
+}
+.cit-fr-body {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 44px 28px 30vh;
+  color: var(--cit-ink);
+  font-size: var(--cit-fr-size, 18px);
+  line-height: 1.75;
+}
+.cit-fr-body .cit-blk { margin: 0 0 1.1em; }
+.cit-fr-body h1, .cit-fr-body h2, .cit-fr-body h3,
+.cit-fr-body h4, .cit-fr-body h5, .cit-fr-body h6 {
+  font-family: var(--cit-serif);
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.6em 0 0.6em;
+  color: var(--cit-ink);
+}
+.cit-fr-body h1 { font-size: 1.5em; }
+.cit-fr-body h2 { font-size: 1.3em; }
+.cit-fr-body h3 { font-size: 1.15em; }
+.cit-fr-body ul, .cit-fr-body ol { padding-inline-start: 1.4em; }
+.cit-fr-body li { margin: 0.35em 0; }
+.cit-fr-body pre {
+  white-space: pre;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78em;
+  line-height: 1.6;
+  background: var(--cit-fill-soft);
+  box-shadow: inset 0 0 0 1px var(--cit-hairline);
+  border-radius: 10px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  direction: ltr; /* code stays LTR even in RTL paragraphs */
+}
+.cit-fr-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+}
+.cit-fr-body blockquote {
+  margin: 1em 0;
+  padding: 2px 0 2px 16px;
+  border-inline-start: 1px solid var(--cit-hairline-strong);
+  color: var(--cit-ink-dim);
+}
+.cit-fr-body a {
+  color: var(--cit-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--cit-hairline-strong);
+  text-underline-offset: 3px;
+}
+.cit-fr-body table { border-collapse: collapse; width: 100%; font-size: 0.9em; }
+.cit-fr-body td, .cit-fr-body th {
+  border: 1px solid var(--cit-hairline);
+  padding: 6px 10px;
+  text-align: start;
+}
+/* Bionic fixation anchors: weight only — same ink, no color shift. */
+.cit-fr-body .cit-fx { font-weight: 700; }
+/* Ease: dyslexia-friendly spacing on a plain sans face. */
+#cit-reader-pane.cit-fr-ease .cit-fr-body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Verdana, sans-serif;
+  letter-spacing: 0.03em;
+  word-spacing: 0.14em;
+  line-height: 1.9;
+}
+/* Spotlight: the current block carries the ink; the rest recede. */
+#cit-reader-pane.cit-fr-spot .cit-blk {
+  opacity: 0.22;
+  transition: opacity 0.25s var(--cit-ease);
+}
+#cit-reader-pane.cit-fr-spot .cit-blk.cit-blk-on { opacity: 1; }
+.cit-fr-empty {
+  text-align: center;
+  padding: 18vh 0;
+  color: var(--cit-ink-dim);
+}
+.cit-fr-empty p {
+  font-style: italic;
+  margin-bottom: 18px;
+}
+@media (prefers-reduced-motion: reduce) {
+  #cit-reader-pane { animation: none; }
+  #cit-reader-pane.cit-fr-spot .cit-blk { transition: none; }
+}
+
+/* ----------------------------------------
+   Command palette (Ctrl/Cmd+K) — every mode,
+   action and setting in one keystroke, which
+   is what lets the Console stay small.
+---------------------------------------- */
+#cit-palette {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483003;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 18vh;
+  background: rgba(0, 0, 0, 0.32);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  animation: cit-pal-in 0.16s var(--cit-ease);
+}
+@keyframes cit-pal-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.cit-pal-box {
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
+  box-shadow:
+    inset 0 1px 0 var(--cit-tile-lip),
+    inset 0 0 0 1px var(--cit-hairline-accent),
+    0 30px 70px rgba(0, 0, 0, 0.6);
+}
+.cit-pal-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--cit-hairline);
+}
+.cit-pal-tag {
+  font-family: var(--cit-serif);
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: var(--cit-ink-faint);
+  flex-shrink: 0;
+}
+.cit-pal-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--cit-ink);
+  font-size: 14px;
+  font-family: inherit;
+}
+.cit-pal-input::placeholder { color: var(--cit-ink-faint); }
+.cit-pal-list { padding: 6px; }
+.cit-pal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--cit-ink-dim);
+  cursor: pointer;
+}
+.cit-pal-row.cit-pal-on {
+  background: var(--cit-fill-soft);
+  box-shadow: inset 0 0 0 1px var(--cit-hairline-strong);
+  color: var(--cit-ink);
+}
+.cit-pal-state {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--cit-ink-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cit-pal-empty {
+  padding: 14px 10px;
   font-size: 12px;
+  font-style: italic;
+  color: var(--cit-ink-faint);
+}
+@media (prefers-reduced-motion: reduce) {
+  #cit-palette { animation: none; }
+}
+
+/* An input tile the user has switched off: still present so the row keeps its
+   three columns, but visibly inert. */
+.cit-qt.cit-qt-dim { opacity: 0.3; pointer-events: none; }
+
+.cit-ic { display: inline-flex; align-items: center; justify-content: center; }
+
+/* ----------------------------------------
+   The Margin — controls as marginalia.
+   No card, no border, no background: marks in
+   the empty gutter beside the text, at rest
+   almost invisible.
+---------------------------------------- */
+#cit-dock.cit-margin {
+  transform: translateY(-50%);
+  /* A generous invisible hit area, so the marks wake as the pointer
+     approaches rather than only on a direct hit. */
+  padding: 26px 30px;
+  margin: -26px -30px;
+  opacity: 0.2;
+  transition: opacity 0.4s var(--cit-ease);
+}
+#cit-dock.cit-margin:hover,
+#cit-dock.cit-margin:focus-within,
+#cit-dock.cit-margin.cit-dock-open {
+  opacity: 1;
+}
+/* While a timer runs the marks stay a little more present, so the count is
+   readable without hunting for it. */
+#cit-dock.cit-margin.cit-margin-live { opacity: 0.4; }
+#cit-dock.cit-margin.cit-quiet { opacity: 0.08; }
+
+.cit-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 34px;
+}
+.cit-mark {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 9px;
+  color: var(--cit-ink-dim);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.cit-mark:hover { color: var(--cit-ink); background: var(--cit-fill-soft); }
+.cit-mark:focus-visible {
+  outline: none;
+  color: var(--cit-ink);
+  box-shadow: inset 0 0 0 1.5px var(--cit-hairline-strong);
+}
+.cit-mark .cit-svg { width: 17px; height: 17px; }
+/* Active state is a mark in the margin, not a filled button: a short rule
+   along the outer edge, the way you would tick something in a book. */
+.cit-mark.cit-active { color: var(--cit-ink); }
+.cit-mark.cit-active::after {
+  content: "";
+  position: absolute;
+  top: 11px;
+  bottom: 11px;
+  width: 1.5px;
+  border-radius: 1px;
+  background: var(--cit-ink);
+}
+/* Close enough to read as a tick ON the mark, not a stray rule beside it. */
+#cit-dock.cit-rail-right .cit-mark.cit-active::after { right: 4px; }
+#cit-dock.cit-rail-left .cit-mark.cit-active::after { left: 4px; }
+
+/* The label writes itself out toward the text, never away into the void. */
+.cit-mark-label {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--cit-ink-faint);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s var(--cit-ease), transform 0.24s var(--cit-spring);
+}
+#cit-dock.cit-rail-right .cit-mark-label {
+  right: calc(100% + 4px);
+  transform: translateY(-50%) translateX(6px);
+}
+#cit-dock.cit-rail-left .cit-mark-label {
+  left: calc(100% + 4px);
+  transform: translateY(-50%) translateX(-6px);
+}
+.cit-mark:hover .cit-mark-label,
+.cit-mark:focus-visible .cit-mark-label {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* Minutes remaining, tucked under the timer mark. */
+.cit-mark:has(.cit-mark-count:not(:empty)) .cit-mark-ic {
+  transform: translateY(-4px);
+}
+.cit-mark-count {
+  position: absolute;
+  bottom: 3px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--cit-serif);
+  font-size: 9px;
+  line-height: 1;
+  color: var(--cit-ink-faint);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.cit-mark-count:empty { display: none; }
+
+/* The Console opens INWARD from the rail — toward the text, never off-screen —
+   and is vertically centred on it. */
+#cit-dock.cit-margin #cit-console {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%) scale(0.97);
+  transform-origin: center;
+}
+#cit-dock.cit-margin.cit-dock-open #cit-console {
+  transform: translateY(-50%) scale(1);
+}
+#cit-dock.cit-margin.cit-rail-right #cit-console {
+  right: calc(100% + 10px);
+  left: auto;
+}
+#cit-dock.cit-margin.cit-rail-left #cit-console {
+  left: calc(100% + 10px);
+  right: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #cit-dock.cit-margin,
+  .cit-mark,
+  .cit-mark-label { transition: none; }
+}
+
+/* ----------------------------------------
+   First run — three short cards, once, ever.
+   Hangs off the menu it describes rather than
+   covering the conversation.
+---------------------------------------- */
+.cit-tour-card {
+  position: absolute;
+  width: 244px;
+  padding: 12px 14px 10px;
+  border-radius: 16px;
+  background: linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
+  box-shadow:
+    inset 0 1px 0 var(--cit-tile-lip),
+    inset 0 0 0 1px var(--cit-hairline-accent),
+    0 24px 56px rgba(0, 0, 0, 0.55);
+  animation: cit-tour-in 0.34s var(--cit-spring);
+  z-index: 1;
+}
+@keyframes cit-tour-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+#cit-dock.cit-corner-br .cit-tour-card { right: 0; bottom: calc(100% + 11px); }
+#cit-dock.cit-corner-bl .cit-tour-card { left: 0; bottom: calc(100% + 11px); }
+#cit-dock.cit-corner-tr .cit-tour-card { right: 0; top: calc(100% + 11px); }
+#cit-dock.cit-corner-tl .cit-tour-card { left: 0; top: calc(100% + 11px); }
+#cit-dock.cit-margin .cit-tour-card { top: 50%; transform: translateY(-50%); }
+#cit-dock.cit-margin.cit-rail-right .cit-tour-card { right: calc(100% + 10px); }
+#cit-dock.cit-margin.cit-rail-left .cit-tour-card { left: calc(100% + 10px); }
+
+.cit-tour-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--cit-hairline);
+}
+.cit-tour-brand {
+  font-family: var(--cit-serif);
+  font-size: 9px;
+  letter-spacing: 0.38em;
+  text-indent: 0.38em;
+  color: var(--cit-ink-faint);
+}
+.cit-tour-step {
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--cit-ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.cit-tour-title {
+  font-family: var(--cit-serif);
+  font-size: 14.5px;
+  line-height: 1.3;
+  color: var(--cit-ink);
+  margin: 10px 0 5px;
+}
+.cit-tour-body {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--cit-ink-dim);
+}
+.cit-tour-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 9px;
+  border-top: 1px solid var(--cit-hairline);
+}
+.cit-tour-skip {
+  border: none;
+  background: transparent;
+  color: var(--cit-ink-faint);
+  font-size: 11.5px;
+  cursor: pointer;
+  padding: 5px 6px;
+  transition: color 0.18s ease;
+}
+.cit-tour-skip:hover { color: var(--cit-ink-dim); }
+.cit-tour-next {
+  border: none;
+  border-radius: 9px;
+  padding: 6px 16px;
+  font-family: var(--cit-serif);
+  font-size: 12.5px;
+  letter-spacing: 0.05em;
+  color: var(--cit-on-accent);
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: transform 0.16s var(--cit-spring);
+}
+.cit-tour-next:active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .cit-tour-card { animation: none; }
+}
+
+/* ----------------------------------------
+   "Where you were" — one quiet card on
+   returning after a real absence.
+---------------------------------------- */
+#cit-back {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147482950; /* under the reading pane; this is a reminder, not a wall */
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  padding: 12px 14px 11px;
+  border-radius: 16px;
+  background: linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
+  box-shadow:
+    inset 0 1px 0 var(--cit-tile-lip),
+    inset 0 0 0 1px var(--cit-hairline-accent),
+    0 24px 56px rgba(0, 0, 0, 0.5);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  animation: cit-back-in 0.4s var(--cit-spring);
+}
+@keyframes cit-back-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to { opacity: 1; transform: translateX(-50%); }
+}
+.cit-back-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--cit-hairline);
+}
+.cit-back-brand {
+  font-family: var(--cit-serif);
+  font-size: 9px;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  text-transform: uppercase;
+  color: var(--cit-ink-faint);
+}
+.cit-back-x {
+  border: none;
+  background: transparent;
+  color: var(--cit-ink-faint);
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  transition: color 0.18s ease;
+}
+.cit-back-x:hover { color: var(--cit-ink); }
+.cit-back-x .cit-svg { width: 12px; height: 12px; }
+.cit-back-goal {
+  font-family: var(--cit-serif);
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--cit-ink);
+  margin: 10px 0 2px;
+}
+.cit-back-goal[dir="auto"] { unicode-bidi: plaintext; }
+.cit-back-parked,
+.cit-back-jump {
+  display: block;
+  width: 100%;
+  text-align: start;
+  border: none;
+  border-radius: 9px;
+  margin-top: 7px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--cit-ink-dim);
+  background: var(--cit-fill-soft);
+  box-shadow: inset 0 0 0 1px var(--cit-tile-edge);
+  cursor: pointer;
+  transition: color 0.18s ease, box-shadow 0.18s ease;
+}
+.cit-back-parked:hover,
+.cit-back-jump:hover {
+  color: var(--cit-ink);
+  box-shadow: inset 0 0 0 1px var(--cit-hairline-strong);
+}
+@media (prefers-reduced-motion: reduce) {
+  #cit-back { animation: none; }
 }

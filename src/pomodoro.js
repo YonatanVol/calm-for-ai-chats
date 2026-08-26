@@ -12,8 +12,9 @@
   var CALM = (window.CALM = window.CALM || {});
   if (!CALM.site) return;
   var S = CALM.settings;
+  var rt = CALM.rt;
 
-  var st = { phase: "idle", remaining: 0, total: 0, cycle: 1, running: false, paused: false, timer: null };
+  var st = { phase: "idle", remaining: 0, total: 0, cycle: 1, running: false, paused: false, timer: null, enteredZen: false };
 
   function minsFor(phase) {
     return phase === "focus" ? S.pomoFocusMin : phase === "long" ? S.pomoLongBreakMin : S.pomoBreakMin;
@@ -30,55 +31,103 @@
   }
 
   // ---------- Timer ----------
-  function start() {
+  // Stats honesty: we log ELAPSED minutes (skip logs what actually happened,
+  // manual End logs the partial block) — never the configured duration.
+  function elapsedMin() {
+    return Math.round((st.total - st.remaining) / 60);
+  }
+  function logElapsed() {
+    var m = elapsedMin();
+    if (m >= 1 && st.phase !== "idle" && CALM.stats) {
+      CALM.stats.log(st.phase, m);
+    }
+  }
+
+  // `resume` (optional) restores a block that a SPA navigation tore down —
+  // phase/remaining/cycle/paused/enteredZen continue exactly where they were.
+  function start(resume) {
     if (st.running) return;
     if (CALM.audio) CALM.audio.unlock(); // unlock audio on the starting gesture
-    st.cycle = 1;
-    st.paused = false;
-    enterPhase("focus");
+    if (resume && resume.phase && resume.phase !== "idle") {
+      st.phase = resume.phase;
+      st.total = Math.max(1, minsFor(st.phase) | 0) * 60;
+      st.remaining = Math.max(0, Math.min(st.total, resume.remaining | 0));
+      st.cycle = Math.max(1, resume.cycle | 0);
+      st.paused = !!resume.paused;
+      st.enteredZen = !!resume.enteredZen;
+    } else {
+      st.cycle = 1;
+      st.paused = false;
+      st.enteredZen = false;
+      enterPhase("focus");
+      // Adopt zen only if WE are the one turning it on (user zen stays theirs).
+      if (S.pomoAutoZen && !CALM.modes.isActive("zen")) {
+        st.enteredZen = true;
+        CALM.modes.enter("zen");
+      }
+    }
     st.running = true;
-    if (S.pomoAutoZen && !CALM.modes.isActive("zen")) CALM.modes.enter("zen");
     buildWidget();
+    buildTimeBar();
     render();
     st.timer = setInterval(tick, 1000);
+    rt.modeTimers.pomodoro = st.timer; // visible to the generic nav sweep
   }
   function stop() {
     if (!st.running && st.phase === "idle") return;
+    // Log the partial block on a real user End — but not during nav teardown
+    // (the block is snapshotted and resumed there; logging would double-count).
+    if (!rt.tearingDown) logElapsed();
     st.running = false;
     clearInterval(st.timer);
     st.timer = null;
+    rt.modeTimers.pomodoro = null;
     st.phase = "idle";
     removeOverlay();
     removeWidget();
+    removeTimeBar();
+    // Leave no zen behind that WE turned on (user-enabled zen is untouched).
+    if (st.enteredZen && CALM.modes.isActive("zen")) CALM.modes.exit("zen");
+    st.enteredZen = false;
   }
   function tick() {
     if (!st.running || st.paused) return;
+    st.remaining--;
     if (st.remaining <= 0) {
+      st.remaining = 0;
+      render();
       nextPhase();
       return;
     }
-    st.remaining--;
     render();
   }
   function nextPhase() {
     if (CALM.audio) CALM.audio.playChime();
-    // Log the block that just finished (best-effort; no-op when signed out).
-    if (CALM.sync && CALM.sync.logFocus && st.phase !== "idle") {
-      CALM.sync.logFocus(st.phase, Math.max(0, minsFor(st.phase) | 0));
-    }
+    if (st.skipLogged) st.skipLogged = false; // skip() already logged it
+    else logElapsed();
     if (st.phase === "focus") {
       var longNow = st.cycle >= (S.pomoCycles | 0);
       enterPhase(longNow ? "long" : "break");
-      if (S.pomoAutoZen && CALM.modes.isActive("zen")) CALM.modes.exit("zen"); // reveal on break
+      // Reveal on break — but only exit the zen WE enabled (ownership fix).
+      if (st.enteredZen && CALM.modes.isActive("zen")) {
+        CALM.modes.exit("zen");
+        st.enteredZen = false;
+      }
       showOverlay(); // surface the break
     } else {
       if (st.phase === "long") {
+        // Already logged above; stop() would otherwise log the same block a
+        // second time on the way out.
+        st.remaining = st.total;
         CALM.modes.exit("pomodoro"); // whole set done
         return;
       }
       st.cycle++;
       enterPhase("focus");
-      if (S.pomoAutoZen && !CALM.modes.isActive("zen")) CALM.modes.enter("zen");
+      if (S.pomoAutoZen && !CALM.modes.isActive("zen")) {
+        st.enteredZen = true;
+        CALM.modes.enter("zen");
+      }
       removeOverlay();
     }
     render();
@@ -88,10 +137,15 @@
     render();
   }
   function skip() {
+    // Log what actually elapsed BEFORE collapsing the clock — zeroing first
+    // made a block skipped at minute 2 report the full 25.
+    logElapsed();
+    st.skipLogged = true;
     st.remaining = 0;
     nextPhase();
   }
   function reset() {
+    logElapsed(); // a discarded partial block still happened
     st.cycle = 1;
     st.paused = false;
     enterPhase("focus");
@@ -151,6 +205,28 @@
       var pb = o.querySelector(".cit-pomo-pause");
       if (pb) pb.textContent = st.paused ? "▶ Resume" : "❚❚ Pause";
     }
+    renderTimeBar();
+  }
+
+  // ---------- Visual time bar (time as a shape, not a number) ----------
+  function buildTimeBar() {
+    removeTimeBar();
+    if (!S.showTimeBar) return;
+    var b = document.createElement("div");
+    b.id = "cit-timebar";
+    b.innerHTML = '<div class="cit-timebar-fill"></div>';
+    document.body.appendChild(b);
+  }
+  function removeTimeBar() {
+    var b = document.getElementById("cit-timebar");
+    if (b) b.remove();
+  }
+  function renderTimeBar() {
+    var b = document.getElementById("cit-timebar");
+    if (!b) return;
+    var fill = b.querySelector(".cit-timebar-fill");
+    if (fill) fill.style.width = (st.total ? (1 - st.remaining / st.total) * 100 : 0) + "%";
+    b.classList.toggle("cit-timebar-break", isBreak());
   }
 
   // ---------- Widget (compact) ----------
@@ -163,6 +239,9 @@
       '<div class="cit-pomo-meta"><span class="cit-pomo-label"></span><span class="cit-pomo-expand">expand ⤢</span></div>';
     w.addEventListener("click", showOverlay);
     document.body.appendChild(w);
+    if (CALM.ui && CALM.ui.makeDraggable) {
+      CALM.ui.makeDraggable(w, "cit-pomo-pos");
+    }
   }
   function removeWidget() {
     var w = document.getElementById("cit-pomo-widget");
@@ -201,5 +280,5 @@
     if (o) o.remove();
   }
 
-  CALM.pomodoro = { start: start, stop: stop, state: st };
+  CALM.pomodoro = { start: start, stop: stop, skip: skip, reset: reset, state: st };
 })();

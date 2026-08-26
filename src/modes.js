@@ -61,27 +61,50 @@
       document.documentElement.classList.remove("cit-width");
       document.documentElement.style.removeProperty("--cit-reading-width");
     }
+    if (CALM.margin && CALM.margin.reposition) CALM.margin.reposition();
   }
 
   // ---------- Zen ----------
+  // Stylesheet-first: a <style> gated on html.cit-zen self-heals when the class
+  // is removed, no matter how the SPA re-rendered in between. The inline path
+  // (zenInline) is kept only for sites whose own !important rules can beat a
+  // stylesheet (ChatGPT); its cleanup strips BOTH saved refs and a fresh query,
+  // so stale references can never leave elements permanently hidden.
   function zenEnter() {
+    injectStyle("cit-zen-style", site.zenCss());
     rt.zenHidden = [];
-    site.zenTargets().forEach(function (el) {
-      el.style.setProperty("display", "none", "important");
-      rt.zenHidden.push(el);
-    });
+    if (site.zenInline) {
+      site.zenTargets().forEach(function (el) {
+        el.style.setProperty("display", "none", "important");
+        rt.zenHidden.push(el);
+      });
+    }
     document.documentElement.classList.add("cit-zen");
     rt.zenOn = true;
-    if (S.zenComposer) CALM.core.hideComposer();
+    // Only claim the composer if it was visible: if the user had already hidden
+    // it themselves, Zen has nothing to restore on the way out.
+    if (S.zenComposer && !rt.composerHidden) {
+      rt.zenHidComposer = true;
+      CALM.core.hideComposer();
+    }
   }
   function zenExit() {
-    rt.zenHidden.forEach(function (el) {
-      el.style.removeProperty("display");
+    document.documentElement.classList.remove("cit-zen");
+    removeEl("cit-zen-style");
+    // Only strip inline display from elements WE set it on. The re-query used
+    // to run on every site, so on Gemini/Claude (zenInline: false) exiting Zen
+    // deleted inline styles the site itself had set — e.g. a collapsed sidenav.
+    var touched = site.zenInline ? rt.zenHidden.concat(site.zenTargets()) : rt.zenHidden;
+    touched.forEach(function (el) {
+      try {
+        el.style.removeProperty("display");
+      } catch (_) {}
     });
     rt.zenHidden = [];
-    document.documentElement.classList.remove("cit-zen");
     rt.zenOn = false;
-    if (S.zenComposer && rt.composerHidden) CALM.core.showComposer();
+    // Restore what ZEN hid, never what the user chose to hide.
+    if (rt.zenHidComposer && rt.composerHidden) CALM.core.showComposer();
+    rt.zenHidComposer = false;
   }
 
   // ---------- Reader (typography) ----------
@@ -95,7 +118,16 @@
       String(S.readerLineHeight / 10)
     );
   }
-  function readerEnter() {
+  // Reader typography is a SETTING, not a mode: it applies whenever the user
+  // has moved either slider off its default, the same way reading width does.
+  // ("Reader" as a name now means one thing only — the Focus Reader pane.)
+  function applyReaderType() {
+    var on = (S.readerFontScale | 0) !== 100 || (S.readerLineHeight | 0) !== 16;
+    if (!on) {
+      document.documentElement.classList.remove("cit-reader");
+      removeEl("cit-reader-style");
+      return;
+    }
     var t = prefix(site.readerTargets(), "html.cit-reader");
     injectStyle(
       "cit-reader-style",
@@ -104,10 +136,6 @@
     );
     readerVars();
     document.documentElement.classList.add("cit-reader");
-  }
-  function readerExit() {
-    document.documentElement.classList.remove("cit-reader");
-    removeEl("cit-reader-style");
   }
 
   // ---------- Night / Dim ----------
@@ -156,11 +184,21 @@
 
   // ---------- Presentation / Screenshot ----------
   function presentationEnter() {
+    // Take the first-run tour off screen immediately rather than relying on it
+    // being inside the dock — it stays un-dismissed and returns afterwards.
+    if (CALM.tour) CALM.tour.close();
     document.documentElement.classList.add("cit-presentation");
+    rt.presentationEnteredZen = !rt.activeModes.zen;
     if (!rt.activeModes.zen) modeEnter("zen");
+    // Presentation hides all Calm buttons — tell the user how to get out.
+    if (CALM.ui.showToast) {
+      CALM.ui.showToast("Presentation — press Esc to exit", true, true);
+    }
   }
   function presentationExit() {
     document.documentElement.classList.remove("cit-presentation");
+    if (rt.presentationEnteredZen && rt.activeModes.zen) modeExit("zen");
+    rt.presentationEnteredZen = false;
   }
 
   // ---------- Auto-scroll (teleprompter) ----------
@@ -183,7 +221,14 @@
   function pauseEnter() {
     rt.paused = true;
     stopTimer("pause");
-    var end = Date.now() + Math.max(1, S.pauseMinutes | 0) * 60000;
+    // Resume the original end time across SPA navs — a nav must never re-arm
+    // a fresh countdown (that could suspend auto-hide indefinitely).
+    var end =
+      rt.resumePauseEnd && rt.resumePauseEnd > Date.now()
+        ? rt.resumePauseEnd
+        : Date.now() + Math.max(1, S.pauseMinutes | 0) * 60000;
+    rt.resumePauseEnd = null;
+    rt.pauseEndTs = end;
     tickPause(end);
     rt.modeTimers.pause = setInterval(function () {
       if (Date.now() >= end) modeExit("pause");
@@ -202,28 +247,157 @@
   }
   function pauseExit() {
     rt.paused = false;
+    rt.pauseEndTs = null;
     stopTimer("pause");
     if (CALM.ui.hideChip) CALM.ui.hideChip("pause");
   }
 
+  // ---------- Reading ruler (ADHD attention anchor) ----------
+  // A fixed band that follows the cursor; giant box-shadows dim everything
+  // above/below it. Pure overlay — zero site-DOM mutation.
+  function rulerVars() {
+    document.documentElement.style.setProperty(
+      "--cit-ruler-h",
+      (S.rulerHeight | 0) + "px"
+    );
+    document.documentElement.style.setProperty(
+      "--cit-ruler-dim",
+      String((S.rulerDim | 0) / 100)
+    );
+  }
+  function rulerMove(e) {
+    var o = document.getElementById("cit-ruler");
+    if (o) o.style.top = e.clientY - (S.rulerHeight | 0) / 2 + "px";
+  }
+  function rulerEnter() {
+    if (!document.getElementById("cit-ruler")) {
+      var o = document.createElement("div");
+      o.id = "cit-ruler";
+      document.body.appendChild(o);
+    }
+    rulerVars();
+    rt.rulerHandler = rulerMove;
+    document.addEventListener("mousemove", rt.rulerHandler, { passive: true });
+  }
+  function rulerExit() {
+    removeEl("cit-ruler");
+    if (rt.rulerHandler) {
+      document.removeEventListener("mousemove", rt.rulerHandler);
+      rt.rulerHandler = null;
+    }
+  }
+
+  // ---------- Chat spotlight (attention on the current exchange) ----------
+  // The in-page sibling of the reading pane's Spotlight: everything above the
+  // exchange you are in recedes. Implemented entirely as a gated stylesheet,
+  // so React and Angular can re-render the thread as often as they like and
+  // the effect survives — the same reason Zen works this way.
+  function chatspotVars() {
+    document.documentElement.style.setProperty(
+      "--cit-spot",
+      String((S.spotDim | 0) / 100)
+    );
+  }
+  function chatspotEnter() {
+    if (!site.spotlightCss) return; // site has not described its turns
+    injectStyle("cit-chatspot-style", site.spotlightCss());
+    chatspotVars();
+    document.documentElement.classList.add("cit-chatspot");
+  }
+  function chatspotExit() {
+    document.documentElement.classList.remove("cit-chatspot");
+    removeEl("cit-chatspot-style");
+  }
+
+  // ---------- Grayscale (stimulation regulation) ----------
+  // Drains the dopamine-bait colors from the site; Calm's own UI is excluded.
+  function grayVars() {
+    document.documentElement.style.setProperty(
+      "--cit-gray",
+      String((S.grayLevel | 0) / 100)
+    );
+  }
+  function grayEnter() {
+    injectStyle(
+      "cit-gray-style",
+      'html.cit-gray body > *:not([id^="cit-"])' +
+        "{filter:grayscale(var(--cit-gray,0.85)) !important;}"
+    );
+    grayVars();
+    document.documentElement.classList.add("cit-gray");
+  }
+  function grayExit() {
+    document.documentElement.classList.remove("cit-gray");
+    removeEl("cit-gray-style");
+  }
+
+  // ---------- Reduce motion (kill site animations/transitions) ----------
+  function motionEnter() {
+    injectStyle(
+      "cit-motion-style",
+      'html.cit-motion *:not([id*="cit-"]):not([class*="cit-"]),' +
+        'html.cit-motion *:not([id*="cit-"]):not([class*="cit-"])::before,' +
+        'html.cit-motion *:not([id*="cit-"]):not([class*="cit-"])::after' +
+        "{animation-duration:0.001s !important;transition-duration:0.001s !important;}"
+    );
+    document.documentElement.classList.add("cit-motion");
+  }
+  function motionExit() {
+    document.documentElement.classList.remove("cit-motion");
+    removeEl("cit-motion-style");
+  }
+
   // ---------- Pomodoro (implemented in src/pomodoro.js, Phase 2) ----------
   function pomodoroEnter() {
-    if (CALM.pomodoro) CALM.pomodoro.start();
+    if (CALM.pomodoro) {
+      var resume = rt.resumePomodoro;
+      rt.resumePomodoro = null;
+      CALM.pomodoro.start(resume || undefined);
+    }
   }
   function pomodoroExit() {
     if (CALM.pomodoro) CALM.pomodoro.stop();
   }
 
   // ---------- Registry ----------
+  // surface: where the mode is offered to the user.
+  //   "tile"     — a control in the Console (the everyday five)
+  //   "advanced" — a row in the Advanced drawer
+  //   "command"  — reachable from the palette / a shortcut only
+  // Every list in the UI derives from this; there are no hard-coded mode
+  // arrays anywhere else.
   var MODES = {
-    zen: { label: "Zen", icon: "❏", enter: zenEnter, exit: zenExit },
-    reader: { label: "Reader", icon: "A", enter: readerEnter, exit: readerExit, vars: readerVars },
-    night: { label: "Night", icon: "☾", enter: nightEnter, exit: nightExit, vars: nightVars },
-    privacy: { label: "Privacy", icon: "⦿", enter: privacyEnter, exit: privacyExit },
-    presentation: { label: "Present", icon: "▣", enter: presentationEnter, exit: presentationExit },
-    autoscroll: { label: "Auto-scroll", icon: "↧", enter: autoscrollEnter, exit: autoscrollExit },
-    pause: { label: "Pause", icon: "⏸", enter: pauseEnter, exit: pauseExit },
-    pomodoro: { label: "Pomodoro", icon: "◴", enter: pomodoroEnter, exit: pomodoroExit },
+    zen: { label: "Zen", icon: "❏", surface: "tile", enter: zenEnter, exit: zenExit },
+    focusreader: {
+      label: "Focus Reader",
+      icon: "\u2750",
+      surface: "tile",
+      enter: function () { if (CALM.reader) CALM.reader.open(); },
+      exit: function () { if (CALM.reader) CALM.reader.close(); },
+      vars: function () { if (CALM.reader) CALM.reader.refreshVars(); },
+    },
+    night: { label: "Night", icon: "☾", surface: "tile", enter: nightEnter, exit: nightExit, vars: nightVars },
+    ruler: { label: "Reading ruler", icon: "▬", surface: "tile", enter: rulerEnter, exit: rulerExit, vars: rulerVars },
+    chatspot: {
+      label: "Chat spotlight",
+      icon: "◉",
+      surface: "tile",
+      enter: chatspotEnter,
+      exit: chatspotExit,
+      vars: chatspotVars,
+    },
+    pomodoro: { label: "Pomodoro", icon: "◴", surface: "tile", enter: pomodoroEnter, exit: pomodoroExit },
+    pause: { label: "Pause", icon: "⏸", surface: "live", enter: pauseEnter, exit: pauseExit },
+    gray: { label: "Grayscale", icon: "◐", surface: "advanced", enter: grayEnter, exit: grayExit, vars: grayVars },
+    motion: { label: "Reduce motion", icon: "◇", surface: "advanced", enter: motionEnter, exit: motionExit },
+    privacy: { label: "Privacy", icon: "⦿", surface: "advanced", enter: privacyEnter, exit: privacyExit },
+    autoscroll: { label: "Auto-scroll", icon: "↧", surface: "advanced", enter: autoscrollEnter, exit: autoscrollExit },
+    presentation: { label: "Present", icon: "▣", surface: "command", enter: presentationEnter, exit: presentationExit },
+  };
+  function bySurface(kind) {
+    return Object.keys(MODES).filter(function (id) {
+      return MODES[id].surface === kind;
+    });
   };
 
   function setModeBtnActive(id, on) {
@@ -236,13 +410,19 @@
   function persist() {
     if (S.rememberState) CALM.saveState();
   }
+  // Several modes change the page's geometry (Zen removes the sidebar, reading
+  // width narrows the column). Anything anchored to the text has to be told.
+  function afterLayoutChange() {
+    if (CALM.margin && CALM.margin.reposition) CALM.margin.reposition();
+  }
   function modeEnter(id) {
     var m = MODES[id];
     if (!m || rt.activeModes[id]) return;
-    if (!CALM.entitled("zenMode")) return; // all modes free in v1
+    if (!CALM.entitled("mode:" + id)) return; // per-mode tier (all free in v1)
     rt.activeModes[id] = true;
     m.enter();
     setModeBtnActive(id, true);
+    afterLayoutChange();
     persist();
   }
   function modeExit(id) {
@@ -251,6 +431,7 @@
     rt.activeModes[id] = false;
     m.exit();
     setModeBtnActive(id, false);
+    afterLayoutChange();
     persist();
   }
   function modeToggle(id) {
@@ -275,6 +456,9 @@
     isActive: isActive,
     refreshVars: refreshVars,
     applyWidth: applyWidth,
+    applyReaderType: applyReaderType,
+    bySurface: bySurface,
+    ids: function () { return Object.keys(MODES); },
     // back-compat aliases used by core/ui/keyboard:
     applyZen: function (on) {
       on ? modeEnter("zen") : modeExit("zen");

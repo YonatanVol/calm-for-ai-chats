@@ -16,9 +16,18 @@
   var C = CALM.const;
 
   // ---- Toast ----
-  function showToast() {
+  // `essential` means "this message must reach the user even while they are
+  // presenting". Presentation deliberately keeps #cit-toast visible so the
+  // "press Esc to exit" hint can get out — otherwise hiding every Calm
+  // surface would hide the only way back. But that exemption is on the
+  // CHANNEL, not on the message, so it also let unprompted toasts through:
+  // the hyperfocus nudge fires on a 30s timer and would pop "stretch? water?"
+  // over whatever the user is showing an audience. So the channel stays
+  // visible and the messages are gated instead.
+  function showToast(text, force, essential) {
+    if (!essential && CALM.modes && CALM.modes.isActive("presentation")) return;
     var now = Date.now();
-    if (now - rt.lastToastAt < C.TOAST_THROTTLE_MS) return;
+    if (!force && now - rt.lastToastAt < C.TOAST_THROTTLE_MS) return;
     rt.lastToastAt = now;
     var t = document.getElementById(IDS.toast);
     if (!t) {
@@ -26,7 +35,7 @@
       t.id = IDS.toast;
       document.body.appendChild(t);
     }
-    t.textContent = "Input hidden · scroll down or ⌃⇧H";
+    t.textContent = text || "Input hidden · scroll down or ⌃⇧H";
     t.classList.remove("cit-toast-show");
     void t.offsetHeight;
     t.classList.add("cit-toast-show");
@@ -42,23 +51,16 @@
   }
 
   // ---- Quick nav ----
-  function updateQuickNav() {
-    var show =
-      S.showQuickNav &&
-      CALM.entitled("quickNav") &&
-      rt.composerHidden &&
-      !!rt.scrollContainer;
-    [IDS.top, IDS.bottom].forEach(function (id) {
-      var b = document.getElementById(id);
-      if (b) b.style.display = show ? "flex" : "none";
-    });
-  }
   function smoothScrollTo(top) {
-    if (!rt.scrollContainer) return;
+    var sc =
+      CALM.core && CALM.core.currentScroller
+        ? CALM.core.currentScroller()
+        : rt.scrollContainer;
+    if (!sc) return;
     try {
-      rt.scrollContainer.scrollTo({ top: top, behavior: "smooth" });
+      sc.scrollTo({ top: top, behavior: "smooth" });
     } catch (_) {
-      rt.scrollContainer.scrollTop = top;
+      sc.scrollTop = top;
     }
   }
 
@@ -109,161 +111,268 @@
     if (c) c.remove();
   }
 
-  // ---- Buttons ----
-  function mkBtn(id, label, title, onClick) {
-    var b = document.createElement("button");
-    b.id = id;
-    b.type = "button";
-    b.className = "cit-btn";
-    b.setAttribute("aria-label", title);
-    b.setAttribute("title", title);
-    b.innerHTML = label;
-    b.addEventListener("click", onClick);
-    document.body.appendChild(b);
-    return b;
+  // ---- Drag engine (shared by dock, chips, widgets, panel) ----
+  // Pointer-based, 5px threshold so clicks still work, viewport-clamped,
+  // optional edge snap, position persisted per storageKey (device-local).
+  function makeDraggable(el, storageKey, opts) {
+    opts = opts || {};
+    var handle = opts.handle || el;
+    var sx, sy, ox, oy, dragging = false, moved = false;
+
+    function place(l, t) {
+      var w = el.offsetWidth || 40;
+      var h = el.offsetHeight || 40;
+      l = Math.max(8, Math.min((window.innerWidth || 1400) - w - 8, l));
+      t = Math.max(8, Math.min((window.innerHeight || 900) - h - 8, t));
+      el.style.left = l + "px";
+      el.style.top = t + "px";
+      el.style.right = "auto";
+      el.style.bottom = "auto";
+      el.style.transform = "none";
+      if (opts.onPlace) opts.onPlace(l, t);
+      return { left: l, top: t };
+    }
+    function restore() {
+      try {
+        var p = JSON.parse(localStorage.getItem(storageKey));
+        if (p && typeof p.left === "number") {
+          place(p.left, p.top);
+          return true;
+        }
+      } catch (_) {}
+      return false;
+    }
+    function onDown(e) {
+      if (e.button !== undefined && e.button !== 0) return;
+      dragging = true;
+      moved = false;
+      sx = e.clientX;
+      sy = e.clientY;
+      var r = el.getBoundingClientRect();
+      ox = r.left;
+      oy = r.top;
+      // Capture the pointer so a missed pointerup (touch/pen cancel, element
+      // detached mid-drag) can never strand the document listeners.
+      try {
+        if (e.pointerId != null && handle.setPointerCapture) {
+          handle.setPointerCapture(e.pointerId);
+        }
+      } catch (_) {}
+      document.addEventListener("pointermove", onMove, true);
+      document.addEventListener("pointerup", onUp, true);
+      document.addEventListener("pointercancel", onUp, true);
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      var dx = e.clientX - sx;
+      var dy = e.clientY - sy;
+      if (!moved && Math.abs(dx) + Math.abs(dy) < 5) return;
+      moved = true;
+      el.classList.add("cit-dragging");
+      place(ox + dx, oy + dy);
+    }
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      document.removeEventListener("pointermove", onMove, true);
+      document.removeEventListener("pointerup", onUp, true);
+      document.removeEventListener("pointercancel", onUp, true);
+      el.classList.remove("cit-dragging");
+      if (!moved) return;
+      var r = el.getBoundingClientRect();
+      if (opts.onDrop) {
+        // Caller owns final placement + persistence (dock corner-anchoring).
+        opts.onDrop({ left: r.left, top: r.top, width: r.width, height: r.height });
+      } else {
+        var l = r.left;
+        var t = r.top;
+        if (opts.snap) {
+          var iw = window.innerWidth || 1400;
+          var dl = l;
+          var dr = iw - (l + r.width);
+          if (Math.min(dl, dr) < 48) l = dl < dr ? 12 : iw - r.width - 12;
+        }
+        var fin = place(l, t);
+        try {
+          if (storageKey) localStorage.setItem(storageKey, JSON.stringify(fin));
+        } catch (_) {}
+      }
+      // swallow the click that follows a drag
+      function block(ev) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        document.removeEventListener("click", block, true);
+      }
+      document.addEventListener("click", block, true);
+      setTimeout(function () {
+        document.removeEventListener("click", block, true);
+      }, 0);
+    }
+    handle.addEventListener("pointerdown", onDown);
+    var restored = opts.onDrop ? false : restore();
+    return { restore: restore, place: place, restored: restored };
   }
 
+  // ---- Popover registry ----
+  // Every floating popover registers its close(); navigation teardown calls
+  // closeAllPopovers() so elements AND their document listeners go together —
+  // no ghost panels or orphaned handlers after a SPA nav.
+  var popovers = [];
+  function registerPopover(closeFn) {
+    popovers.push(closeFn);
+  }
+  function unregisterPopover(closeFn) {
+    var i = popovers.indexOf(closeFn);
+    if (i >= 0) popovers.splice(i, 1);
+  }
+  // One Escape listener for the whole extension. Handlers run newest-first and
+  // the first one that reports it handled the key wins, so Escape always
+  // dismisses the topmost surface.
+  // A STACK of currently-open surfaces. Registering at open time (rather than
+  // at module load) is what makes "topmost" mean what the user sees: the last
+  // thing opened is the first thing Escape closes.
+  var escapers = [];
+  function registerEscape(fn) {
+    escapers.push(fn);
+    return function () {
+      var i = escapers.indexOf(fn);
+      if (i >= 0) escapers.splice(i, 1);
+    };
+  }
+  document.addEventListener(
+    "keydown",
+    function (e) {
+      if (e.key !== "Escape") return;
+      for (var i = escapers.length - 1; i >= 0; i--) {
+        if (escapers[i]() === true) {
+          e.stopPropagation();
+          return;
+        }
+      }
+    },
+    true
+  );
+
+  function closeAllPopovers() {
+    popovers.slice().forEach(function (c) {
+      try {
+        c();
+      } catch (_) {}
+    });
+    popovers.length = 0;
+  }
+
+  // ---- Generic popover close ----
+
+
+  // The Console (src/console.js) is the only menu now: the modes popover and
+  // the tabbed settings panel are gone, and the section builders below render
+  // into its Advanced drawer instead of into tabs.
   function createUI() {
-    [IDS.toggle, IDS.zen, IDS.settings, IDS.top, IDS.bottom].forEach(function (id) {
-      var e = document.getElementById(id);
-      if (e) e.remove();
-    });
-
-    var toggle = mkBtn(
-      IDS.toggle,
-      '<span class="cit-icon">▼</span>',
-      "Toggle input (Ctrl+Shift+H)",
-      function () {
-        CALM.core.manualToggleComposer();
-      }
-    );
-    if (!S.showToggleButton) toggle.style.display = "none";
-
-    mkBtn(IDS.zen, "❏", "Zen mode (Ctrl+Shift+Z)", function () {
-      CALM.modes.toggleZen();
-    }).classList.toggle("cit-active", rt.zenOn);
-
-    mkBtn(IDS.settings, "⚙", "Calm settings", function (e) {
-      e.stopPropagation();
-      toggleSettingsPanel();
-    });
-
-    mkBtn(IDS.top, "⤒", "Scroll to top", function () {
-      smoothScrollTo(0);
-    });
-    mkBtn(IDS.bottom, "⤓", "Scroll to bottom", function () {
-      smoothScrollTo(rt.scrollContainer ? rt.scrollContainer.scrollHeight : 0);
-    });
-    updateQuickNav();
+    if (CALM.dock) CALM.dock.build();
   }
 
-  // ---- Settings panel ----
-  function toggleSettingsPanel() {
-    var p = document.getElementById(IDS.panel);
-    if (p) {
-      p.remove();
-      return;
-    }
-    p = document.createElement("div");
-    p.id = IDS.panel;
-
-    var header = document.createElement("div");
-    header.className = "cit-settings-header";
-    var title = document.createElement("div");
-    title.className = "cit-settings-title";
-    title.textContent = "Calm";
-    var close = document.createElement("button");
-    close.type = "button";
-    close.className = "cit-settings-close";
-    close.setAttribute("aria-label", "Close");
-    close.innerHTML = "✕";
-    close.addEventListener("click", function (e) {
-      e.stopPropagation();
-      p.remove();
+  // ---- Advanced drawer: every long-tail control, grouped ----
+  function buildAdvancedSections(c) {
+    c.appendChild(divider("Modes"));
+    CALM.modes.ids().forEach(function (id) {
+      if (CALM.modes.MODES[id].surface === "tile") return; // already up front
+      c.appendChild(modeRow(id));
     });
-    header.appendChild(title);
-    header.appendChild(close);
-    p.appendChild(header);
-
-    var tabbar = document.createElement("div");
-    tabbar.className = "cit-tabbar";
-    var content = document.createElement("div");
-    content.className = "cit-tab-content";
-    var TABS = [
-      { id: "modes", label: "Modes", build: buildModesTab },
-      { id: "reading", label: "Reading", build: buildReadingTab },
-      { id: "behavior", label: "Behavior", build: buildBehaviorTab },
-      { id: "presets", label: "Presets", build: buildPresetsTab },
-      { id: "account", label: "Account", build: buildAccountTab },
-      { id: "about", label: "About", build: buildAboutTab },
-    ];
-    function showTab(id) {
-      content.innerHTML = "";
-      var btns = tabbar.querySelectorAll(".cit-tab");
-      for (var i = 0; i < btns.length; i++) {
-        btns[i].classList.toggle("cit-tab-on", btns[i].getAttribute("data-tab") === id);
-      }
-      for (var j = 0; j < TABS.length; j++) if (TABS[j].id === id) TABS[j].build(content);
-    }
-    TABS.forEach(function (t) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "cit-tab";
-      b.textContent = t.label;
-      b.setAttribute("data-tab", t.id);
-      b.addEventListener("click", function (e) {
-        e.stopPropagation();
-        showTab(t.id);
-      });
-      tabbar.appendChild(b);
-    });
-    p.appendChild(tabbar);
-    p.appendChild(content);
-    document.body.appendChild(p);
-    showTab("modes");
-
-    function closeOnOutside(e) {
-      if (!p.contains(e.target) && e.target.id !== IDS.settings) {
-        p.remove();
-        document.removeEventListener("click", closeOnOutside, true);
-      }
-    }
-    setTimeout(function () {
-      document.addEventListener("click", closeOnOutside, true);
-    }, 0);
+    buildModesTab(c);
+    c.appendChild(divider("Reading"));
+    buildReadingTab(c);
+    c.appendChild(divider("Behavior"));
+    buildBehaviorTab(c);
+    c.appendChild(divider("Presets"));
+    buildPresetsTab(c);
+    c.appendChild(divider("About"));
+    buildAboutTab(c);
   }
 
   function buildModesTab(c) {
-    ["zen", "reader", "night", "privacy", "presentation", "autoscroll", "pause", "pomodoro"].forEach(
-      function (id) {
-        c.appendChild(modeRow(id));
-      }
-    );
-    c.appendChild(divider("Mode settings"));
-    c.appendChild(sliderRow("Auto-scroll speed", "autoScrollSpeed", 1, 10, 1));
-    c.appendChild(sliderRow("Pause minutes", "pauseMinutes", 5, 60, 5));
     c.appendChild(divider("Pomodoro"));
-    c.appendChild(sliderRow("Focus minutes", "pomoFocusMin", 5, 60, 5));
-    c.appendChild(sliderRow("Break minutes", "pomoBreakMin", 1, 20, 1));
-    c.appendChild(sliderRow("Long break minutes", "pomoLongBreakMin", 5, 30, 5));
-    c.appendChild(sliderRow("Cycles before long break", "pomoCycles", 2, 8, 1));
+    c.appendChild(
+      selectRow(
+        "Timer preset",
+        "pomoPreset",
+        [
+          { value: "custom", label: "Custom" },
+          { value: "10/2", label: "Just 10 min (starter)" },
+          { value: "25/5", label: "Classic 25/5" },
+          { value: "52/17", label: "Deep 52/17" },
+          { value: "90/20", label: "Ultra 90/20" },
+        ],
+        function () {
+          var map = {
+            "10/2": [10, 2, 10],
+            "25/5": [25, 5, 15],
+            "52/17": [52, 17, 25],
+            "90/20": [90, 20, 30],
+          };
+          var v = map[S.pomoPreset];
+          if (v) {
+            S.pomoFocusMin = v[0];
+            S.pomoBreakMin = v[1];
+            S.pomoLongBreakMin = v[2];
+            CALM.saveSettings();
+            // Re-render the WHOLE drawer, not just this tab into the shared
+            // container: `c` here is the drawer body, so the old
+            // `c.innerHTML=""; buildModesTab(c)` deleted Reading, Behavior,
+            // Presets and About along with it.
+            c.innerHTML = "";
+            buildAdvancedSections(c);
+          }
+        }
+      )
+    );
+    // The four minute settings the preset above writes are not repeated here.
+    // Offering both a preset AND its four components invites you to build an
+    // inconsistent one by hand, and the preset already covers every sensible
+    // arrangement. ⌘K has them if you want an odd one.
     c.appendChild(toggleRow("Auto Zen during focus", "pomoAutoZen"));
     c.appendChild(toggleRow("Chime at phase end", "pomoSound"));
+    c.appendChild(divider("Time awareness"));
+    c.appendChild(toggleRow("Tell me when an answer lands", "answerReady"));
+    c.appendChild(toggleRow("Remind me what I was doing", "whereWasI"));
+    c.appendChild(toggleRow("Time-on-page chip", "showTimeOnPage"));
   }
   function buildReadingTab(c) {
-    c.appendChild(sliderRow("Reading width (0=off)", "readingWidth", 0, 1600, 20, CALM.modes.applyWidth));
-    c.appendChild(sliderRow("Reader font %", "readerFontScale", 80, 160, 5, CALM.modes.refreshVars));
-    c.appendChild(sliderRow("Reader line-height ×10", "readerLineHeight", 12, 22, 1, CALM.modes.refreshVars));
-    c.appendChild(sliderRow("Night dim %", "nightLevel", 10, 70, 5, CALM.modes.refreshVars));
+    c.appendChild(
+      numberRow("Column width", "readingWidth", [
+        { value: 0, label: "Whatever the site does" },
+        { value: 640, label: "Narrow" },
+        { value: 820, label: "Comfortable" },
+        { value: 1000, label: "Wide" },
+      ], CALM.modes.applyWidth)
+    );
+    c.appendChild(
+      numberRow("Text size", "readerFontScale", [
+        { value: 100, label: "Normal" },
+        { value: 115, label: "Larger" },
+        { value: 130, label: "Largest" },
+      ], CALM.modes.applyReaderType)
+    );
+    // Every remaining reading number — line height, night dim, ruler height
+    // and dim, spotlight dim, grayscale — is a fine adjustment to a mode you
+    // are already looking at. They live in ⌘K, where the arrow keys change
+    // them WHILE the effect is on screen, which is the only way anyone can
+    // judge what "45%" means anyway.
   }
   function buildBehaviorTab(c) {
     c.appendChild(toggleRow("Auto-hide on scroll", "autoHideOnScroll"));
-    c.appendChild(sliderRow("Scroll sensitivity", "sensitivity", 1, 10, 1));
+    c.appendChild(
+      numberRow("How eagerly it hides", "sensitivity", [
+        { value: 2, label: "Only a deliberate scroll" },
+        { value: 5, label: "Balanced" },
+        { value: 9, label: "The moment I scroll up" },
+      ])
+    );
     c.appendChild(toggleRow("Zen also hides input", "zenComposer"));
     c.appendChild(
       selectRow("Type while hidden", "typeAhead", [
+        { value: "auto", label: "Auto-reveal (instant)" },
         { value: "both", label: "Both" },
-        { value: "auto", label: "Auto-reveal" },
         { value: "buffer", label: "Buffer" },
         { value: "off", label: "Off" },
       ])
@@ -273,15 +382,70 @@
         if (S.rememberState) CALM.saveState();
       })
     );
-    c.appendChild(toggleRow("Quick scroll buttons", "showQuickNav", updateQuickNav));
     c.appendChild(toggleRow("Keyboard shortcuts", "keyboardShortcut"));
     c.appendChild(
-      toggleRow("Show toggle button", "showToggleButton", function () {
-        var b = document.getElementById(IDS.toggle);
-        if (b) b.style.display = S.showToggleButton ? "" : "none";
+      toggleRow("Show input tile", "showToggleButton", function () {
+        if (CALM.console) CALM.console.render();
       })
     );
-    c.appendChild(toggleRow("Hint when auto-hidden", "showHints"));
+    c.appendChild(
+      selectRow(
+        "Menu style",
+        "menuStyle",
+        [
+          { value: "console", label: "Corner pill" },
+          { value: "margin", label: "Page margin (needs room)" },
+        ],
+        function () {
+          if (CALM.dock) CALM.dock.build();
+        }
+      )
+    );
+    c.appendChild(
+      selectRow(
+        "Where the goal shows",
+        "intentChipMode",
+        [
+          { value: "dock", label: "In the pill" },
+          { value: "floating", label: "Floating chip" },
+          { value: "hidden", label: "Nowhere" },
+        ],
+        function () {
+          if (CALM.intent) CALM.intent.renderChip();
+          if (CALM.dock) CALM.dock.refreshStatus();
+        }
+      )
+    );
+    var reset = document.createElement("button");
+    reset.type = "button";
+    reset.className = "cit-save-preset";
+    reset.textContent = "↺ Reset positions";
+    reset.addEventListener("click", function (e) {
+      e.stopPropagation();
+      ["cit-dock-pos", "cit-intent-pos", "cit-pomo-pos"].forEach(
+        function (k) {
+          try {
+            localStorage.removeItem(k);
+          } catch (_) {}
+        }
+      );
+      ["cit-dock", "cit-intent-chip", "cit-pomo-widget"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+          el.style.left = "";
+          el.style.top = "";
+          el.style.right = "";
+          el.style.bottom = "";
+          el.style.transform = "";
+        }
+      });
+      if (CALM.dock) CALM.dock.build();
+      // build() removes and re-creates the dock, taking this very drawer with
+      // it. Re-open on Advanced so the user stays where they were.
+      if (CALM.console) CALM.console.openAdvanced();
+      showToast("Positions reset", true);
+    });
+    c.appendChild(reset);
   }
   function buildPresetsTab(c) {
     var host = document.createElement("div");
@@ -289,89 +453,32 @@
     c.appendChild(host);
     buildPresets(host);
   }
-  function buildAccountTab(c) {
-    var wrap = document.createElement("div");
-    wrap.className = "cit-account";
-    c.appendChild(wrap);
-
-    function render() {
-      wrap.innerHTML = "";
-      var auth = CALM.auth;
-      if (!auth) {
-        var na = document.createElement("p");
-        na.className = "cit-about-dim";
-        na.textContent = "Sync isn't available right now.";
-        wrap.appendChild(na);
-        return;
-      }
-      if (auth.isSignedIn()) {
-        var u = auth.user() || {};
-        var who = document.createElement("div");
-        who.className = "cit-account-who";
-        who.textContent = "Signed in as " + (u.email || u.id || "your account");
-        var note = document.createElement("p");
-        note.className = "cit-about-dim";
-        note.textContent =
-          "Your settings, presets and focus stats sync to your account.";
-        var out = document.createElement("button");
-        out.type = "button";
-        out.className = "cit-save-preset";
-        out.textContent = "Sign out";
-        out.addEventListener("click", function (e) {
-          e.stopPropagation();
-          auth.signOut().then(render);
-        });
-        wrap.appendChild(who);
-        wrap.appendChild(note);
-        wrap.appendChild(out);
-      } else {
-        var intro = document.createElement("p");
-        intro.className = "cit-about-dim";
-        intro.textContent =
-          "Sign in to sync your settings, presets and focus stats across devices. The free experience stays fully local until you do.";
-        var inBtn = document.createElement("button");
-        inBtn.type = "button";
-        inBtn.className = "cit-save-preset";
-        inBtn.textContent = "Sign in with Google";
-        inBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          inBtn.disabled = true;
-          inBtn.textContent = "Opening Google…";
-          CALM.auth.signInWithGoogle().then(function (r) {
-            if (r && r.ok) {
-              render();
-            } else {
-              inBtn.disabled = false;
-              inBtn.textContent = "Sign in with Google";
-              var err = document.createElement("div");
-              err.className = "cit-account-err";
-              err.textContent = (r && r.error) || "Sign-in failed. Try again.";
-              wrap.appendChild(err);
-            }
-          });
-        });
-        wrap.appendChild(intro);
-        wrap.appendChild(inBtn);
-      }
-    }
-    render();
-  }
-
   function buildAboutTab(c) {
     var d = document.createElement("div");
     d.className = "cit-about";
     d.innerHTML =
       '<div class="cit-about-name">Calm</div>' +
       '<div class="cit-about-ver">Reading Mode for AI Chats</div>' +
-      "<p>Distraction-free reading for ChatGPT &amp; Gemini — hide the input, 8 focus modes, a Pomodoro timer, and more.</p>" +
-      '<p class="cit-about-dim">Your conversations are never read or sent. Settings stay on your device.</p>' +
-      '<p><span class="cit-about-pro">Pro — cloud sync, dashboard &amp; Spotify — coming soon.</span></p>';
+      "<p>Distraction-free reading for ChatGPT, Gemini and Claude — hide the input, the Focus Reader, a Pomodoro timer, and more.</p>" +
+      '<p class="cit-about-dim">No permissions, no account, no network requests. Everything stays on your device.</p>';
     c.appendChild(d);
+  }
+
+  // Every settings row says which setting it controls and how. This is the
+  // same trick `data-cit-mode` already plays on the mode tiles: the menu
+  // becomes inspectable, so a test can ask "is `menuStyle` reachable, and as
+  // what?" instead of grepping the source for the string and hoping a comment
+  // did not answer for it.
+  function stamp(row, key, kind) {
+    row.setAttribute("data-cit-key", key);
+    row.setAttribute("data-cit-kind", kind);
+    return row;
   }
 
   function toggleRow(label, key, after) {
     var r = document.createElement("div");
     r.className = "cit-settings-row";
+    stamp(r, key, "toggle");
     var span = document.createElement("span");
     span.textContent = label;
     var sw = document.createElement("button");
@@ -379,6 +486,11 @@
     sw.className = "cit-toggle-switch" + (S[key] ? " cit-on" : "");
     sw.setAttribute("role", "switch");
     sw.setAttribute("aria-checked", String(!!S[key]));
+    // The switch's only child is the knob, so there is no text for a screen
+    // reader to name it by — without this it announces "switch, checked" and
+    // never says WHAT is switched. The visible label sits in a sibling span,
+    // which nothing associates with the control on its own.
+    sw.setAttribute("aria-label", label);
     var knob = document.createElement("div");
     knob.className = "cit-toggle-knob";
     sw.appendChild(knob);
@@ -396,43 +508,15 @@
     return r;
   }
 
-  function sliderRow(label, key, min, max, step, after) {
-    var r = document.createElement("div");
-    r.className = "cit-settings-row cit-slider-row";
-    var top = document.createElement("div");
-    top.className = "cit-slider-top";
-    var span = document.createElement("span");
-    span.textContent = label;
-    var val = document.createElement("span");
-    val.className = "cit-slider-val";
-    val.textContent = S[key];
-    top.appendChild(span);
-    top.appendChild(val);
-    var input = document.createElement("input");
-    input.type = "range";
-    input.className = "cit-slider";
-    input.min = min;
-    input.max = max;
-    input.step = step;
-    input.value = S[key];
-    input.addEventListener("input", function () {
-      S[key] = parseInt(input.value, 10);
-      val.textContent = S[key];
-      CALM.saveSettings();
-      if (after) after();
-    });
-    r.appendChild(top);
-    r.appendChild(input);
-    return r;
-  }
-
   function selectRow(label, key, options, after) {
     var r = document.createElement("div");
     r.className = "cit-settings-row";
+    stamp(r, key, "select");
     var span = document.createElement("span");
     span.textContent = label;
     var sel = document.createElement("select");
     sel.className = "cit-select";
+    sel.setAttribute("aria-label", label);
     options.forEach(function (o) {
       var op = document.createElement("option");
       op.value = o.value;
@@ -442,6 +526,50 @@
     });
     sel.addEventListener("change", function () {
       S[key] = sel.value;
+      CALM.saveSettings();
+      if (after) after();
+    });
+    r.appendChild(span);
+    r.appendChild(sel);
+    return r;
+  }
+
+  // A select over a numeric setting. The menu offers a few good values; the
+  // setting stays a number, so ⌘K can still nudge it to anything in range.
+  //
+  // This is what "no sliders, only options" means in practice: a slider asks
+  // you to pick a value, which needs you to know what the values mean. Four
+  // named choices ask you to pick an intent. Anyone who wants the exact number
+  // still has it, one keystroke away, which is why nothing was lost by doing
+  // this — see the reachability suite.
+  function numberRow(label, key, options, after) {
+    var r = document.createElement("div");
+    r.className = "cit-settings-row";
+    stamp(r, key, "select");
+    var span = document.createElement("span");
+    span.textContent = label;
+    var sel = document.createElement("select");
+    sel.className = "cit-select";
+    sel.setAttribute("aria-label", label);
+    var exact = options.some(function (o) { return o.value === (S[key] | 0); });
+    options.forEach(function (o) {
+      var op = document.createElement("option");
+      op.value = String(o.value);
+      op.textContent = o.label;
+      if (o.value === (S[key] | 0)) op.selected = true;
+      sel.appendChild(op);
+    });
+    // A value set from ⌘K may sit between the offered ones. Say so rather
+    // than silently showing the wrong option as selected.
+    if (!exact) {
+      var custom = document.createElement("option");
+      custom.value = String(S[key] | 0);
+      custom.textContent = "Custom (" + (S[key] | 0) + ")";
+      custom.selected = true;
+      sel.insertBefore(custom, sel.firstChild);
+    }
+    sel.addEventListener("change", function () {
+      S[key] = Number(sel.value) | 0;
       CALM.saveSettings();
       if (after) after();
     });
@@ -462,11 +590,28 @@
     var r = document.createElement("div");
     r.className = "cit-settings-row";
     var span = document.createElement("span");
-    span.textContent = m.icon + "  " + m.label;
+    span.className = "cit-row-label";
+    if (CALM.icons && CALM.icons.mode[id]) {
+      var ric = document.createElement("span");
+      ric.className = "cit-row-ic";
+      ric.innerHTML = CALM.icons.mode[id]; // static markup from our icon set
+      span.appendChild(ric);
+      var rlb = document.createElement("span");
+      rlb.textContent = m.label;
+      span.appendChild(rlb);
+    } else {
+      span.textContent = m.icon + "  " + m.label;
+    }
     var sw = document.createElement("button");
     sw.type = "button";
     sw.className = "cit-toggle-switch" + (CALM.modes.isActive(id) ? " cit-on" : "");
     sw.setAttribute("data-cit-mode", id);
+    // Same control as a settings toggle, and it was missing all three things
+    // that make one usable without sight: what it is, that it is a switch,
+    // and whether it is on.
+    sw.setAttribute("role", "switch");
+    sw.setAttribute("aria-checked", String(!!CALM.modes.isActive(id)));
+    sw.setAttribute("aria-label", m.label);
     var knob = document.createElement("div");
     knob.className = "cit-toggle-knob";
     sw.appendChild(knob);
@@ -474,6 +619,7 @@
       e.preventDefault();
       e.stopPropagation();
       CALM.modes.toggle(id);
+      sw.setAttribute("aria-checked", String(!!CALM.modes.isActive(id)));
       sw.classList.toggle("cit-on", CALM.modes.isActive(id));
     });
     r.appendChild(span);
@@ -484,7 +630,15 @@
     var list = document.querySelectorAll("[data-cit-mode]");
     for (var i = 0; i < list.length; i++) {
       var id = list[i].getAttribute("data-cit-mode");
-      list[i].classList.toggle("cit-on", CALM.modes.isActive(id));
+      var on = CALM.modes.isActive(id);
+      list[i].classList.toggle("cit-on", on);
+      list[i].classList.toggle("cit-active", on);
+      // Sync the announced state with the shown one. Updating only the class
+      // is worse than updating neither: the row looks correct while telling a
+      // screen reader the opposite, and nothing on screen hints at it.
+      if (list[i].getAttribute("role") === "switch") {
+        list[i].setAttribute("aria-checked", String(!!on));
+      }
     }
   }
 
@@ -541,17 +695,26 @@
   CALM.ui = {
     showToast: showToast,
     hideToast: hideToast,
-    updateQuickNav: updateQuickNav,
     smoothScrollTo: smoothScrollTo,
     showTypeChip: showTypeChip,
     hideTypeChip: hideTypeChip,
     showChip: showChip,
     hideChip: hideChip,
     refreshModeButtons: refreshModeButtons,
+    registerPopover: registerPopover,
+    registerEscape: registerEscape,
+    unregisterPopover: unregisterPopover,
+    closeAllPopovers: closeAllPopovers,
     createUI: createUI,
-    toggleSettingsPanel: toggleSettingsPanel,
+    buildAdvancedSections: buildAdvancedSections,
+    makeDraggable: makeDraggable,
     toggleRow: toggleRow,
-    sliderRow: sliderRow,
     selectRow: selectRow,
+    // Introspection for the suite: both of these are stacks that surfaces
+    // push onto when they open and must pop from when they close, and the
+    // only way to catch one that forgets is to be able to count them.
+    _openSurfaces: function () {
+      return { popovers: popovers.length, escapers: escapers.length };
+    },
   };
 })();

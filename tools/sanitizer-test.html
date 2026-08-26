@@ -1,0 +1,85 @@
+<!doctype html>
+<!-- Calm — sanitizer attack suite.
+     The Focus Reader re-renders AI output, which is attacker-influenceable, so
+     src/reader.js's sanitize() is the one security-critical function in the
+     codebase. These cases need a REAL browser (a stub DOM cannot prove that a
+     script did not execute), so they live here rather than in the Node harness.
+
+     Run:
+       "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+         --headless --disable-gpu --allow-file-access-from-files \
+         --virtual-time-budget=3000 --dump-dom tools/sanitizer-test.html
+     and read the <pre id="out"> block. All cases must pass. --><html><body><div id="src"></div><pre id="out"></pre>
+<script>
+var CALM = window.CALM = { site: { responseSel: "#src" }, settings: {}, IDS: {}, icons: {},
+  ui: {}, modes: {}, saveSettings: function(){} };
+</script>
+<script src="../src/reader.js"></script>
+<script>
+var results = [];
+function t(name, html, assertFn) {
+  var src = document.getElementById("src");
+  src.innerHTML = html;
+  var clean = CALM.reader._sanitize(src);
+  document.body.appendChild(clean);           // actually attach it
+  var ok = false, detail = "";
+  try { ok = assertFn(clean); } catch (e) { detail = e.message; }
+  results.push((ok ? "PASS  " : "FAIL  ") + name + (detail ? " :: " + detail : "") +
+    (ok ? "" : "  got=" + clean.innerHTML.slice(0, 120)));
+  clean.remove();
+}
+window.__hit = false;
+t("script tag is dropped, its code never runs",
+  '<p>a</p><script>window.__hit=true<\/script>',
+  function (c) { return !window.__hit && c.querySelectorAll("script").length === 0; });
+t("event handler attributes cannot survive",
+  '<p onclick="window.__hit=true" onmouseover="window.__hit=true">hi</p>',
+  function (c) { var p=c.querySelector("p"); return p && p.attributes.length===0; });
+t("img onerror never fires (img not allowed)",
+  '<img src=x onerror="window.__hit=true">',
+  function (c) { return c.querySelectorAll("img").length===0 && !window.__hit; });
+t("javascript: href is rejected",
+  '<a href="javascript:window.__hit=true">x</a>',
+  function (c) { var a=c.querySelector("a"); return a && !a.getAttribute("href"); });
+t("obfuscated java\\tscript: href is rejected",
+  '<a href="java&#9;script:alert(1)">x</a>',
+  function (c) { var a=c.querySelector("a"); return a && !a.getAttribute("href"); });
+t("data: href is rejected",
+  '<a href="data:text/html,<script>1<\/script>">x</a>',
+  function (c) { var a=c.querySelector("a"); return a && !a.getAttribute("href"); });
+t("https href kept, with noopener",
+  '<a href="https://example.com/x">x</a>',
+  function (c) { var a=c.querySelector("a");
+    return a.getAttribute("href")==="https://example.com/x" &&
+           a.getAttribute("rel")==="noopener noreferrer" && a.getAttribute("target")==="_blank"; });
+t("style tag dropped and its CSS text not leaked",
+  '<style>body{display:none}</style><p>keep</p>',
+  function (c) { return c.querySelectorAll("style").length===0 &&
+                        c.textContent.indexOf("display:none")<0 &&
+                        c.textContent.indexOf("keep")>=0; });
+t("iframe dropped", '<iframe src="https://evil.test"></iframe><p>k</p>',
+  function (c) { return c.querySelectorAll("iframe").length===0; });
+t("svg + its script dropped",
+  '<svg><script>window.__hit=true<\/script><circle/></svg><p>k</p>',
+  function (c) { return c.querySelectorAll("svg,script,circle").length===0 && !window.__hit; });
+t("form and inputs dropped", '<form><input name=a><button>go</button></form><p>k</p>',
+  function (c) { return c.querySelectorAll("form,input,button").length===0; });
+t("id/class/style attributes stripped (no DOM clobbering, no CSS injection)",
+  '<p id="cit-dock" class="x" style="position:fixed;inset:0" data-x="1">t</p>',
+  function (c) { var p=c.querySelector("p"); return p.attributes.length===0; });
+t("unknown/custom element is unwrapped but its text kept",
+  '<message-content><p>inner text</p></message-content>',
+  function (c) { return c.querySelectorAll("message-content").length===0 &&
+                        c.textContent.indexOf("inner text")>=0; });
+t("nested structure and code blocks preserved",
+  '<ul><li><code>x=1</code></li></ul><pre><code>line</code></pre>',
+  function (c) { return c.querySelectorAll("ul li code").length===1 &&
+                        c.querySelectorAll("pre code").length===1; });
+t("katex becomes its TeX source",
+  '<span class="katex"><span>xy</span><annotation encoding="application/x-tex">x^2</annotation></span>',
+  function (c) { return c.textContent.indexOf("x^2")>=0 && c.querySelectorAll(".katex").length===0; });
+t("Hebrew text survives intact", '<p>שלום עולם</p>',
+  function (c) { return c.textContent.indexOf("שלום עולם")>=0; });
+document.getElementById("out").textContent = results.join("\n") +
+  "\n\n" + results.filter(r=>r.indexOf("PASS")===0).length + "/" + results.length + " passed";
+</script></body></html>
