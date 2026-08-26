@@ -455,9 +455,21 @@
     c.appendChild(d);
   }
 
+  // Every settings row says which setting it controls and how. This is the
+  // same trick `data-cit-mode` already plays on the mode tiles: the menu
+  // becomes inspectable, so a test can ask "is `menuStyle` reachable, and as
+  // what?" instead of grepping the source for the string and hoping a comment
+  // did not answer for it.
+  function stamp(row, key, kind) {
+    row.setAttribute("data-cit-key", key);
+    row.setAttribute("data-cit-kind", kind);
+    return row;
+  }
+
   function toggleRow(label, key, after) {
     var r = document.createElement("div");
     r.className = "cit-settings-row";
+    stamp(r, key, "toggle");
     var span = document.createElement("span");
     span.textContent = label;
     var sw = document.createElement("button");
@@ -485,6 +497,7 @@
   function sliderRow(label, key, min, max, step, after) {
     var r = document.createElement("div");
     r.className = "cit-settings-row cit-slider-row";
+    stamp(r, key, "range");
     var top = document.createElement("div");
     top.className = "cit-slider-top";
     var span = document.createElement("span");
@@ -515,6 +528,7 @@
   function selectRow(label, key, options, after) {
     var r = document.createElement("div");
     r.className = "cit-settings-row";
+    stamp(r, key, "select");
     var span = document.createElement("span");
     span.textContent = label;
     var sel = document.createElement("select");

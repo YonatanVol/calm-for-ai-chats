@@ -1465,6 +1465,244 @@ section("Chat spotlight");
   w2.C.modes.exit("focusreader");
 })();
 
+/* ---------------- Adapters answer everything the engine asks ------------- */
+// The engine talks to each site through one object, and adding a site means
+// hand-writing that object again. Nothing checks that the new one answers
+// every question the engine asks — a missing method is a TypeError deep in a
+// scroll handler, and a method that answers with the wrong SHAPE is worse,
+// because it fails somewhere else entirely.
+//
+// So read the questions out of the engine rather than listing them here: any
+// site.x the source touches is part of the contract by definition, including
+// ones added after this test was written.
+section("Adapter contract");
+(function () {
+  var asked = {};
+  fs.readdirSync(path.join(ROOT, "src")).forEach(function (f) {
+    if (!/\.js$/.test(f) || f === "adapters.js") return;
+    var src = fs.readFileSync(path.join(ROOT, "src", f), "utf8");
+    var m, re = /\bsite\.([a-zA-Z_]+)/g;
+    while ((m = re.exec(src))) asked[m[1]] = true;
+  });
+  var names = Object.keys(asked).sort();
+  check("(setup) the engine asks the adapters something",
+    names.length >= 8, names.length + ": " + names.join(", "));
+
+  // What each answer has to look like. Anything the engine only passes
+  // straight to querySelector is checked as a string; the rest by use.
+  var SHAPE = {
+    id: "string",
+    composer: "element-or-null",
+    promptInput: "element-or-null",
+    scrollRoot: "element-or-null",
+    zenTargets: "array",
+    readerTargets: "selector",
+    privacyTargets: "selector",
+    zenCss: "string",
+    widthCss: "string",
+    spotlightCss: "string",
+    excludedScrollers: "string",
+    zenInline: "boolean",
+    responseSel: "selector",
+    stopSel: "selector",
+  };
+
+  var SELECTOR_FIELDS = ["responseSel", "stopSel", "readerTargets",
+    "privacyTargets", "excludedScrollers"];
+
+
+  // Node has no DOM and this repo has no dependencies, so there is nothing
+  // here that can truly parse a selector. Rather than write half a CSS
+  // grammar and invent failures, this reports only faults that are
+  // unambiguously fatal — it can miss a broken selector, but it cannot
+  // invent one. tools/selector-test.html does the real querySelector parse
+  // in a browser, which is the only place that parse actually exists.
+  function selectorFault(sel) {
+    var depth = { "[": 0, "(": 0 };
+    var quote = null;
+    for (var i = 0; i < sel.length; i++) {
+      var c = sel.charAt(i);
+      if (quote) { if (c === quote && sel.charAt(i - 1) !== "\\") quote = null; continue; }
+      if (c === '"' || c === "'") { quote = c; continue; }
+      if (c === "[") depth["["]++;
+      else if (c === "]") { if (--depth["["] < 0) return "unbalanced ]"; }
+      else if (c === "(") depth["("]++;
+      else if (c === ")") { if (--depth["("] < 0) return "unbalanced )"; }
+    }
+    if (quote) return "unterminated " + quote + " quote";
+    if (depth["["]) return "unclosed [";
+    if (depth["("]) return "unclosed (";
+    if (/\[\s*\]/.test(sel)) return "empty [] attribute";
+    // Split on top-level commas only — a comma inside :is(...) or [attr=","]
+    // is not a group separator, and treating it as one is how a checker like
+    // this starts reporting healthy selectors as broken.
+    var parts = [], buf = "", d = 0;
+    quote = null;
+    for (i = 0; i < sel.length; i++) {
+      c = sel.charAt(i);
+      if (quote) { if (c === quote && sel.charAt(i - 1) !== "\\") quote = null; buf += c; continue; }
+      if (c === '"' || c === "'") { quote = c; buf += c; continue; }
+      if (c === "[" || c === "(") d++;
+      else if (c === "]" || c === ")") d--;
+      if (c === "," && d === 0) { parts.push(buf); buf = ""; continue; }
+      buf += c;
+    }
+    parts.push(buf);
+    for (i = 0; i < parts.length; i++) {
+      var part = parts[i].trim();
+      if (!part) return "empty part (stray comma)";
+      if (/^[>+~]|[>+~]$/.test(part)) return "dangling combinator in \"" + part + "\"";
+    }
+    return null;
+  }
+
+  // The validator is itself a thing that can be wrong, and a checker nobody
+  // checks is worse than no checker — it reports confidence it has not
+  // earned. Both directions: real selectors from the wild must pass, and
+  // each fault it claims to detect must actually be detected.
+  [
+    '[data-message-author-role="assistant"] .markdown',
+    "#stage-slideover-sidebar, #stage-sidebar-tiny-bar, nav[aria-label]",
+    ":is(h1, h2) > p",
+    'button[aria-label*="Stop" i]',
+    "a[href*='/c/']",
+    ".cit-x:not(:nth-last-child(-n+2))",
+  ].forEach(function (sel) {
+    check("the selector checker accepts " + sel.slice(0, 34),
+      !selectorFault(sel), selectorFault(sel) || "");
+  });
+  [
+    ["#a,,#b", "stray comma"],
+    ["#a >", "dangling combinator"],
+    ["[data-x", "unclosed bracket"],
+    [":is(a, b", "unclosed paren"],
+    ["[]", "empty attribute"],
+    ["a['x]", "unterminated quote"],
+  ].forEach(function (pair) {
+    check("the selector checker catches a " + pair[1], !!selectorFault(pair[0]),
+      selectorFault(pair[0]) || "MISSED");
+  });
+
+  ["chatgpt.com", "gemini.google.com", "claude.ai"].forEach(function (host) {
+    var w = buildWorld(host, { lenient: true });
+    var site = w.C.site;
+    names.forEach(function (n) {
+      var shape = SHAPE[n];
+      if (!shape) {
+        // A question the engine asks that this test has no opinion about is
+        // still a question the adapter must answer.
+        check(host + " answers site." + n, site[n] !== undefined);
+        return;
+      }
+      var v;
+      try {
+        v = typeof site[n] === "function" ? site[n]() : site[n];
+      } catch (e) {
+        check(host + " answers site." + n + " without throwing", false, e.message);
+        return;
+      }
+      var ok;
+      if (shape === "array") ok = Array.isArray(v);
+      else if (shape === "string") ok = typeof v === "string" && v.length > 0;
+      else if (shape === "boolean") ok = typeof v === "boolean";
+      else if (shape === "selector") ok = typeof v === "string" && v.length > 0;
+      else ok = v === null || (v && typeof v === "object");
+      check(host + " answers site." + n + " with a " + shape, ok,
+        Object.prototype.toString.call(v));
+    });
+
+    // A selector that cannot be parsed takes down whatever ran it, and these
+    // run on timers and in scroll handlers — so a typo is a silent, repeating
+    // exception rather than a visible failure. Check EVERY field that ends up
+    // in querySelector or closest or a CSS rule, not just the two obvious
+    // ones. (zenTargets is exempt: it returns resolved elements, not a
+    // selector. zenCss/widthCss/spotlightCss return whole stylesheets.)
+    SELECTOR_FIELDS.forEach(function (n) {
+      if (site[n] === undefined) return;
+      var sel;
+      try { sel = typeof site[n] === "function" ? site[n]() : site[n]; }
+      catch (_) { return; } // shape check above already reported this
+      if (typeof sel !== "string" || !sel) return;
+      var bad = selectorFault(sel);
+      check(host + "'s " + n + " parses as a selector", !bad, bad || sel);
+    });
+  });
+})();
+
+/* ---------------- Every setting has a way to reach it -------------------- */
+// The palette is derived from defaultSettings so a new setting appears without
+// being registered twice — but only booleans come through automatically.
+// A NUMBER needs an entry in RANGES to say what its bounds are, and without
+// one it is not rejected or logged, it is simply skipped. The setting then
+// exists, is read by its feature, persists when written, and has no way for
+// anyone to change it. That is the quietest kind of dead code.
+section("Settings are reachable");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  var items = C.palette._items ? C.palette._items() : [];
+  if (!items.length) { try { C.palette.open(); C.palette.close(); } catch (_) {} }
+  items = C.palette._items();
+
+  var exposed = {};
+  items.forEach(function (it) { if (it.key) exposed[it.key] = it.kind; });
+
+  var defaults = C.defaultSettings;
+  var numbers = Object.keys(defaults).filter(function (k) {
+    return typeof defaults[k] === "number" && k !== "settingsVersion";
+  });
+  var strings = Object.keys(defaults).filter(function (k) {
+    return typeof defaults[k] === "string";
+  });
+  var bools = Object.keys(defaults).filter(function (k) {
+    return typeof defaults[k] === "boolean";
+  });
+
+  check("(setup) there are settings of each kind to check",
+    numbers.length >= 10 && bools.length >= 10 && strings.length >= 2,
+    numbers.length + " numbers / " + bools.length + " booleans / " +
+      strings.length + " strings");
+
+  numbers.forEach(function (k) {
+    check("the " + k + " slider can be reached", exposed[k] === "range");
+  });
+  bools.forEach(function (k) {
+    check("the " + k + " switch can be reached", exposed[k] === "toggle");
+  });
+
+  // Strings are the one kind the palette cannot derive — it has no way to
+  // know the allowed values — so they must be spelled out in the menu.
+  //
+  // The first version of this checked that the key appeared as text somewhere
+  // in console.js or ui.js, which a comment or an unrelated mention would
+  // satisfy while the setting stayed unreachable. So ask the MENU instead:
+  // every row stamps the setting it controls and how, and we read that back
+  // off the rendered drawer. (The stub's querySelectorAll only understands
+  // class selectors, so walk the tree rather than using [data-cit-key].)
+  C.dock.build();
+  C.console.open();
+  C.console.openAdvanced();
+  var menuExposed = {};
+  (function walk(n) {
+    (n.children || []).forEach(function (ch) {
+      var k = ch.getAttribute && ch.getAttribute("data-cit-key");
+      if (k) menuExposed[k] = ch.getAttribute("data-cit-kind");
+      walk(ch);
+    });
+  })(w.bodyEls["cit-dock"] || global.document.body);
+
+  check("(setup) the menu reports which settings it offers (guard against a " +
+    "walk that finds nothing)",
+    Object.keys(menuExposed).length >= 10,
+    Object.keys(menuExposed).length + " rows: " +
+      Object.keys(menuExposed).slice(0, 6).join(", ") + "…");
+
+  strings.forEach(function (k) {
+    check("the " + k + " choice is offered in the menu as a select",
+      menuExposed[k] === "select", menuExposed[k] || "(not in the menu)");
+  });
+})();
+
 /* ---------------- Auto-hide: only when there is something to read -------- */
 section("Auto-hide");
 (function () {
