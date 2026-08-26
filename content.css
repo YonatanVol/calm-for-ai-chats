@@ -27,6 +27,10 @@ html {
   --cit-toggle-off-knob: #9a9ba0;
   --cit-toggle-on-bg: #f0f0f2;
   --cit-toggle-on-knob: #1b1c1f;
+  /* OPAQUE on purpose. A translucent select background lets the browser's own
+     control canvas — which is white unless told otherwise — show through, so
+     the dark panel grew light native-looking dropdowns. */
+  --cit-select-bg: #26272b;
   --cit-hairline-accent: rgba(255, 255, 255, 0.18);
   --cit-fill-soft: rgba(255, 255, 255, 0.045);
   --cit-break: #9aa8b8;            /* muted steel for breaks */
@@ -65,6 +69,7 @@ html[class*="light"], html[data-theme="light"] {
   --cit-toggle-off-knob: #6e6f74;
   --cit-toggle-on-bg: #1c1d20;
   --cit-toggle-on-knob: #f7f7f8;
+  --cit-select-bg: #ffffff;
   --cit-hairline-accent: rgba(28, 29, 32, 0.2);
   --cit-fill-soft: rgba(28, 29, 32, 0.045);
   --cit-shadow: 0 18px 44px rgba(20, 22, 28, 0.16);
@@ -78,6 +83,21 @@ html[class*="light"], html[data-theme="light"] {
   --cit-tile-lip: rgba(255, 255, 255, 0.95);
   --cit-tile-edge: rgba(28, 29, 32, 0.08);
   --cit-tile-label: rgba(28, 29, 32, 0.52);
+}
+
+/* Calm's surfaces declare their own scheme, so the native dropdown a <select>
+   opens matches the panel it came from. Deliberately NOT on :root — that is
+   the host page's element, and setting it there would restyle the site's own
+   form controls, which is precisely the bleed the isolation block below
+   exists to prevent. */
+#cit-dock, #cit-console, #cit-palette, #cit-intent-pop, #cit-reader-pane,
+#cit-pomo-widget, #cit-pomo-overlay { color-scheme: dark; }
+html[class*="light"] #cit-dock, html[data-theme="light"] #cit-dock,
+html[class*="light"] #cit-console, html[data-theme="light"] #cit-console,
+html[class*="light"] #cit-palette, html[data-theme="light"] #cit-palette,
+html[class*="light"] #cit-intent-pop, html[data-theme="light"] #cit-intent-pop,
+html[class*="light"] #cit-reader-pane, html[data-theme="light"] #cit-reader-pane {
+  color-scheme: light;
 }
 
 /* ================= Host isolation =================
@@ -669,14 +689,31 @@ html[class*="light"], html[data-theme="light"] {
 }
 
 .cit-select {
-  background: var(--cit-hairline);
+  /* Without appearance:none the platform paints its OWN control and ignores
+     every colour below it — which is why these read as light native widgets
+     on a dark panel. Now that the settings drawer is built almost entirely
+     out of selects, that is the difference between a designed panel and a
+     form. The chevron is inlined as a data: URI, so nothing is fetched. */
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: var(--cit-select-bg);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239a9ba0' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
   color: var(--cit-ink);
   border: 1px solid var(--cit-hairline-strong);
   border-radius: 7px;
-  padding: 4px 8px;
+  padding: 4px 26px 4px 9px;
   font-size: 12.5px;
   cursor: pointer;
   outline: none;
+  max-width: 62%;
+  text-overflow: ellipsis;
+}
+.cit-select:hover { border-color: var(--cit-hairline-accent); }
+.cit-select:focus-visible {
+  border-color: var(--cit-ink-dim);
+  box-shadow: 0 0 0 2px var(--cit-hairline-strong);
 }
 .cit-select option {
   background: var(--cit-surface);

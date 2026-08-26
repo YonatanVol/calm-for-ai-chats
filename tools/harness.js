@@ -2280,8 +2280,19 @@ section("Polish");
   var labels = adv.querySelectorAll(".cit-settings-row").map(function (r) {
     return r.children[0] ? r.children[0].textContent : "";
   });
-  check("dockQuiet is reachable from Advanced",
-    labels.some(function (l) { return /fade the pill/i.test(l); }), labels.length + " rows");
+  // The bug this guards is "dockQuiet has no control ANYWHERE" — it was
+  // written when the Advanced drawer was the only place a setting could live.
+  // ⌘K now derives a toggle for every boolean, and the settings-reachability
+  // suite asserts that for all 42, so the guarantee is intact while the row
+  // itself has been trimmed out of the menu. Assert the original intent
+  // rather than the place it used to be satisfied.
+  C.palette.open();
+  var reachable = C.palette._items().some(function (i) {
+    return i.key === "dockQuiet";
+  });
+  C.palette.close();
+  check("dockQuiet is still reachable somewhere", reachable,
+    labels.length + " menu rows");
 
   // One Escape listener, newest-first: the reader must win over the Console.
   C.console.open();
@@ -2311,9 +2322,14 @@ section("Review fixes");
   var labels = adv.querySelectorAll(".cit-settings-row").map(function (r) {
     return r.children[0] ? r.children[0].textContent : "";
   });
+  // The subject here is "Show input tile", which was passed as appendChild's
+  // SECOND argument and silently discarded. It used the row above it as the
+  // other half of the pair; that row has since been trimmed, so pair it with
+  // one that is still there. The guarantee is unchanged.
   check("both toggle rows render (appendChild takes ONE child)",
-    labels.some(function (l) { return /fade the pill/i.test(l); }) &&
-    labels.some(function (l) { return /show input tile/i.test(l); }));
+    labels.some(function (l) { return /keyboard shortcuts/i.test(l); }) &&
+    labels.some(function (l) { return /show input tile/i.test(l); }),
+    labels.slice(0, 5).join(" | "));
 
   // Escape must reach every dismissible surface.
   function esc() {
