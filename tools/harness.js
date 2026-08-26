@@ -278,9 +278,53 @@ section("Static");
   var css = fs.readFileSync(path.join(ROOT, "content.css"), "utf8");
   check("content.css braces balanced",
     css.split("{").length === css.split("}").length);
-  var warm = css.match(/198, ?161, ?91|c6a15b|d9bc7f|a8874a|#241d12|#232019|#17140f|#211d19/g);
-  check("no gold/warm literals in CSS (quiet graphite only)", !warm,
-    warm ? warm.slice(0, 3).join(",") : "");
+  // The palette is quiet graphite, and this is what holds it there.
+  //
+  // It used to be a DENYLIST of known gold literals — and it passed for months
+  // while .cit-dock-pill::after shimmered rgba(217, 188, 127), because the
+  // list held that exact colour as "d9bc7f" and never as decimal. Same colour,
+  // different notation, straight through. This project already learned this
+  // lesson once, in the sanitizer: a list of the bad things you thought of is
+  // not a rule, it is a record of your imagination.
+  //
+  // So measure instead. A grey has r ≈ g ≈ b; anything with real chroma is a
+  // colour, whatever notation it is written in. Purposeful colours are named
+  // here, with a reason each — and adding to this list should feel like a
+  // decision, which is the point.
+  // Keyed by the actual RGB triple, not by how it happens to be spelled.
+  // Keying it by hex is how the first attempt at this failed: #f59e0b was
+  // allowed and rgba(245, 158, 11) was not, though they are one colour.
+  var INTENTIONAL = {
+    "255,155,61": "Night mode's warm tint — the whole point of the mode",
+    "245,158,11": "the Pomodoro break ring, deliberately warm against focus grey",
+    "179,38,30": "destructive actions (reset, delete) — red means red",
+    "154,168,184": "muted steel for breaks",
+  };
+  function chroma(rgb) {
+    return Math.max(rgb[0], rgb[1], rgb[2]) - Math.min(rgb[0], rgb[1], rgb[2]);
+  }
+  var colours = [];
+  (css.match(/#[0-9a-fA-F]{3}\b|#[0-9a-fA-F]{6}\b/g) || []).forEach(function (h) {
+    var x = h.slice(1);
+    if (x.length === 3) x = x[0] + x[0] + x[1] + x[1] + x[2] + x[2];
+    colours.push([h.toLowerCase(), [
+      parseInt(x.slice(0, 2), 16), parseInt(x.slice(2, 4), 16),
+      parseInt(x.slice(4, 6), 16)]]);
+  });
+  (css.match(/rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+/g) || []).forEach(function (m) {
+    var n = m.match(/\d+/g).map(Number);
+    colours.push([m + "…)", n]);
+  });
+  check("(setup) the palette scan actually reads colours",
+    colours.length >= 40, colours.length + " colour literals");
+  var strays = colours.filter(function (c) {
+    // 12 is comfortably above the 8 that near-black shadows carry and well
+    // below the 30 of the softest deliberate colour here.
+    return chroma(c[1]) > 12 && !INTENTIONAL[c[1].join(",")];
+  });
+  check("every colour is quiet graphite, or named as deliberate", !strays.length,
+    strays.map(function (c) { return c[0] + " (chroma " + chroma(c[1]) + ")"; })
+      .slice(0, 4).join(", "));
   var mf = JSON.parse(fs.readFileSync(path.join(ROOT, "manifest.json"), "utf8"));
   check("manifest v3 parses", mf.manifest_version === 3);
   check("manifest declares ZERO permissions",
