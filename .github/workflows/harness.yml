@@ -1,0 +1,35 @@
+# The merge gate, run on every push and pull request.
+#
+# There is no build step and no dependencies — Calm is plain content scripts —
+# so this needs nothing but the Node and Python already on the runner. That is
+# deliberate: a gate that takes a minute to install its own tooling is a gate
+# people learn to skip.
+name: harness
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Scenario suite
+        run: node tools/harness.js
+
+      - name: Package (validates the manifest and the file list)
+        run: python3 install.py --zip
+
+      - name: Upload the built extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: calm-extension
+          path: dist/*.zip
+          if-no-files-found: error

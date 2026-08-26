@@ -1,0 +1,17 @@
+name: An idea
+description: Something Calm could do, or should stop doing
+labels: [idea]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What gets in your way?
+      description: |
+        The problem is more useful than the solution. Calm's job is to make AI
+        chats quieter to read and easier to stay in, and the best features so
+        far came from someone describing a friction rather than a feature.
+    validations: { required: true }
+  - type: textarea
+    id: idea
+    attributes:
+      label: What did you have in mind? (optional)
