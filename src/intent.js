@@ -131,12 +131,17 @@
   var openClose = null;
 
   function togglePop(focusPark) {
-    if (document.getElementById("cit-intent-pop")) {
+    var existing = document.getElementById("cit-intent-pop");
+    if (existing) {
+      // openClose is always set while a card is up. The fallback is for the
+      // state that should be impossible — a card on screen with no closer —
+      // because the alternative is returning here and leaving it stuck open
+      // with no way to dismiss it.
       if (openClose) openClose();
+      else existing.remove();
       return;
     }
-    var p;
-    p = document.createElement("div");
+    var p = document.createElement("div");
     p.id = "cit-intent-pop";
 
     // Engraved lid, same as the bloom tray — identity, then the question.
