@@ -291,9 +291,6 @@
   }
 
   function buildModesTab(c) {
-    c.appendChild(divider("Mode settings"));
-    c.appendChild(sliderRow("Auto-scroll speed", "autoScrollSpeed", 1, 10, 1));
-    c.appendChild(sliderRow("Pause minutes", "pauseMinutes", 5, 60, 5));
     c.appendChild(divider("Pomodoro"));
     c.appendChild(
       selectRow(
@@ -329,34 +326,48 @@
         }
       )
     );
-    c.appendChild(sliderRow("Focus minutes", "pomoFocusMin", 5, 90, 1));
-    c.appendChild(sliderRow("Break minutes", "pomoBreakMin", 1, 20, 1));
-    c.appendChild(sliderRow("Long break minutes", "pomoLongBreakMin", 5, 30, 5));
-    c.appendChild(sliderRow("Cycles before long break", "pomoCycles", 2, 8, 1));
+    // The four minute settings the preset above writes are not repeated here.
+    // Offering both a preset AND its four components invites you to build an
+    // inconsistent one by hand, and the preset already covers every sensible
+    // arrangement. ⌘K has them if you want an odd one.
     c.appendChild(toggleRow("Auto Zen during focus", "pomoAutoZen"));
     c.appendChild(toggleRow("Chime at phase end", "pomoSound"));
-    c.appendChild(toggleRow("Focus progress bar", "showTimeBar"));
     c.appendChild(divider("Time awareness"));
     c.appendChild(toggleRow("Tell me when an answer lands", "answerReady"));
     c.appendChild(toggleRow("Remind me what I was doing", "whereWasI"));
-    c.appendChild(sliderRow("...after this many minutes away", "whereWasIMin", 5, 120, 5));
-    c.appendChild(toggleRow("...with a soft chime", "answerReadyChime"));
     c.appendChild(toggleRow("Time-on-page chip", "showTimeOnPage"));
-    c.appendChild(sliderRow("Hyperfocus nudge (min, 0=off)", "hyperfocusMin", 0, 180, 15));
   }
   function buildReadingTab(c) {
-    c.appendChild(sliderRow("Reading width (0=off)", "readingWidth", 0, 1600, 20, CALM.modes.applyWidth));
-    c.appendChild(sliderRow("Page text size %", "readerFontScale", 80, 160, 5, CALM.modes.applyReaderType));
-    c.appendChild(sliderRow("Page line-height ×10", "readerLineHeight", 12, 22, 1, CALM.modes.applyReaderType));
-    c.appendChild(sliderRow("Night dim %", "nightLevel", 10, 70, 5, CALM.modes.refreshVars));
-    c.appendChild(sliderRow("Ruler height px", "rulerHeight", 50, 160, 10, CALM.modes.refreshVars));
-    c.appendChild(sliderRow("Ruler dim %", "rulerDim", 15, 70, 5, CALM.modes.refreshVars));
-    c.appendChild(sliderRow("Chat spotlight dim %", "spotDim", 10, 70, 5, CALM.modes.refreshVars));
-    c.appendChild(sliderRow("Grayscale %", "grayLevel", 40, 100, 5, CALM.modes.refreshVars));
+    c.appendChild(
+      numberRow("Column width", "readingWidth", [
+        { value: 0, label: "Whatever the site does" },
+        { value: 640, label: "Narrow" },
+        { value: 820, label: "Comfortable" },
+        { value: 1000, label: "Wide" },
+      ], CALM.modes.applyWidth)
+    );
+    c.appendChild(
+      numberRow("Text size", "readerFontScale", [
+        { value: 100, label: "Normal" },
+        { value: 115, label: "Larger" },
+        { value: 130, label: "Largest" },
+      ], CALM.modes.applyReaderType)
+    );
+    // Every remaining reading number — line height, night dim, ruler height
+    // and dim, spotlight dim, grayscale — is a fine adjustment to a mode you
+    // are already looking at. They live in ⌘K, where the arrow keys change
+    // them WHILE the effect is on screen, which is the only way anyone can
+    // judge what "45%" means anyway.
   }
   function buildBehaviorTab(c) {
     c.appendChild(toggleRow("Auto-hide on scroll", "autoHideOnScroll"));
-    c.appendChild(sliderRow("Scroll sensitivity", "sensitivity", 1, 10, 1));
+    c.appendChild(
+      numberRow("How eagerly it hides", "sensitivity", [
+        { value: 2, label: "Only a deliberate scroll" },
+        { value: 5, label: "Balanced" },
+        { value: 9, label: "The moment I scroll up" },
+      ])
+    );
     c.appendChild(toggleRow("Zen also hides input", "zenComposer"));
     c.appendChild(
       selectRow("Type while hidden", "typeAhead", [
@@ -372,7 +383,6 @@
       })
     );
     c.appendChild(toggleRow("Keyboard shortcuts", "keyboardShortcut"));
-    c.appendChild(toggleRow("Fade the pill while typing", "dockQuiet"));
     c.appendChild(
       toggleRow("Show input tile", "showToggleButton", function () {
         if (CALM.console) CALM.console.render();
@@ -391,7 +401,6 @@
         }
       )
     );
-    c.appendChild(toggleRow("Dock auto-collapse", "dockAutoCollapse"));
     c.appendChild(
       selectRow(
         "Where the goal shows",
@@ -494,37 +503,6 @@
     return r;
   }
 
-  function sliderRow(label, key, min, max, step, after) {
-    var r = document.createElement("div");
-    r.className = "cit-settings-row cit-slider-row";
-    stamp(r, key, "range");
-    var top = document.createElement("div");
-    top.className = "cit-slider-top";
-    var span = document.createElement("span");
-    span.textContent = label;
-    var val = document.createElement("span");
-    val.className = "cit-slider-val";
-    val.textContent = S[key];
-    top.appendChild(span);
-    top.appendChild(val);
-    var input = document.createElement("input");
-    input.type = "range";
-    input.className = "cit-slider";
-    input.min = min;
-    input.max = max;
-    input.step = step;
-    input.value = S[key];
-    input.addEventListener("input", function () {
-      S[key] = parseInt(input.value, 10);
-      val.textContent = S[key];
-      CALM.saveSettings();
-      if (after) after();
-    });
-    r.appendChild(top);
-    r.appendChild(input);
-    return r;
-  }
-
   function selectRow(label, key, options, after) {
     var r = document.createElement("div");
     r.className = "cit-settings-row";
@@ -542,6 +520,49 @@
     });
     sel.addEventListener("change", function () {
       S[key] = sel.value;
+      CALM.saveSettings();
+      if (after) after();
+    });
+    r.appendChild(span);
+    r.appendChild(sel);
+    return r;
+  }
+
+  // A select over a numeric setting. The menu offers a few good values; the
+  // setting stays a number, so ⌘K can still nudge it to anything in range.
+  //
+  // This is what "no sliders, only options" means in practice: a slider asks
+  // you to pick a value, which needs you to know what the values mean. Four
+  // named choices ask you to pick an intent. Anyone who wants the exact number
+  // still has it, one keystroke away, which is why nothing was lost by doing
+  // this — see the reachability suite.
+  function numberRow(label, key, options, after) {
+    var r = document.createElement("div");
+    r.className = "cit-settings-row";
+    stamp(r, key, "select");
+    var span = document.createElement("span");
+    span.textContent = label;
+    var sel = document.createElement("select");
+    sel.className = "cit-select";
+    var exact = options.some(function (o) { return o.value === (S[key] | 0); });
+    options.forEach(function (o) {
+      var op = document.createElement("option");
+      op.value = String(o.value);
+      op.textContent = o.label;
+      if (o.value === (S[key] | 0)) op.selected = true;
+      sel.appendChild(op);
+    });
+    // A value set from ⌘K may sit between the offered ones. Say so rather
+    // than silently showing the wrong option as selected.
+    if (!exact) {
+      var custom = document.createElement("option");
+      custom.value = String(S[key] | 0);
+      custom.textContent = "Custom (" + (S[key] | 0) + ")";
+      custom.selected = true;
+      sel.insertBefore(custom, sel.firstChild);
+    }
+    sel.addEventListener("change", function () {
+      S[key] = Number(sel.value) | 0;
       CALM.saveSettings();
       if (after) after();
     });
@@ -668,7 +689,6 @@
     buildAdvancedSections: buildAdvancedSections,
     makeDraggable: makeDraggable,
     toggleRow: toggleRow,
-    sliderRow: sliderRow,
     selectRow: selectRow,
   };
 })();

@@ -10,18 +10,33 @@ html {
   --cit-ink: #ececee;              /* soft near-white */
   --cit-ink-dim: rgba(236, 236, 238, 0.56);
   --cit-ink-faint: rgba(236, 236, 238, 0.32);
-  --cit-gold: #c7c8cc;             /* quiet neutral emphasis (was gold) */
-  --cit-gold-bright: #ececed;      /* raised active fill — lit end */
-  --cit-gold-deep: #cfd0d3;        /* raised active fill — low end */
-  --cit-gold-soft: rgba(255, 255, 255, 0.07);
+  --cit-accent: #c7c8cc;             /* quiet neutral emphasis */
+  --cit-accent-bright: #ececed;      /* raised active fill — lit end */
+  --cit-accent-deep: #cfd0d3;        /* raised active fill — low end */
+  --cit-accent-soft: rgba(255, 255, 255, 0.07);
   --cit-hairline: rgba(255, 255, 255, 0.08);
   --cit-hairline-strong: rgba(255, 255, 255, 0.15);
-  --cit-hairline-gold: rgba(255, 255, 255, 0.18);
+  /* WCAG 1.4.11 asks 3:1 for a UI component. Measured, not guessed:
+     off knob 3.4:1 (light) and 4.1:1 (dark) against its own track; on
+     knob ~15:1; off track vs on track 10:1 and 11.4:1.
+     A switch reads as ON by INVERTING, not by changing hue. Off is a dark
+     track with a light knob; on is a light track with a dark knob. Both
+     halves flip, so the state is legible at a glance and from the corner of
+     the eye — which is where a settings list is actually read. */
+  --cit-toggle-off-bg: rgba(255, 255, 255, 0.13);
+  --cit-toggle-off-knob: #9a9ba0;
+  --cit-toggle-on-bg: #f0f0f2;
+  --cit-toggle-on-knob: #1b1c1f;
+  /* OPAQUE on purpose. A translucent select background lets the browser's own
+     control canvas — which is white unless told otherwise — show through, so
+     the dark panel grew light native-looking dropdowns. */
+  --cit-select-bg: #26272b;
+  --cit-hairline-accent: rgba(255, 255, 255, 0.18);
   --cit-fill-soft: rgba(255, 255, 255, 0.045);
   --cit-break: #9aa8b8;            /* muted steel for breaks */
   --cit-night-tint: #ff9b3d;
-  --cit-on-gold: #1b1c1f;          /* dark ink on the raised active fill */
-  --cit-gold-ink: #dcdce0;         /* neutral emphasis text/icon */
+  --cit-on-accent: #1b1c1f;          /* dark ink on the raised active fill */
+  --cit-accent-ink: #dcdce0;         /* neutral emphasis text/icon */
   --cit-ring: rgba(255, 255, 255, 0.16);
   --cit-tray-a: #212226;           /* tray: lit top … */
   --cit-tray-b: #16171a;           /* … to shadowed base */
@@ -44,17 +59,22 @@ html[class*="light"], html[data-theme="light"] {
   --cit-ink: #1c1d20;              /* graphite text */
   --cit-ink-dim: rgba(28, 29, 32, 0.6);
   --cit-ink-faint: rgba(28, 29, 32, 0.38);
-  --cit-gold: #48494e;             /* quiet neutral emphasis */
-  --cit-gold-bright: #303134;      /* dark active fill — lit end */
-  --cit-gold-deep: #232427;        /* dark active fill — low end */
-  --cit-gold-soft: rgba(28, 29, 32, 0.05);
+  --cit-accent: #48494e;             /* quiet neutral emphasis */
+  --cit-accent-bright: #303134;      /* dark active fill — lit end */
+  --cit-accent-deep: #232427;        /* dark active fill — low end */
+  --cit-accent-soft: rgba(28, 29, 32, 0.05);
   --cit-hairline: rgba(28, 29, 32, 0.1);
   --cit-hairline-strong: rgba(28, 29, 32, 0.17);
-  --cit-hairline-gold: rgba(28, 29, 32, 0.2);
+  --cit-toggle-off-bg: rgba(28, 29, 32, 0.15);
+  --cit-toggle-off-knob: #6e6f74;
+  --cit-toggle-on-bg: #1c1d20;
+  --cit-toggle-on-knob: #f7f7f8;
+  --cit-select-bg: #ffffff;
+  --cit-hairline-accent: rgba(28, 29, 32, 0.2);
   --cit-fill-soft: rgba(28, 29, 32, 0.045);
   --cit-shadow: 0 18px 44px rgba(20, 22, 28, 0.16);
-  --cit-on-gold: #f4f4f6;          /* light ink on the dark active fill */
-  --cit-gold-ink: #303134;
+  --cit-on-accent: #f4f4f6;          /* light ink on the dark active fill */
+  --cit-accent-ink: #303134;
   --cit-ring: rgba(28, 29, 32, 0.2);
   --cit-tray-a: #fbfbfc;
   --cit-tray-b: #eeeef1;
@@ -63,6 +83,21 @@ html[class*="light"], html[data-theme="light"] {
   --cit-tile-lip: rgba(255, 255, 255, 0.95);
   --cit-tile-edge: rgba(28, 29, 32, 0.08);
   --cit-tile-label: rgba(28, 29, 32, 0.52);
+}
+
+/* Calm's surfaces declare their own scheme, so the native dropdown a <select>
+   opens matches the panel it came from. Deliberately NOT on :root — that is
+   the host page's element, and setting it there would restyle the site's own
+   form controls, which is precisely the bleed the isolation block below
+   exists to prevent. */
+#cit-dock, #cit-console, #cit-palette, #cit-intent-pop, #cit-reader-pane,
+#cit-pomo-widget, #cit-pomo-overlay { color-scheme: dark; }
+html[class*="light"] #cit-dock, html[data-theme="light"] #cit-dock,
+html[class*="light"] #cit-console, html[data-theme="light"] #cit-console,
+html[class*="light"] #cit-palette, html[data-theme="light"] #cit-palette,
+html[class*="light"] #cit-intent-pop, html[data-theme="light"] #cit-intent-pop,
+html[class*="light"] #cit-reader-pane, html[data-theme="light"] #cit-reader-pane {
+  color-scheme: light;
 }
 
 /* ================= Host isolation =================
@@ -150,7 +185,7 @@ html[class*="light"], html[data-theme="light"] {
 #cit-console input[type="range"],
 #cit-reader-pane input[type="range"],
 .cit-settings-row input[type="range"] {
-  accent-color: var(--cit-gold);
+  accent-color: var(--cit-accent);
 }
 
 /* ----------------------------------------
@@ -185,7 +220,7 @@ html[class*="light"], html[data-theme="light"] {
   background: linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
   box-shadow:
     inset 0 1px 0 var(--cit-tile-lip),
-    inset 0 0 0 1px var(--cit-hairline-gold),
+    inset 0 0 0 1px var(--cit-hairline-accent),
     0 26px 60px rgba(0, 0, 0, 0.55);
   opacity: 0;
   transform: scale(0.97);
@@ -219,9 +254,9 @@ html[class*="light"], html[data-theme="light"] {
   cursor: pointer;
   transition: box-shadow 0.2s ease;
 }
-.cit-live-main:hover { box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-gold); }
+.cit-live-main:hover { box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-accent); }
 .cit-live-on .cit-live-main {
-  background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
 }
 .cit-live-time {
   font-family: var(--cit-serif);
@@ -232,7 +267,7 @@ html[class*="light"], html[data-theme="light"] {
   font-variant-numeric: tabular-nums;
 }
 .cit-live-on .cit-live-time,
-.cit-live-on .cit-live-sub { color: var(--cit-on-gold); }
+.cit-live-on .cit-live-sub { color: var(--cit-on-accent); }
 .cit-live-idle[dir="auto"] { unicode-bidi: plaintext; }
 .cit-live-idle {
   font-family: var(--cit-serif);
@@ -267,10 +302,10 @@ html[class*="light"], html[data-theme="light"] {
   padding: 0;
   transition: box-shadow 0.18s ease;
 }
-.cit-live-btn:hover { box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-gold); }
+.cit-live-btn:hover { box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-accent); }
 .cit-live-btn.cit-active {
-  background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
-  color: var(--cit-on-gold);
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
+  color: var(--cit-on-accent);
 }
 .cit-live-btn .cit-svg { width: 16px; height: 16px; }
 
@@ -292,11 +327,11 @@ html[class*="light"], html[data-theme="light"] {
   padding: 0;
   transition: box-shadow 0.18s ease, transform 0.16s var(--cit-spring);
 }
-.cit-qt:hover { box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-gold); }
+.cit-qt:hover { box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-hairline-accent); }
 .cit-qt:active { transform: scale(0.97); }
 .cit-qt.cit-active {
-  background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
-  color: var(--cit-on-gold);
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
+  color: var(--cit-on-accent);
 }
 .cit-qt .cit-svg { width: 18px; height: 18px; }
 .cit-qt-label {
@@ -307,7 +342,7 @@ html[class*="light"], html[data-theme="light"] {
   text-indent: 0.15em;
   color: var(--cit-tile-label);
 }
-.cit-qt.cit-active .cit-qt-label { color: var(--cit-on-gold); }
+.cit-qt.cit-active .cit-qt-label { color: var(--cit-on-accent); }
 
 /* Inline sliders — the two most-adjusted values, no drawer needed. */
 .cit-con-slider {
@@ -353,8 +388,8 @@ html[class*="light"], html[data-theme="light"] {
 }
 .cit-chipm:hover { color: var(--cit-ink); box-shadow: inset 0 0 0 1px var(--cit-hairline-strong); }
 .cit-chipm.cit-active {
-  background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
-  color: var(--cit-on-gold);
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
+  color: var(--cit-on-accent);
 }
 .cit-chipm-ic { display: inline-flex; }
 .cit-chipm .cit-svg { width: 13px; height: 13px; }
@@ -450,15 +485,15 @@ html[class*="light"], html[data-theme="light"] {
 }
 /* The seal answers when the tray is open. */
 #cit-dock.cit-dock-open .cit-dock-pill {
-  border-color: var(--cit-hairline-gold);
+  border-color: var(--cit-hairline-accent);
   box-shadow: 0 0 0 3px var(--cit-ring), 0 8px 26px rgba(0, 0, 0, 0.5);
 }
 #cit-dock.cit-dock-open .cit-dock-mark {
-  color: var(--cit-gold-bright);
+  color: var(--cit-accent-bright);
 }
 .cit-dock-mark {
   font-size: 15px;
-  color: var(--cit-gold);
+  color: var(--cit-accent);
   transition: color 0.25s var(--cit-ease);
 }
 .cit-dock-status {
@@ -545,7 +580,7 @@ html[class*="light"], html[data-theme="light"] {
   width: 38px;
   height: 22px;
   border-radius: 11px;
-  background: var(--cit-hairline-strong);
+  background: var(--cit-toggle-off-bg);
   cursor: pointer;
   flex-shrink: 0;
   border: none;
@@ -553,7 +588,7 @@ html[class*="light"], html[data-theme="light"] {
   transition: background 0.2s ease;
 }
 .cit-toggle-switch.cit-on {
-  background: var(--cit-gold);
+  background: var(--cit-toggle-on-bg);
 }
 .cit-toggle-knob {
   position: absolute;
@@ -562,12 +597,13 @@ html[class*="light"], html[data-theme="light"] {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #fff;
-  transition: transform 0.2s ease;
+  background: var(--cit-toggle-off-knob);
+  transition: transform 0.2s ease, background 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 .cit-toggle-switch.cit-on .cit-toggle-knob {
   transform: translateX(16px);
+  background: var(--cit-toggle-on-knob);
 }
 
 /* slider rows */
@@ -586,13 +622,13 @@ html[class*="light"], html[data-theme="light"] {
   color: var(--cit-ink);
 }
 .cit-slider-val {
-  color: var(--cit-gold) !important;
+  color: var(--cit-accent) !important;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
 .cit-slider {
   width: 100%;
-  accent-color: var(--cit-gold);
+  accent-color: var(--cit-accent);
   cursor: pointer;
 }
 
@@ -630,7 +666,7 @@ html[class*="light"], html[data-theme="light"] {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--cit-gold);
+  background: var(--cit-accent);
   animation: cit-pulse 1s ease-in-out infinite;
   flex-shrink: 0;
 }
@@ -653,14 +689,31 @@ html[class*="light"], html[data-theme="light"] {
 }
 
 .cit-select {
-  background: var(--cit-hairline);
+  /* Without appearance:none the platform paints its OWN control and ignores
+     every colour below it — which is why these read as light native widgets
+     on a dark panel. Now that the settings drawer is built almost entirely
+     out of selects, that is the difference between a designed panel and a
+     form. The chevron is inlined as a data: URI, so nothing is fetched. */
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: var(--cit-select-bg);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239a9ba0' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
   color: var(--cit-ink);
   border: 1px solid var(--cit-hairline-strong);
   border-radius: 7px;
-  padding: 4px 8px;
+  padding: 4px 26px 4px 9px;
   font-size: 12.5px;
   cursor: pointer;
   outline: none;
+  max-width: 62%;
+  text-overflow: ellipsis;
+}
+.cit-select:hover { border-color: var(--cit-hairline-accent); }
+.cit-select:focus-visible {
+  border-color: var(--cit-ink-dim);
+  box-shadow: 0 0 0 2px var(--cit-hairline-strong);
 }
 .cit-select option {
   background: var(--cit-surface);
@@ -697,7 +750,7 @@ html[class*="light"], html[data-theme="light"] {
 #cit-timebar .cit-timebar-fill {
   height: 100%;
   width: 0%;
-  background: var(--cit-gold);
+  background: var(--cit-accent);
   transition: width 1s linear;
 }
 #cit-timebar.cit-timebar-break .cit-timebar-fill {
@@ -817,7 +870,7 @@ html.cit-presentation #cit-night-overlay {
   padding: 13px 14px 12px;
   box-shadow:
     inset 0 1px 0 var(--cit-tile-lip),
-    inset 0 0 0 1px var(--cit-hairline-gold),
+    inset 0 0 0 1px var(--cit-hairline-accent),
     0 28px 64px rgba(0, 0, 0, 0.6);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   animation: cit-panel-in 0.2s var(--cit-spring);
@@ -919,7 +972,7 @@ html.cit-presentation #cit-night-overlay {
 .cit-intent-goal:focus,
 .cit-intent-add:focus,
 .cit-intent-park:focus {
-  box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-gold),
+  box-shadow: inset 0 1px 0 var(--cit-tile-lip), inset 0 0 0 1px var(--cit-accent),
     0 0 0 3px var(--cit-ring);
 }
 
@@ -950,7 +1003,7 @@ html.cit-presentation #cit-night-overlay {
   border: none;
   box-shadow: inset 0 0 0 1.2px var(--cit-hairline-strong);
   background: transparent;
-  color: var(--cit-on-gold);
+  color: var(--cit-on-accent);
   font-size: 10px;
   line-height: 1;
   cursor: pointer;
@@ -958,10 +1011,10 @@ html.cit-presentation #cit-night-overlay {
   flex-shrink: 0;
   transition: box-shadow 0.18s ease, background 0.18s ease;
 }
-.cit-intent-box:hover { box-shadow: inset 0 0 0 1.2px var(--cit-gold); }
+.cit-intent-box:hover { box-shadow: inset 0 0 0 1.2px var(--cit-accent); }
 .cit-intent-task.cit-done .cit-intent-box {
-  background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
-  box-shadow: inset 0 0 0 1px var(--cit-gold-bright);
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
+  box-shadow: inset 0 0 0 1px var(--cit-accent-bright);
 }
 .cit-intent-del {
   border: none;
@@ -986,7 +1039,7 @@ html.cit-presentation #cit-night-overlay {
   padding: 4px 2px 4px 9px;
   font-size: 12px;
   color: var(--cit-ink-dim);
-  border-left: 1px solid var(--cit-hairline-gold);
+  border-left: 1px solid var(--cit-hairline-accent);
   margin-bottom: 3px;
 }
 .cit-intent-note span {
@@ -1024,8 +1077,8 @@ html.cit-presentation #cit-night-overlay {
   font-family: var(--cit-serif);
   font-size: 12.5px;
   letter-spacing: 0.06em;
-  color: var(--cit-on-gold);
-  background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
+  color: var(--cit-on-accent);
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 4px 14px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   transition: transform 0.16s var(--cit-spring), box-shadow 0.2s ease;
@@ -1049,10 +1102,10 @@ html.cit-presentation #cit-night-overlay {
 .cit-chip {
   padding: 7px 13px;
   border-radius: 999px;
-  background: var(--cit-gold);
-  /* --cit-gold is a light grey since the monochrome pass; ink on it measured
-     1.42:1. The on-gold token is the readable counterpart. */
-  color: var(--cit-on-gold);
+  background: var(--cit-accent);
+  /* --cit-accent is a light grey since the monochrome pass; ink on it measured
+     1.42:1. The on-accent token is the readable counterpart. */
+  color: var(--cit-on-accent);
   font-size: 12.5px;
   font-weight: 600;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -1136,7 +1189,7 @@ html.cit-presentation #cit-night-overlay {
 }
 .cit-pomo-ring .cit-pomo-prog {
   fill: none;
-  stroke: var(--cit-gold);
+  stroke: var(--cit-accent);
   stroke-width: 5;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.95s linear, stroke 0.4s ease;
@@ -1214,7 +1267,7 @@ html.cit-presentation #cit-night-overlay {
   background: var(--cit-hairline-strong);
 }
 .cit-pomo-dots .cit-dot-on {
-  background: var(--cit-gold);
+  background: var(--cit-accent);
 }
 .cit-pomo-break .cit-pomo-dots .cit-dot-on {
   background: #f59e0b;
@@ -1263,9 +1316,9 @@ html.cit-presentation #cit-night-overlay {
   transition: background 0.15s ease;
 }
 .cit-mini-btn:hover {
-  background: var(--cit-gold);
-  border-color: var(--cit-gold);
-  color: var(--cit-on-gold); /* ink on this fill measured 1.42:1 */
+  background: var(--cit-accent);
+  border-color: var(--cit-accent);
+  color: var(--cit-on-accent); /* ink on this fill measured 1.42:1 */
 }
 .cit-mini-btn.cit-del {
   padding: 3px 7px;
@@ -1339,13 +1392,13 @@ html.cit-presentation #cit-night-overlay {
 /* SVG icon sizing */
 .cit-svg { width: 16px; height: 16px; display: block; }
 .cit-svg-mark { width: 20px; height: 20px; }
-.cit-row-ic { display: inline-flex; margin-right: 9px; color: var(--cit-gold); vertical-align: middle; }
+.cit-row-ic { display: inline-flex; margin-right: 9px; color: var(--cit-accent); vertical-align: middle; }
 .cit-row-ic .cit-svg { width: 15px; height: 15px; }
 .cit-row-label { display: inline-flex; align-items: center; }
 .cit-dock-mark { display: inline-flex; }
 #cit-intent-chip .cit-row-ic { margin-right: 2px; }
 
-/* Gold hairline + deep shadow on every raised surface */
+/* Hairline + deep shadow on every raised surface */
 .cit-dock-pill,
 #cit-intent-chip,
 #cit-pomo-widget,
@@ -1353,7 +1406,7 @@ html.cit-presentation #cit-night-overlay {
 .cit-chip,
 #cit-toast,
 #cit-type-chip {
-  box-shadow: inset 0 0 0 1px var(--cit-hairline-gold), var(--cit-shadow);
+  box-shadow: inset 0 0 0 1px var(--cit-hairline-accent), var(--cit-shadow);
   border-color: transparent;
 }
 
@@ -1361,34 +1414,19 @@ html.cit-presentation #cit-night-overlay {
 .cit-dock-status { font-family: var(--cit-serif); }
 .cit-pomo-time { font-family: var(--cit-serif) !important; letter-spacing: 0.05em; }
 /* Scoped so it cannot override the break ring, which is deliberately warm. */
-.cit-pomo-ring .cit-pomo-prog { stroke: var(--cit-gold); }
+.cit-pomo-ring .cit-pomo-prog { stroke: var(--cit-accent); }
 
-/* Uppercase spaced tabs with a gold active underline */
+/* Uppercase spaced tabs with an active underline */
 
-/* Panel breathing room + gold controls */
+/* Panel breathing room + control accents */
 .cit-settings-row { padding: 11px 0; }
-.cit-slider { accent-color: var(--cit-gold); }
-.cit-toggle-switch.cit-on { background: linear-gradient(135deg, var(--cit-gold-bright), var(--cit-gold-deep)); }
-.cit-settings-divider { color: var(--cit-gold-deep); border-color: var(--cit-hairline-gold); letter-spacing: 0.14em; }
-.cit-slider-val { color: var(--cit-gold) !important; font-family: var(--cit-serif); }
+.cit-slider { accent-color: var(--cit-accent); }
+.cit-settings-divider { color: var(--cit-accent-deep); border-color: var(--cit-hairline-accent); letter-spacing: 0.14em; }
+.cit-slider-val { color: var(--cit-accent) !important; font-family: var(--cit-serif); }
 
-/* The slow gold shimmer (pill hover) */
-.cit-dock-pill { position: relative; overflow: hidden; }
-.cit-dock-pill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(105deg, transparent 42%, rgba(217, 188, 127, 0.16) 50%, transparent 58%);
-  background-size: 260% 100%;
-  background-position: 130% 0;
-  pointer-events: none;
-  transition: background-position 0.9s var(--cit-ease);
-}
-.cit-dock-pill:hover::after { background-position: -130% 0; }
 
-/* Timebar in gold */
-#cit-timebar .cit-timebar-fill { background: linear-gradient(90deg, var(--cit-gold-deep), var(--cit-gold-bright)); }
+/* Timebar */
+#cit-timebar .cit-timebar-fill { background: linear-gradient(90deg, var(--cit-accent-deep), var(--cit-accent-bright)); }
 #cit-timebar.cit-timebar-break .cit-timebar-fill { background: var(--cit-break); }
 
 /* ----------------------------------------
@@ -1462,8 +1500,8 @@ html.cit-presentation #cit-night-overlay {
   box-shadow: inset 0 0 0 1px var(--cit-hairline-strong);
 }
 .cit-fr-btn.cit-active {
-  background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
-  color: var(--cit-on-gold);
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
+  color: var(--cit-on-accent);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 .cit-fr-ic {
@@ -1479,7 +1517,7 @@ html.cit-presentation #cit-night-overlay {
 .cit-fr-ic .cit-svg { width: 15px; height: 15px; }
 .cit-fr-range {
   width: 84px;
-  accent-color: var(--cit-gold);
+  accent-color: var(--cit-accent);
 }
 .cit-fr-body {
   max-width: 46rem;
@@ -1595,7 +1633,7 @@ html.cit-presentation #cit-night-overlay {
   background: linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
   box-shadow:
     inset 0 1px 0 var(--cit-tile-lip),
-    inset 0 0 0 1px var(--cit-hairline-gold),
+    inset 0 0 0 1px var(--cit-hairline-accent),
     0 30px 70px rgba(0, 0, 0, 0.6);
 }
 .cit-pal-top {
@@ -1818,7 +1856,7 @@ html.cit-presentation #cit-night-overlay {
   background: linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
   box-shadow:
     inset 0 1px 0 var(--cit-tile-lip),
-    inset 0 0 0 1px var(--cit-hairline-gold),
+    inset 0 0 0 1px var(--cit-hairline-accent),
     0 24px 56px rgba(0, 0, 0, 0.55);
   animation: cit-tour-in 0.34s var(--cit-spring);
   z-index: 1;
@@ -1893,8 +1931,8 @@ html.cit-presentation #cit-night-overlay {
   font-family: var(--cit-serif);
   font-size: 12.5px;
   letter-spacing: 0.05em;
-  color: var(--cit-on-gold);
-  background: linear-gradient(160deg, var(--cit-gold-bright), var(--cit-gold-deep));
+  color: var(--cit-on-accent);
+  background: linear-gradient(160deg, var(--cit-accent-bright), var(--cit-accent-deep));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
   cursor: pointer;
   transition: transform 0.16s var(--cit-spring);
@@ -1921,7 +1959,7 @@ html.cit-presentation #cit-night-overlay {
   background: linear-gradient(178deg, var(--cit-tray-a), var(--cit-tray-b));
   box-shadow:
     inset 0 1px 0 var(--cit-tile-lip),
-    inset 0 0 0 1px var(--cit-hairline-gold),
+    inset 0 0 0 1px var(--cit-hairline-accent),
     0 24px 56px rgba(0, 0, 0, 0.5);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   animation: cit-back-in 0.4s var(--cit-spring);
