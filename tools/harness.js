@@ -1261,6 +1261,155 @@ section("Where was I");
   check("it never appears during Presentation", !w3.bodyEls["cit-back"]);
   Date.now = realNow;
   w3.C.modes.exit("presentation");
+
+  // SCENARIO 38b — "I came back after lunch, read the card, then clicked a
+  // different conversation in the sidebar." The card belongs to the
+  // conversation it was raised over. Its jump button remembers a scroll
+  // offset from THAT conversation, so leaving it up after a navigation is not
+  // merely stale decoration — pressing it scrolls a different conversation to
+  // a meaningless position.
+  var w4 = buildWorld("chatgpt.com", { lenient: true });
+  w4.C.intent.state.goal = "finish the migration notes";
+  global.document.hidden = true;
+  (w4.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  Date.now = function () { return realNow() + 45 * 60000; };
+  global.document.hidden = false;
+  (w4.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  Date.now = realNow;
+  check("(setup) the card is up before navigating", !!w4.bodyEls["cit-back"]);
+  w4.nav("https://chatgpt.com/c/another-conversation");
+  check("opening another conversation takes the card with it",
+    !w4.bodyEls["cit-back"]);
+})();
+
+/* ---------------- Presentation hides every Calm surface ------------------ */
+// Presentation exists for one reason: other people are looking at this screen.
+// The rule is not "hide the menu", it is "hide ALL of Calm" — and it is
+// enforced by one CSS block listing surfaces by id, which is exactly the kind
+// of list that goes one entry stale without anyone noticing.
+//
+// So derive the list instead of trusting it: raise every body-level surface
+// the extension can put on the page, then require the CSS to name each one.
+// Only elements parented to <body> are considered — anything inside the dock
+// is already covered by hiding the dock, and demanding its own rule would be
+// a false alarm.
+section("Presentation");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  var css = fs.readFileSync(path.join(ROOT, "content.css"), "utf8");
+  var block = css.slice(css.indexOf("html.cit-presentation"));
+  block = block.slice(0, block.indexOf("}"));
+
+  C.modes.ids().forEach(function (id) {
+    if (id === "presentation") return;
+    try { C.modes.enter(id); } catch (_) {}
+  });
+  try { C.ui.showToast("hello", true); } catch (_) {}
+  try { C.ui.showChip("time", "25m here"); } catch (_) {}
+  try { C.intent.toggle(true); } catch (_) {}
+  try { C.palette.open(); } catch (_) {}
+  try { C.intent.state.goal = "x"; C.back.show(); } catch (_) {}
+
+  var onBody = (global.document.body.children || [])
+    .map(function (e) { return e && e.__id; })
+    .filter(function (id) { return id && /^cit-/.test(id); })
+    .filter(function (id, i, a) { return a.indexOf(id) === i; });
+
+  // A derivation that raised nothing would wave every assertion through.
+  check("the test actually got Calm's surfaces onto the page (guard against " +
+    "a derivation that observes nothing)",
+    onBody.length >= 8, onBody.length + " body-level surfaces");
+
+  onBody.forEach(function (id) {
+    // #cit-toast is the one deliberate exemption: Presentation hides every
+    // Calm control INCLUDING the menu, so the toast is the only channel left
+    // to say "press Esc to exit". Hiding it would make Presentation a trap.
+    // The messages that travel on it are gated instead — asserted below.
+    if (id === "cit-toast") return;
+    check("Presentation hides " + id, block.indexOf("#" + id) >= 0);
+  });
+
+  // The exemption above is on the CHANNEL. What must not happen is an
+  // unprompted message riding it in front of an audience — the hyperfocus
+  // nudge fires on a 30-second timer and does not care what you are doing.
+  var w2 = buildWorld("chatgpt.com", { lenient: true });
+  w2.C.modes.enter("presentation");
+  var toast = w2.bodyEls["cit-toast"];
+  check("(setup) Presentation tells you how to get out",
+    !!toast && /Esc/.test(toast.textContent || ""));
+  var hint = toast && toast.textContent;
+  w2.C.ui.showToast("🌿 1h on this site — stretch? water?", true);
+  check("a wellness nudge does not pop over a presentation",
+    !!toast && toast.textContent === hint,
+    toast ? toast.textContent : "(no toast)");
+  w2.C.ui.showToast();
+  check("nor does the input-hidden hint",
+    !!toast && toast.textContent === hint,
+    toast ? toast.textContent : "(no toast)");
+  w2.C.modes.exit("presentation");
+  w2.C.ui.showToast("back to normal", true);
+  check("and ordinary toasts work again once the presentation ends",
+    !!toast && toast.textContent === "back to normal",
+    toast ? toast.textContent : "(no toast)");
+})();
+
+/* ---------------- Every mode puts the page back ------------------------- */
+// A mode is a loan: whatever it changes about the page, leaving it must give
+// back. Each exit is written by hand next to its enter, so the pairs drift
+// one line at a time. Rather than trust twelve pairs, take a picture of the
+// page, enter, exit, and require the picture to match.
+section("Modes give the page back");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  var html = global.document.documentElement;
+
+  function snapshot() {
+    return {
+      els: Object.keys(w.bodyEls).filter(function (k) { return /^cit-/.test(k); }).sort(),
+      cls: Array.from(html.classList._s).filter(function (c) { return /^cit-/.test(c); }).sort(),
+    };
+  }
+  function diff(a, b) {
+    return b.filter(function (x) { return a.indexOf(x) < 0; });
+  }
+
+  // Two elements are CHANNELS, not surfaces: they are created once and reused
+  // by whoever needs to say something. What must go when a mode leaves is the
+  // mode's message, not the channel — and that is covered, because a chip or
+  // a pane carries its own id and would show up in the diff below. An empty
+  // chip stack and a toast still fading out are not residue.
+  var CHANNELS = ["cit-chip-stack", "cit-toast"];
+
+  var ids = C.modes.ids();
+  check("(setup) there are modes to check", ids.length >= 8, ids.length + " modes");
+
+  ids.forEach(function (id) {
+    var before = snapshot();
+    try { C.modes.enter(id); } catch (e) { check(id + " can be entered", false, e.message); return; }
+    try { C.modes.exit(id); } catch (e) { check(id + " can be exited", false, e.message); return; }
+    var after = snapshot();
+    var leftEls = diff(before.els, after.els).filter(function (k) {
+      return CHANNELS.indexOf(k) < 0;
+    });
+    var leftCls = diff(before.cls, after.cls);
+    check("leaving " + id + " takes its elements with it", !leftEls.length,
+      leftEls.join(", "));
+    check("leaving " + id + " takes its <html> classes with it", !leftCls.length,
+      leftCls.join(", "));
+  });
+
+  // ...and the channels themselves are handed back empty, which is the half
+  // the exclusion above would otherwise stop anyone from checking.
+  C.modes.enter("pause");
+  var stack = w.bodyEls["cit-chip-stack"];
+  check("(setup) Pause puts a chip in the stack",
+    !!stack && (stack.children || []).length > 0);
+  C.modes.exit("pause");
+  check("leaving Pause hands the chip stack back empty",
+    !!stack && (stack.children || []).length === 0,
+    stack ? (stack.children || []).length + " left" : "(no stack)");
 })();
 
 /* ---------------- Auto-hide: only when there is something to read -------- */

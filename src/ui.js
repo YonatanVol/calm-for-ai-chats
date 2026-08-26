@@ -16,7 +16,16 @@
   var C = CALM.const;
 
   // ---- Toast ----
-  function showToast(text, force) {
+  // `essential` means "this message must reach the user even while they are
+  // presenting". Presentation deliberately keeps #cit-toast visible so the
+  // "press Esc to exit" hint can get out — otherwise hiding every Calm
+  // surface would hide the only way back. But that exemption is on the
+  // CHANNEL, not on the message, so it also let unprompted toasts through:
+  // the hyperfocus nudge fires on a 30s timer and would pop "stretch? water?"
+  // over whatever the user is showing an audience. So the channel stays
+  // visible and the messages are gated instead.
+  function showToast(text, force, essential) {
+    if (!essential && CALM.modes && CALM.modes.isActive("presentation")) return;
     var now = Date.now();
     if (!force && now - rt.lastToastAt < C.TOAST_THROTTLE_MS) return;
     rt.lastToastAt = now;
