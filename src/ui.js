@@ -690,5 +690,11 @@
     makeDraggable: makeDraggable,
     toggleRow: toggleRow,
     selectRow: selectRow,
+    // Introspection for the suite: both of these are stacks that surfaces
+    // push onto when they open and must pop from when they close, and the
+    // only way to catch one that forgets is to be able to count them.
+    _openSurfaces: function () {
+      return { popovers: popovers.length, escapers: escapers.length };
+    },
   };
 })();

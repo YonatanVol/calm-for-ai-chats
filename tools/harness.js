@@ -1936,6 +1936,72 @@ section("Jump to answer");
   w3.C.core.jumpToAnswerStart = realJump;
 })();
 
+/* ---------------- Surfaces let go of what they took --------------------- */
+// Opening a surface pushes a closer onto the popover registry and an entry
+// onto the Escape stack. Closing it must pop BOTH. Nothing crashes when one
+// is forgotten — the stale entry just answers "not mine" — so the symptom is
+// a stack that grows all session, each entry holding a detached DOM tree.
+// Counting is the only way to see it.
+section("Surfaces let go");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  var base = C.ui._openSurfaces();
+
+  // SCENARIO 51 — open and close the intention card, ten times over.
+  for (var i = 0; i < 10; i++) {
+    C.intent.toggle(false);
+    var pop = w.bodyEls["cit-intent-pop"];
+    var x = pop && pop.querySelector(".cit-intent-close");
+    if (x && x.__ls && x.__ls.click) {
+      x.__ls.click[0]({ stopPropagation: function () {}, preventDefault: function () {} });
+    }
+  }
+  var after = C.ui._openSurfaces();
+  check("closing the intention card leaves nothing on the stacks",
+    after.popovers === base.popovers && after.escapers === base.escapers,
+    "popovers " + base.popovers + "→" + after.popovers +
+      ", escapers " + base.escapers + "→" + after.escapers);
+
+  // SCENARIO 51b — closing it the way the SHORTCUT does: ⌃⇧K again, or a
+  // second click on the chip. This route used to remove the element directly
+  // instead of going through the closer, which left the outside-click
+  // listener bound to the document. That listener fires on every click
+  // anywhere on the page and asks a detached node whether it contains the
+  // target — a cost paid forever, once per open-and-toggle-shut.
+  var w1b = buildWorld("chatgpt.com", { lenient: true });
+  var baseClicks = (w1b.docLs.click || []).length;
+  var base1b = w1b.C.ui._openSurfaces();
+  for (i = 0; i < 10; i++) {
+    w1b.C.intent.toggle(false); // open
+    w1b.C.intent.toggle(false); // and shut again
+  }
+  check("toggling it shut unbinds its outside-click listener",
+    (w1b.docLs.click || []).length === baseClicks,
+    baseClicks + " → " + (w1b.docLs.click || []).length);
+  var after1b = w1b.C.ui._openSurfaces();
+  check("toggling it shut also clears the stacks",
+    after1b.popovers === base1b.popovers && after1b.escapers === base1b.escapers,
+    "popovers " + base1b.popovers + "→" + after1b.popovers +
+      ", escapers " + base1b.escapers + "→" + after1b.escapers);
+
+  // SCENARIO 52 — and the same when a navigation closes it instead. This is
+  // the path that actually leaks: the registry holds whatever reference it
+  // was handed at open time, and if the module later wraps that function,
+  // the wrapper's cleanup never runs.
+  var w2 = buildWorld("chatgpt.com", { lenient: true });
+  var base2 = w2.C.ui._openSurfaces();
+  for (i = 0; i < 10; i++) {
+    w2.C.intent.toggle(false);
+    w2.nav("https://chatgpt.com/c/n" + i);
+  }
+  var after2 = w2.C.ui._openSurfaces();
+  check("a navigation closing it leaves nothing behind either",
+    after2.popovers === base2.popovers && after2.escapers === base2.escapers,
+    "popovers " + base2.popovers + "→" + after2.popovers +
+      ", escapers " + base2.escapers + "→" + after2.escapers);
+})();
+
 section("Auto-hide");
 (function () {
   var w = buildWorld("chatgpt.com", {});

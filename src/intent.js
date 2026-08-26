@@ -121,12 +121,21 @@
   }
 
   // ---------- Focus panel ----------
+  // The closer for the card that is currently open, so every route out of it
+  // — the ✕, Escape, a click outside, a navigation, and toggling it shut —
+  // runs the SAME cleanup. This used to remove the element directly, which
+  // left the document-level click listener bound. That listener runs on every
+  // click anywhere on the page and asks a detached node whether it contains
+  // the target, so the cost was paid on every click for the life of the tab,
+  // once per open-and-toggle-shut.
+  var openClose = null;
+
   function togglePop(focusPark) {
-    var p = document.getElementById("cit-intent-pop");
-    if (p) {
-      p.remove();
+    if (document.getElementById("cit-intent-pop")) {
+      if (openClose) openClose();
       return;
     }
+    var p;
     p = document.createElement("div");
     p.id = "cit-intent-pop";
 
@@ -330,29 +339,44 @@
     document.body.appendChild(p);
     (focusPark ? park : goal).focus();
 
+    // ONE closer, and every registry gets that same reference.
+    //
+    // This used to register closePop and then reassign the variable to a
+    // wrapper that also released the Escape handler. Callers that looked the
+    // name up at call time got the wrapper and cleaned up properly — but the
+    // popover registry had captured the ORIGINAL at open time, so when a
+    // NAVIGATION closed the card through the registry, the Escape handler was
+    // never released. It stayed on the stack holding this whole detached
+    // popover, once per navigation, for the life of the tab.
+    //
+    // Nothing broke, which is why it survived: a stale handler simply answers
+    // "not mine" and Escape carries on to the right one. The suite counts the
+    // stacks, because counting is the only way to see this.
+    var unEsc = null;
     function closePop() {
       p.remove();
       document.removeEventListener("click", closeOnOutside, true);
+      if (unEsc) {
+        unEsc();
+        unEsc = null;
+      }
       if (CALM.ui.unregisterPopover) CALM.ui.unregisterPopover(closePop);
+      if (openClose === closePop) openClose = null;
     }
     function closeOnOutside(e) {
       if (!p.contains(e.target) && e.target.id !== "cit-intent-chip") closePop();
     }
+    openClose = closePop;
     if (CALM.ui.registerPopover) CALM.ui.registerPopover(closePop);
     // Escape closes it too — it used to be the only Calm surface you could not
     // dismiss with the keyboard.
-    var unEsc = CALM.ui.registerEscape
-      ? CALM.ui.registerEscape(function () {
-          if (!document.getElementById("cit-intent-pop")) return false;
-          closePop();
-          return true;
-        })
-      : null;
-    var innerClose = closePop;
-    closePop = function () {
-      if (unEsc) { unEsc(); unEsc = null; }
-      innerClose();
-    };
+    if (CALM.ui.registerEscape) {
+      unEsc = CALM.ui.registerEscape(function () {
+        if (!document.getElementById("cit-intent-pop")) return false;
+        closePop();
+        return true;
+      });
+    }
     setTimeout(function () {
       document.addEventListener("click", closeOnOutside, true);
     }, 0);
