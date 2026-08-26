@@ -76,6 +76,7 @@
   }
 
   // ---------- Status ----------
+  var lastStatus = null; // what the status line currently says
   function statusText() {
     var parts = [];
     var goal = CALM.intent && CALM.intent.state && CALM.intent.state.goal;
@@ -96,8 +97,17 @@
     var elx = d.querySelector(".cit-dock-status");
     if (!elx) return;
     var t = statusText();
-    elx.textContent = t;
-    elx.style.display = t ? "" : "none";
+    // Only write when it actually changed. This runs once a second for the
+    // life of every tab, and assigning textContent dirties the node whether
+    // or not the text differs — so the idle case was a layout and a paint
+    // every second, forever, on a page whose whole purpose here is to sit
+    // still. Almost every tick IS idle: this text only moves while a Pomodoro
+    // is counting down.
+    if (t !== lastStatus) {
+      lastStatus = t;
+      elx.textContent = t;
+      elx.style.display = t ? "" : "none";
+    }
   }
 
   // ---------- Open / collapse (the Console owns its own state) ----------
@@ -113,6 +123,7 @@
 
   function build(opts) {
     opts = opts || {};
+    lastStatus = null; // fresh node, so nothing is cached about its text
     // A rebuild triggered by the page moving (a resize, gaining or losing the
     // margin gutter) must not close a menu the user is reading. A rebuild
     // triggered by navigation still starts closed.
@@ -152,9 +163,17 @@
     pill.type = "button";
     pill.className = "cit-dock-pill";
     pill.setAttribute("aria-label", "Calm");
-    pill.innerHTML =
-      '<span class="cit-dock-mark">' + IC.mark +
-      '</span><span class="cit-dock-status"></span>';
+    // Built as elements rather than one innerHTML string. Same markup, but
+    // the status span is now a real child that can be found and asserted on —
+    // as an innerHTML blob it was invisible to every test that tried, so the
+    // once-a-second refresh below has never actually been exercised.
+    var mark = document.createElement("span");
+    mark.className = "cit-dock-mark";
+    mark.innerHTML = IC.mark; // static markup from our own icon set
+    var status = document.createElement("span");
+    status.className = "cit-dock-status";
+    pill.appendChild(mark);
+    pill.appendChild(status);
     pill.addEventListener("click", function (e) {
       e.stopPropagation();
       unquiet();

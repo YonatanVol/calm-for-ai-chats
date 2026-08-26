@@ -2136,6 +2136,63 @@ section("Controls are named");
     }).join(", "));
 })();
 
+/* ---------------- The idle tab stays idle -------------------------------- */
+// A tool whose entire proposition is stillness should not be writing to the
+// DOM once a second forever. The dock's status line ticks every second so a
+// running Pomodoro counts down — but almost every tick is idle, and assigning
+// textContent dirties the node whether or not the text differs.
+section("Idle cost");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  C.dock.build();
+  var d = w.bodyEls["cit-dock"];
+  // Ask for the node the way a real query would, and prove it is REAL — a
+  // lenient world hands back a fresh phantom for every miss, so !!status is
+  // not evidence of anything. Two lookups returning the same node is.
+  var status = d && d.querySelector(".cit-dock-status");
+  check("(setup) the dock has a real status line",
+    !!status && d.querySelector(".cit-dock-status") === status);
+  if (!status) return;
+
+  // Count writes by watching the property the tick assigns.
+  var writes = 0;
+  var held = status.textContent;
+  Object.defineProperty(status, "textContent", {
+    get: function () { return held; },
+    set: function (v) { writes++; held = v; },
+    configurable: true,
+  });
+
+  for (var i = 0; i < 30; i++) C.dock.refreshStatus();
+  check("thirty idle ticks write to the page at most once", writes <= 1,
+    writes + " writes");
+
+  // ...and it must still update when there IS something to say.
+  C.intent.state.goal = "finish the migration notes";
+  C.settings.intentChipMode = "dock";
+  C.settings.intentionPrompt = true;
+  C.dock.refreshStatus();
+  check("but a change still reaches the page", /migration/.test(held), held);
+
+  var before = writes;
+  C.dock.refreshStatus();
+  C.dock.refreshStatus();
+  check("and repeating that change does not write again", writes === before,
+    (writes - before) + " extra writes");
+
+  // A rebuild — a resize, or gaining the margin gutter — makes a BLANK status
+  // node while the cache still holds what the old one said. Skipping the
+  // write then leaves the new pill silent about a timer that is still running,
+  // which is the one moment this line has a job to do.
+  C.dock.build();
+  C.dock.refreshStatus();
+  var fresh = w.bodyEls["cit-dock"].querySelector(".cit-dock-status");
+  check("a rebuilt pill still shows what the old one was saying",
+    !!fresh && /migration/.test(fresh.textContent || ""),
+    fresh ? "\"" + fresh.textContent + "\"" : "(no node)");
+})();
+
 section("Auto-hide");
 (function () {
   var w = buildWorld("chatgpt.com", {});
