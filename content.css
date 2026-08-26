@@ -275,7 +275,7 @@ html[class*="light"], html[data-theme="light"] {
 .cit-live-btn .cit-svg { width: 16px; height: 16px; }
 
 /* Quick tiles — the three things reached most often. */
-.cit-quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cit-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .cit-qt {
   display: flex;
   flex-direction: column;

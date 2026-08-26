@@ -413,6 +413,8 @@
     rt.pendingText = "";
     rt.initialized = false;
     rt.accUp = 0;
+    rt.jumpIdx = 0;
+    rt.jumpTotal = -1; // forces a re-anchor to the newest answer
     rt.composerEl = null;
     rt.scrollContainer = null;
     // Calm-owned singletons that popover-close doesn't cover.
@@ -439,6 +441,56 @@
       }
     });
     rt.navObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
+  // ---- Back to the top of the answer ----
+  // A long answer finishes and the view is parked at its END, because that is
+  // where the streaming left you. Reading it means hunting upward for where it
+  // started. This puts you on its first line instead, and pressing again walks
+  // back through earlier answers — which is how people actually re-read a
+  // conversation: by turn, not by pixel.
+  function answers() {
+    try {
+      if (!site.responseSel) return [];
+      return Array.prototype.slice.call(
+        document.querySelectorAll(site.responseSel)
+      );
+    } catch (_) {
+      return [];
+    }
+  }
+  function jumpToAnswerStart() {
+    var list = answers();
+    if (!list.length) return; // a new chat has nothing to go back to
+
+    // A new turn makes the walk-back position stale: you are asking about the
+    // conversation as it is now, not as it was three answers ago.
+    if (rt.jumpTotal !== list.length) {
+      rt.jumpTotal = list.length;
+      rt.jumpIdx = list.length - 1;
+    }
+    var el = list[rt.jumpIdx];
+    if (!el || !el.getBoundingClientRect) return;
+
+    var sc = currentScroller();
+    if (!sc) return;
+    // The scroller may be the page itself, whose rect is already the viewport.
+    var base = 0;
+    try {
+      if (sc !== document.scrollingElement && sc !== document.documentElement &&
+          sc !== document.body && sc.getBoundingClientRect) {
+        base = sc.getBoundingClientRect().top || 0;
+      }
+    } catch (_) {}
+    var target = (sc.scrollTop || 0) + (el.getBoundingClientRect().top - base) -
+      C.JUMP_MARGIN;
+    var max = Math.max(0, (sc.scrollHeight || 0) - (sc.clientHeight || 0));
+    CALM.ui.smoothScrollTo(Math.max(0, Math.min(max, target)));
+
+    // Step back for next time, and STOP at the first answer rather than
+    // wrapping — wrapping would fling you to the bottom of a long
+    // conversation just as you reached the top of it.
+    if (rt.jumpIdx > 0) rt.jumpIdx--;
   }
 
   // ---- Keyboard ----
@@ -471,6 +523,10 @@
         e.preventDefault();
         e.stopPropagation();
         modes.toggle("presentation");
+      } else if (e.code === "KeyJ") {
+        e.preventDefault();
+        e.stopPropagation();
+        CALM.core.jumpToAnswerStart();
       }
     },
     true
@@ -550,6 +606,7 @@
     insertIntoInput: insertIntoInput,
     discoverScroll: discoverScroll,
     currentScroller: currentScroller,
+    jumpToAnswerStart: jumpToAnswerStart,
     init: init,
   };
 
