@@ -698,6 +698,52 @@ section("Scenarios III");
   w3.C.core.init();
   check("remembered 'hidden' still applies to a real conversation",
     w3.C.rt.composerHidden);
+
+  // SCENARIO 10c — "It hid itself while I was reading, so I scrolled to the
+  // bottom to get it back. Then I opened another conversation and scrolling
+  // to the bottom stopped working."
+  //
+  // Hiding remembers WHY: an automatic hide is a guess and scrolling back to
+  // the bottom undoes it; an explicit hide is a decision and does not. What
+  // is saved across a navigation is only the fact of being hidden, so the
+  // restore has to pick one — and picking "decision" quietly takes away the
+  // affordance the user just learned, with no toast to hint at the shortcut.
+  var w4 = buildWorld("chatgpt.com", {
+    lenient: true,
+    seed: { "cit-state-chatgpt": JSON.stringify({
+      composerHidden: true, hiddenManually: false, modes: {} }) },
+  });
+  w4.docQuery = function () { return w4.makeEl("div"); }; // a real conversation
+  w4.C.settings.rememberState = true;
+  w4.C.rt.composerHidden = false;
+  w4.C.core.init();
+  check("(setup) a remembered auto-hide is restored hidden",
+    w4.C.rt.composerHidden);
+  check("a remembered auto-hide can still be undone by scrolling to the bottom",
+    !w4.C.rt.hiddenManually);
+
+  // ...and the other half of the same rule: a hide the user ASKED for stays.
+  var w5 = buildWorld("chatgpt.com", {
+    lenient: true,
+    seed: { "cit-state-chatgpt": JSON.stringify({
+      composerHidden: true, hiddenManually: true, modes: {} }) },
+  });
+  w5.docQuery = function () { return w5.makeEl("div"); };
+  w5.C.settings.rememberState = true;
+  w5.C.rt.composerHidden = false;
+  w5.C.core.init();
+  check("a hide I asked for is not undone by scrolling after a navigation",
+    w5.C.rt.composerHidden && w5.C.rt.hiddenManually);
+
+  // The distinction has to survive the storage boundary or the restore above
+  // is guessing.
+  var w6 = buildWorld("chatgpt.com", { lenient: true });
+  w6.C.rt.composerHidden = true;
+  w6.C.rt.hiddenManually = true;
+  w6.C.settings.rememberState = true;
+  w6.C.saveState();
+  check("saved state records which kind of hide it was",
+    JSON.parse(w6.local["cit-state-chatgpt"]).hiddenManually === true);
 })();
 
 section("Scenarios IV");
@@ -884,6 +930,48 @@ section("Scenarios VI");
   check("typing in Calm's own search box is not scooped into the chat",
     !stolen && !C.rt.pendingText);
   C.palette.close();
+
+  // SCENARIO 19b — "Calm hid the input so I could read, and I hit Space to
+  // scroll down like I do on every other page."
+  //
+  // Space is a printable character AND the oldest scroll key on the web. When
+  // the composer is hidden there is nothing being typed yet, so a Space is a
+  // request to move down the page — never the first character of a message.
+  var body = w.makeEl("div"); // focus is on the page, not in any field
+  function press(key) {
+    var prevented = false;
+    (w.docLs.keydown || []).forEach(function (f) {
+      f({ key: key, code: key === " " ? "Space" : "Key" + key.toUpperCase(),
+          ctrlKey: false, metaKey: false, altKey: false,
+          composedPath: function () { return [body]; },
+          preventDefault: function () { prevented = true; },
+          stopPropagation: function () {} });
+    });
+    return prevented;
+  }
+  C.rt.composerHidden = true;
+  C.rt.pendingText = "";
+  C.settings.typeAhead = "auto";
+  check("Space still scrolls the page while the input is hidden", !press(" "));
+
+  // ...but a letter is someone starting to type, and must still be caught.
+  C.rt.composerHidden = true;
+  C.rt.pendingText = "";
+  check("a letter still starts a message", press("h"));
+
+  // In buffer mode the composer stays hidden while you keep typing, so once
+  // there IS a word in flight a Space belongs to the sentence.
+  C.rt.composerHidden = true;
+  C.settings.typeAhead = "buffer";
+  C.rt.pendingText = "";
+  press("h");
+  press("i");
+  check("(setup) buffer mode is holding a word", C.rt.pendingText === "hi");
+  check("a Space mid-sentence is typed, not swallowed as a scroll",
+    press(" ") && C.rt.pendingText === "hi ");
+
+  C.settings.typeAhead = "auto";
+  C.rt.pendingText = "";
   C.rt.composerHidden = false;
 })();
 
