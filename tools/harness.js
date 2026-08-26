@@ -352,6 +352,67 @@ section("Static");
       .slice(0, 4).join(", "));
   var mf = JSON.parse(fs.readFileSync(path.join(ROOT, "manifest.json"), "utf8"));
   check("manifest v3 parses", mf.manifest_version === 3);
+
+  // Load order in the manifest is load-bearing. There is no module system
+  // here — every file is a script sharing window.CALM — so a module that
+  // captures `var S = CALM.settings` at its top level gets `undefined`
+  // forever if state.js has not run yet. Reordering the list is a one-line
+  // edit that looks harmless and breaks a feature somewhere else entirely.
+  //
+  // Derive it: find who PROVIDES each namespace and who CAPTURES it at module
+  // scope, and require the provider to come first. A file added later joins
+  // this automatically.
+  (function () {
+    var order = (mf.content_scripts[0].js || []);
+    var provider = {};
+    var captures = {};
+    order.forEach(function (f) {
+      var src = fs.readFileSync(path.join(ROOT, f), "utf8");
+      var m, re = /^\s*CALM\.([a-zA-Z]+)\s*=/gm;
+      while ((m = re.exec(src))) {
+        if (!(m[1] in provider)) provider[m[1]] = f;
+      }
+      // Module-SCOPE captures only: two spaces of indent inside the IIFE.
+      re = /^  var [a-zA-Z_]+ = CALM\.([a-zA-Z]+);/gm;
+      captures[f] = [];
+      while ((m = re.exec(src))) captures[f].push(m[1]);
+    });
+
+    check("(setup) the load order actually has captures to check",
+      Object.keys(captures).some(function (f) { return captures[f].length; }),
+      order.length + " scripts");
+
+    var faults = [];
+    order.forEach(function (f, i) {
+      captures[f].forEach(function (ns) {
+        var from = provider[ns];
+        if (!from) return; // provided by the browser or built later, not ours
+        if (order.indexOf(from) > i) {
+          faults.push(f + " reads CALM." + ns + " before " + from + " defines it");
+        }
+      });
+    });
+    check("every module loads after whatever it captures", !faults.length,
+      faults.slice(0, 3).join("; "));
+  })();
+
+  // The version lives in the manifest and is repeated in the changelog. Two
+  // copies of a number drift the moment one is bumped in a hurry, and the one
+  // people READ is the changelog while the one that ships is the manifest —
+  // so a mismatch tells users the wrong thing about what they installed.
+  var chg = fs.readFileSync(path.join(ROOT, "CHANGELOG.md"), "utf8");
+  var top = chg.match(/^## \[([0-9]+\.[0-9]+\.[0-9]+)\]/m);
+  check("the changelog's newest entry matches the shipped version",
+    !!top && top[1] === mf.version,
+    "manifest " + mf.version + " vs changelog " + (top ? top[1] : "none"));
+
+  // Claims a user can check should not be able to rot silently.
+  ["README.md", "SECURITY.md", "PRIVACY.md"].forEach(function (f) {
+    check(f + " exists", fs.existsSync(path.join(ROOT, f)));
+  });
+  var readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+  check("the README tells people how to install without a clone",
+    /Releases/.test(readme) && /Load unpacked/.test(readme));
   check("manifest declares ZERO permissions",
     !(mf.permissions || []).length, JSON.stringify(mf.permissions));
   check("no host_permissions (no network reachable)",
