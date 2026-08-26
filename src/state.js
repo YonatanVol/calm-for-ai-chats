@@ -123,6 +123,9 @@
     // lesson being taught every time you scroll for the rest of your life.
     HINT_EVERY_DAYS: 7,
     RETRY_MS: 1500,
+    // Breathing room above an answer you jumped to, so its first line is not
+    // welded to the top edge of the window.
+    JUMP_MARGIN: 24,
   };
 
   CALM.IDS = {
@@ -155,6 +158,8 @@
     scrollLockTimer: null,
     lastScrollTop: 0,
     accUp: 0,
+    jumpIdx: 0, // which answer ⌃⇧J lands on next (walks backwards)
+    jumpTotal: -1, // answers seen last jump; a change re-anchors to the newest
     accTimer: null,
     draftSaved: false,
     pendingText: "", // type-ahead buffer (typing while composer hidden)

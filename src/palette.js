@@ -77,6 +77,12 @@
     });
     items.push({
       kind: "action",
+      name: "Back to the start of the answer",
+      hint: "⌃⇧J",
+      run: function () { CALM.core.jumpToAnswerStart(); },
+    });
+    items.push({
+      kind: "action",
       name: "Intention and parked thoughts",
       hint: "⌃⇧K",
       run: function () { if (CALM.intent) CALM.intent.toggle(false); },

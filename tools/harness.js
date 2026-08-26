@@ -427,9 +427,19 @@ section("Console");
   check("nearest-corner detection all quadrants", quad);
 
   // Main view: one live tile, three quick tiles, two sliders, mode chips
-  check("main view has a live tile + 3 quick tiles",
+  // Named rather than counted: adding a quick tile is a product decision, not
+  // a regression, and an assertion that breaks on the count turns every such
+  // decision into a false failure somewhere unrelated. What matters is that
+  // the row is there and carries the tiles it is supposed to.
+  var qtLabels = con.querySelectorAll(".cit-qt-label").map(function (e) {
+    return e.textContent;
+  });
+  check("main view has one live tile and a row of quick tiles",
     con.querySelectorAll(".cit-live").length === 1 &&
-    con.querySelectorAll(".cit-qt").length === 3);
+    ["Input", "Zen", "Reader", "Answer"].every(function (l) {
+      return qtLabels.indexOf(l) >= 0;
+    }) && qtLabels.length <= 6,
+    qtLabels.join(" / "));
   check("inline sliders present", con.querySelectorAll(".cit-con-slider").length === 2);
   check("mode chips come from the registry",
     con.querySelectorAll(".cit-chipm").length ===
@@ -1766,6 +1776,122 @@ section("The hint");
     t3 ? t3.textContent : "(none)");
 })();
 
+/* ---------------- Back to the top of the answer -------------------------- */
+// A long answer arrives and the view is parked at its END, because that is
+// where the streaming left you. Reading it means finding where it started,
+// which on a wall of text is a scroll-and-squint. So: jump to the first line
+// of the last answer, and press again to walk back through earlier ones.
+section("Jump to answer");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+
+  // Four answers down a tall page, each 500px tall, 600px apart.
+  var sc = w.makeEl("div");
+  sc.clientHeight = 800;
+  sc.scrollHeight = 4000;
+  sc.scrollTop = 3000;
+  sc.closest = function () { return null; };
+  sc.__rect = { top: 0, left: 0, right: 900, bottom: 800, width: 900, height: 800 };
+  C.rt.scrollContainer = sc;
+
+  var answers = [0, 1, 2, 3].map(function (i) {
+    var a = w.makeEl("div");
+    // Where each answer sits in the document, expressed as it would be seen
+    // from the current scroll position.
+    a.__docTop = 400 + i * 900;
+    a.__rect = {
+      top: a.__docTop - sc.scrollTop, left: 0, right: 900,
+      bottom: a.__docTop - sc.scrollTop + 500, width: 900, height: 500,
+    };
+    return a;
+  });
+  function refreshRects() {
+    answers.forEach(function (a) {
+      a.__rect = {
+        top: a.__docTop - sc.scrollTop, left: 0, right: 900,
+        bottom: a.__docTop - sc.scrollTop + 500, width: 900, height: 500,
+      };
+    });
+  }
+  var visible = answers.slice();
+  w.docQueryAll = function (sel) {
+    return sel === C.site.responseSel ? visible : [];
+  };
+  // smoothScrollTo goes through the real scroller; move it and re-measure,
+  // exactly as a browser would.
+  sc.scrollTo = function (o) { sc.scrollTop = o.top; refreshRects(); };
+
+  // SCENARIO 45 — "The answer finished and I want to read it from the top."
+  C.core.jumpToAnswerStart();
+  check("jumping lands at the start of the last answer",
+    Math.abs(sc.scrollTop - (400 + 3 * 900 - 24)) < 2, "scrollTop " + sc.scrollTop);
+
+  // SCENARIO 46 — "That was the wrong one, I meant the answer before it."
+  C.core.jumpToAnswerStart();
+  check("pressing again walks back to the previous answer",
+    Math.abs(sc.scrollTop - (400 + 2 * 900 - 24)) < 2, "scrollTop " + sc.scrollTop);
+  C.core.jumpToAnswerStart();
+  C.core.jumpToAnswerStart();
+  check("and keeps walking back to the first",
+    Math.abs(sc.scrollTop - 376) < 2, "scrollTop " + sc.scrollTop);
+
+  // SCENARIO 47 — it must not wrap round to the bottom and lose me.
+  C.core.jumpToAnswerStart();
+  check("at the first answer it stays there rather than wrapping",
+    Math.abs(sc.scrollTop - 376) < 2, "scrollTop " + sc.scrollTop);
+
+  // SCENARIO 48 — "A new answer arrived." The walk-back position is about the
+  // conversation as it was; a new turn makes it stale.
+  var fresh = w.makeEl("div");
+  sc.scrollHeight = 5000; // the page grew with the new turn, or it is unreachable
+  fresh.__docTop = 4000;
+  fresh.__rect = { top: 4000 - sc.scrollTop, left: 0, right: 900,
+                   bottom: 4500 - sc.scrollTop, width: 900, height: 500 };
+  visible = answers.concat([fresh]);
+  C.core.jumpToAnswerStart();
+  check("a new answer resets the walk to the newest",
+    Math.abs(sc.scrollTop - (4000 - 24)) < 2, "scrollTop " + sc.scrollTop);
+
+  // SCENARIO 49 — a brand-new chat has nothing to jump to. Do nothing, and
+  // above all do not throw inside a keyboard handler.
+  var w2 = buildWorld("chatgpt.com", { lenient: true });
+  w2.docQueryAll = function () { return []; };
+  var sc2 = w2.makeEl("div");
+  sc2.clientHeight = 800; sc2.scrollHeight = 800; sc2.scrollTop = 0;
+  sc2.closest = function () { return null; };
+  w2.C.rt.scrollContainer = sc2;
+  var threw = false;
+  try { w2.C.core.jumpToAnswerStart(); } catch (_) { threw = true; }
+  check("on an empty chat it does nothing, quietly", !threw && sc2.scrollTop === 0);
+
+  // SCENARIO 50 — reachable from all three places the owner asked for.
+  var w3 = buildWorld("chatgpt.com", { lenient: true });
+  w3.C.dock.build();
+  w3.C.console.open();
+  var labels = (w3.bodyEls["cit-console"].querySelectorAll(".cit-qt-label") || [])
+    .map(function (e) { return e.textContent; });
+  check("the menu offers it as a tile", labels.indexOf("Answer") >= 0,
+    labels.join(" / "));
+  w3.C.palette.open();
+  var named = w3.C.palette._items().filter(function (i) {
+    return i.kind === "action" && /answer/i.test(i.name);
+  });
+  check("⌘K offers it by name", named.length === 1,
+    named.map(function (i) { return i.name; }).join(", "));
+  w3.C.palette.close();
+  var jumped = false;
+  var realJump = w3.C.core.jumpToAnswerStart;
+  w3.C.core.jumpToAnswerStart = function () { jumped = true; };
+  (w3.docLs.keydown || []).forEach(function (f) {
+    f({ code: "KeyJ", key: "J", ctrlKey: true, shiftKey: true, metaKey: false,
+        altKey: false, preventDefault: function () {},
+        stopPropagation: function () {} });
+  });
+  check("⌃⇧J runs it", jumped);
+  w3.C.core.jumpToAnswerStart = realJump;
+})();
+
 section("Auto-hide");
 (function () {
   var w = buildWorld("chatgpt.com", {});
@@ -2085,7 +2211,8 @@ section("Polish");
   var con = w.bodyEls["cit-console"];
   var tiles = con.querySelectorAll(".cit-qt");
   check("hidden input tile dims and keeps its column",
-    tiles.length === 3 && tiles[0].classList.contains("cit-qt-dim"));
+    tiles.length >= 3 && tiles[0].classList.contains("cit-qt-dim"),
+    tiles.length + " tiles");
   C.dock.build(); // survives a rebuild
   check("the setting survives a rebuild",
     w.bodyEls["cit-console"].querySelectorAll(".cit-qt")[0].classList.contains("cit-qt-dim"));

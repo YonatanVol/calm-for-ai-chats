@@ -257,6 +257,13 @@
         return t;
       })()
     );
+    quick.appendChild(
+      quickTile(null, "top", "Answer", function () {
+        return false; // an action, not a state — never shows as "on"
+      }, function () {
+        CALM.core.jumpToAnswerStart();
+      })
+    );
     c.appendChild(quick);
 
     c.appendChild(inlineSlider("Width", "readingWidth", 0, 1400, 20, CALM.modes.applyWidth));
