@@ -1810,6 +1810,39 @@ section("Settings are reachable");
     check("the " + k + " switch can be reached", exposed[k] === "toggle");
   });
 
+  // The menu offers a few chosen values for a numeric setting; ⌘K offers the
+  // whole range. They describe the SAME setting, so a menu value outside the
+  // palette's bounds would be one the user can pick from one place and never
+  // reach from the other — and ⌘K would clamp it away the moment they nudged
+  // it. Read both out of the source and require them to agree.
+  var uiSrc = fs.readFileSync(path.join(ROOT, "src", "ui.js"), "utf8");
+  var palSrc = fs.readFileSync(path.join(ROOT, "src", "palette.js"), "utf8");
+  var RANGES = {};
+  palSrc.replace(/^\s{4}([a-zA-Z]+): \[(\d+), (\d+), (\d+)\],/gm,
+    function (m, k, a, b) { RANGES[k] = [+a, +b]; return m; });
+  var offered = [];
+  uiSrc.replace(/numberRow\("[^"]*", "([a-zA-Z]+)", \[([\s\S]*?)\]/g,
+    function (m, key, body) {
+      var vals = [];
+      body.replace(/value: (\d+)/g, function (_, v) { vals.push(+v); return _; });
+      offered.push([key, vals]);
+      return m;
+    });
+  check("(setup) the menu offers some numeric choices to check",
+    offered.length >= 2, offered.length + " numeric rows");
+  var outOfRange = [];
+  offered.forEach(function (pair) {
+    var r = RANGES[pair[0]];
+    if (!r) { outOfRange.push(pair[0] + " has no ⌘K range at all"); return; }
+    pair[1].forEach(function (v) {
+      if (v < r[0] || v > r[1]) {
+        outOfRange.push(pair[0] + " offers " + v + " outside [" + r[0] + "," + r[1] + "]");
+      }
+    });
+  });
+  check("every value the menu offers is one ⌘K can also reach",
+    !outOfRange.length, outOfRange.join("; "));
+
   // Strings are the one kind the palette cannot derive — it has no way to
   // know the allowed values — so they must be spelled out in the menu.
   //
@@ -2105,6 +2138,18 @@ section("Surfaces let go");
       clicks + " → " + (ws.docLs.click || []).length);
   });
 
+  // SCENARIO 51d — a card on screen with no closer should still be
+  // dismissible. This state should not be reachable; the point is that if it
+  // ever becomes reachable, the card does not become permanent furniture.
+  var w1d = buildWorld("chatgpt.com", { lenient: true });
+  w1d.C.intent.toggle(false);
+  w1d.C.ui.closeAllPopovers(); // drops the closer, as a navigation does
+  w1d.C.intent.toggle(false); // open again
+  check("(setup) a card is up", !!w1d.bodyEls["cit-intent-pop"]);
+  w1d.C.intent.toggle(false);
+  check("toggling always dismisses the card, however it got there",
+    !w1d.bodyEls["cit-intent-pop"]);
+
   // SCENARIO 52 — and the same when a navigation closes it instead. This is
   // the path that actually leaks: the registry holds whatever reference it
   // was handed at open time, and if the module later wraps that function,
@@ -2152,6 +2197,57 @@ section("Controls are named");
   check("(setup) the drawer has controls to check",
     selects.length >= 5 && buttons.length >= 5,
     selects.length + " selects / " + buttons.length + " buttons");
+
+  // A number set from ⌘K can land between the choices the menu offers. The
+  // menu must not then highlight a value the user does not have — a select
+  // silently showing the wrong option is how someone changes a setting they
+  // never touched, by opening the drawer and closing it again.
+  C.settings.readingWidth = 903; // deliberately not one of the offered widths
+  var adv2 = w.makeEl("div");
+  global.document.body.appendChild(adv2);
+  C.ui.buildAdvancedSections(adv2);
+  var widthSel = null;
+  (function walk(n) {
+    (n.children || []).forEach(function (ch) {
+      if (!widthSel && ch.getAttribute &&
+          ch.getAttribute("data-cit-key") === "readingWidth") {
+        widthSel = (ch.children || []).filter(function (c) {
+          return (c.tagName || "").toLowerCase() === "select";
+        })[0];
+      }
+      walk(ch);
+    });
+  })(adv2);
+  var selected = widthSel && (widthSel.children || []).filter(function (o) {
+    return o.selected;
+  });
+  check("a width set outside the offered ones shows as its own value",
+    !!selected && selected.length === 1 && /903/.test(selected[0].textContent),
+    selected ? selected.map(function (o) { return o.textContent; }).join("|")
+      : "(no select)");
+
+  C.settings.readingWidth = 820; // one that IS offered
+  var adv3 = w.makeEl("div");
+  global.document.body.appendChild(adv3);
+  C.ui.buildAdvancedSections(adv3);
+  var sel3 = null;
+  (function walk(n) {
+    (n.children || []).forEach(function (ch) {
+      if (!sel3 && ch.getAttribute &&
+          ch.getAttribute("data-cit-key") === "readingWidth") {
+        sel3 = (ch.children || []).filter(function (c) {
+          return (c.tagName || "").toLowerCase() === "select";
+        })[0];
+      }
+      walk(ch);
+    });
+  })(adv3);
+  var chosen = sel3 && (sel3.children || []).filter(function (o) { return o.selected; });
+  check("and an offered width shows as that choice, with no stray Custom",
+    !!chosen && chosen.length === 1 && !/Custom/.test(chosen[0].textContent) &&
+      !(sel3.children || []).some(function (o) { return /Custom/.test(o.textContent); }),
+    chosen ? chosen[0].textContent : "(none)");
+  C.settings.readingWidth = 0;
 
   var unnamedSel = selects.filter(function (s) {
     return !(s.getAttribute && s.getAttribute("aria-label"));
@@ -2215,6 +2311,21 @@ section("Idle cost");
   check("(setup) the dock has a real status line",
     !!status && d.querySelector(".cit-dock-status") === status);
   if (!status) return;
+
+  // The pill used to be one innerHTML string. Rebuilding it with createElement
+  // has to produce the SAME thing: the monogram first, the status second,
+  // inside the pill. Structure is what a stylesheet targets, and this one is
+  // positioned by :first-child rules.
+  var pill = d.querySelector(".cit-dock-pill");
+  var kids = (pill && pill.children) || [];
+  check("the pill is still a monogram followed by a status line",
+    kids.length === 2 &&
+      String(kids[0].className).indexOf("cit-dock-mark") >= 0 &&
+      String(kids[1].className).indexOf("cit-dock-status") >= 0,
+    kids.length + ": " + kids.map(function (k) { return k.className; }).join(", "));
+  check("and the monogram still carries the mark",
+    !!kids[0] && /svg/i.test(String(kids[0].innerHTML || "")),
+    kids[0] ? String(kids[0].innerHTML || "").slice(0, 30) : "(none)");
 
   // Count writes by watching the property the tick assigns.
   var writes = 0;
