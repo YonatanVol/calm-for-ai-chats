@@ -174,6 +174,8 @@
 
   function inlineSlider(label, key, min, max, step, after) {
     var r = el("div", "cit-con-slider");
+    r.setAttribute("data-cit-key", key);
+    r.setAttribute("data-cit-kind", "range");
     r.appendChild(el("span", "cit-con-slabel", label));
     var i = document.createElement("input");
     i.type = "range";

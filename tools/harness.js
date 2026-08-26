@@ -1217,6 +1217,82 @@ section("Adapter contract");
     stopSel: "selector",
   };
 
+  var SELECTOR_FIELDS = ["responseSel", "stopSel", "readerTargets",
+    "privacyTargets", "excludedScrollers"];
+
+
+  // Node has no DOM and this repo has no dependencies, so there is nothing
+  // here that can truly parse a selector. Rather than write half a CSS
+  // grammar and invent failures, this reports only faults that are
+  // unambiguously fatal — it can miss a broken selector, but it cannot
+  // invent one. tools/selector-test.html does the real querySelector parse
+  // in a browser, which is the only place that parse actually exists.
+  function selectorFault(sel) {
+    var depth = { "[": 0, "(": 0 };
+    var quote = null;
+    for (var i = 0; i < sel.length; i++) {
+      var c = sel.charAt(i);
+      if (quote) { if (c === quote && sel.charAt(i - 1) !== "\\") quote = null; continue; }
+      if (c === '"' || c === "'") { quote = c; continue; }
+      if (c === "[") depth["["]++;
+      else if (c === "]") { if (--depth["["] < 0) return "unbalanced ]"; }
+      else if (c === "(") depth["("]++;
+      else if (c === ")") { if (--depth["("] < 0) return "unbalanced )"; }
+    }
+    if (quote) return "unterminated " + quote + " quote";
+    if (depth["["]) return "unclosed [";
+    if (depth["("]) return "unclosed (";
+    if (/\[\s*\]/.test(sel)) return "empty [] attribute";
+    // Split on top-level commas only — a comma inside :is(...) or [attr=","]
+    // is not a group separator, and treating it as one is how a checker like
+    // this starts reporting healthy selectors as broken.
+    var parts = [], buf = "", d = 0;
+    quote = null;
+    for (i = 0; i < sel.length; i++) {
+      c = sel.charAt(i);
+      if (quote) { if (c === quote && sel.charAt(i - 1) !== "\\") quote = null; buf += c; continue; }
+      if (c === '"' || c === "'") { quote = c; buf += c; continue; }
+      if (c === "[" || c === "(") d++;
+      else if (c === "]" || c === ")") d--;
+      if (c === "," && d === 0) { parts.push(buf); buf = ""; continue; }
+      buf += c;
+    }
+    parts.push(buf);
+    for (i = 0; i < parts.length; i++) {
+      var part = parts[i].trim();
+      if (!part) return "empty part (stray comma)";
+      if (/^[>+~]|[>+~]$/.test(part)) return "dangling combinator in \"" + part + "\"";
+    }
+    return null;
+  }
+
+  // The validator is itself a thing that can be wrong, and a checker nobody
+  // checks is worse than no checker — it reports confidence it has not
+  // earned. Both directions: real selectors from the wild must pass, and
+  // each fault it claims to detect must actually be detected.
+  [
+    '[data-message-author-role="assistant"] .markdown',
+    "#stage-slideover-sidebar, #stage-sidebar-tiny-bar, nav[aria-label]",
+    ":is(h1, h2) > p",
+    'button[aria-label*="Stop" i]',
+    "a[href*='/c/']",
+    ".cit-x:not(:nth-last-child(-n+2))",
+  ].forEach(function (sel) {
+    check("the selector checker accepts " + sel.slice(0, 34),
+      !selectorFault(sel), selectorFault(sel) || "");
+  });
+  [
+    ["#a,,#b", "stray comma"],
+    ["#a >", "dangling combinator"],
+    ["[data-x", "unclosed bracket"],
+    [":is(a, b", "unclosed paren"],
+    ["[]", "empty attribute"],
+    ["a['x]", "unterminated quote"],
+  ].forEach(function (pair) {
+    check("the selector checker catches a " + pair[1], !!selectorFault(pair[0]),
+      selectorFault(pair[0]) || "MISSED");
+  });
+
   ["chatgpt.com", "gemini.google.com", "claude.ai"].forEach(function (host) {
     var w = buildWorld(host, { lenient: true });
     var site = w.C.site;
@@ -1245,15 +1321,20 @@ section("Adapter contract");
         Object.prototype.toString.call(v));
     });
 
-    // A selector that cannot be parsed takes down whatever ran it. These two
-    // are handed to querySelector on a timer, so a typo is a silent, repeating
-    // exception rather than a visible failure.
-    ["responseSel", "stopSel"].forEach(function (n) {
-      if (!site[n]) return;
-      // No real DOM here to parse with, so check the shape that actually
-      // breaks querySelector in practice: an empty part from a stray comma.
-      check(host + "'s " + n + " has no empty selector parts",
-        !/(^|,)\s*($|,)/.test(site[n]), site[n]);
+    // A selector that cannot be parsed takes down whatever ran it, and these
+    // run on timers and in scroll handlers — so a typo is a silent, repeating
+    // exception rather than a visible failure. Check EVERY field that ends up
+    // in querySelector or closest or a CSS rule, not just the two obvious
+    // ones. (zenTargets is exempt: it returns resolved elements, not a
+    // selector. zenCss/widthCss/spotlightCss return whole stylesheets.)
+    SELECTOR_FIELDS.forEach(function (n) {
+      if (site[n] === undefined) return;
+      var sel;
+      try { sel = typeof site[n] === "function" ? site[n]() : site[n]; }
+      catch (_) { return; } // shape check above already reported this
+      if (typeof sel !== "string" || !sel) return;
+      var bad = selectorFault(sel);
+      check(host + "'s " + n + " parses as a selector", !bad, bad || sel);
     });
   });
 })();
@@ -1300,13 +1381,35 @@ section("Settings are reachable");
   });
 
   // Strings are the one kind the palette cannot derive — it has no way to
-  // know the allowed values — so they must be spelled out in the menu, and
-  // this is the assertion that notices when one is not.
-  var menu = fs.readFileSync(path.join(ROOT, "src", "console.js"), "utf8") +
-    fs.readFileSync(path.join(ROOT, "src", "ui.js"), "utf8");
+  // know the allowed values — so they must be spelled out in the menu.
+  //
+  // The first version of this checked that the key appeared as text somewhere
+  // in console.js or ui.js, which a comment or an unrelated mention would
+  // satisfy while the setting stayed unreachable. So ask the MENU instead:
+  // every row stamps the setting it controls and how, and we read that back
+  // off the rendered drawer. (The stub's querySelectorAll only understands
+  // class selectors, so walk the tree rather than using [data-cit-key].)
+  C.dock.build();
+  C.console.open();
+  C.console.openAdvanced();
+  var menuExposed = {};
+  (function walk(n) {
+    (n.children || []).forEach(function (ch) {
+      var k = ch.getAttribute && ch.getAttribute("data-cit-key");
+      if (k) menuExposed[k] = ch.getAttribute("data-cit-kind");
+      walk(ch);
+    });
+  })(w.bodyEls["cit-dock"] || global.document.body);
+
+  check("(setup) the menu reports which settings it offers (guard against a " +
+    "walk that finds nothing)",
+    Object.keys(menuExposed).length >= 10,
+    Object.keys(menuExposed).length + " rows: " +
+      Object.keys(menuExposed).slice(0, 6).join(", ") + "…");
+
   strings.forEach(function (k) {
-    check("the " + k + " choice is offered in the menu",
-      menu.indexOf('"' + k + '"') >= 0);
+    check("the " + k + " choice is offered in the menu as a select",
+      menuExposed[k] === "select", menuExposed[k] || "(not in the menu)");
   });
 })();
 
