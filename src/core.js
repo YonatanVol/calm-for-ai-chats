@@ -87,7 +87,18 @@
     if (S.rememberState) CALM.saveState();
     // A restore is not news — it is the state you left. Hinting on every
     // navigation would turn the hint into noise.
-    if (opts.auto && S.showHints && !opts.silent) ui.showToast();
+    //
+    // Neither is the fiftieth auto-hide of a long reading session. The first
+    // one teaches you where the input went; after that the same sentence is
+    // just something moving at the edge of your vision while you read, which
+    // is the precise thing this extension exists to remove. Say it once, then
+    // not again for a week — long enough to have forgotten, rare enough not
+    // to be noise.
+    if (opts.auto && S.showHints && !opts.silent &&
+        CALM.hints.shouldShow("composerHidden", C.HINT_EVERY_DAYS)) {
+      CALM.hints.markShown("composerHidden");
+      ui.showToast();
+    }
   }
   function showComposer() {
     if (!currentComposer() || !rt.composerHidden) return;
