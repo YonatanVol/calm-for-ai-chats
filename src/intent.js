@@ -274,7 +274,7 @@
     p.appendChild(notesWrap);
     function renderNotes() {
       notesWrap.innerHTML = "";
-      loadNotes().forEach(function (note, i) {
+      loadNotes().forEach(function (note) {
         var row = document.createElement("div");
         row.className = "cit-intent-note";
         var span = document.createElement("span");
@@ -285,8 +285,14 @@
         del.textContent = "✕";
         del.addEventListener("click", function (e) {
           e.stopPropagation();
+          // Parked thoughts are the one list here that is shared between tabs,
+          // so the store can change under an open panel. Delete the thought
+          // this row was drawn for, never the position it was drawn at — the
+          // list we re-read may have shifted since, and then ✕ takes out
+          // somebody else's note. (Already gone? indexOf says so; re-render.)
           var n = loadNotes();
-          n.splice(i, 1);
+          var at = n.indexOf(note);
+          if (at >= 0) n.splice(at, 1);
           saveNotes(n);
           renderNotes();
         });

@@ -3102,6 +3102,65 @@ section("Who turned Zen on (Pomodoro)");
   C.modes.exit("zen");
 })();
 
+section("Parked thoughts belong to whoever wrote them");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+
+  // Parked thoughts live in localStorage ON PURPOSE — they are the one thing
+  // in the Focus panel that is meant to follow you between tabs. So the panel
+  // is routinely looking at a list that another tab can change underneath it.
+  //
+  // "I had three thoughts parked and the Focus panel open. In my other
+  // ChatGPT tab I ticked the first one off. Back here I pressed ✕ on the
+  // second — and it deleted the third instead."
+  w.local["cit-parked"] = JSON.stringify(["call the dentist", "check the invoice", "reply to Dana"]);
+  C.intent.toggle(false);
+  var pop = w.bodyEls["cit-intent-pop"];
+  var rows = pop && pop.querySelectorAll(".cit-intent-note");
+  var rendered = rows ? rows.length : 0;
+
+  // The other tab removes the FIRST thought while this panel sits open.
+  w.local["cit-parked"] = JSON.stringify(["check the invoice", "reply to Dana"]);
+
+  // I press ✕ on "check the invoice" — the second row as it is drawn here.
+  var del = rows && rows[1] && rows[1].querySelector(".cit-intent-del");
+  if (del && del.__ls && del.__ls.click) {
+    del.__ls.click[0]({ stopPropagation: function () {}, preventDefault: function () {} });
+  }
+  var left = JSON.parse(w.local["cit-parked"] || "[]");
+
+  check("deleting a parked thought deletes the one I pressed",
+    rendered === 3 && left.length === 1 && left[0] === "reply to Dana",
+    "rendered=" + rendered + " left=" + JSON.stringify(left));
+})();
+
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+
+  // The same two tabs, both tidying up. "I pressed ✕ on a thought I had
+  // already ticked off in my other tab." Pressing ✕ on something that is
+  // already gone must be a no-op — not a licence to take the last one
+  // instead, which is what deleting at position -1 does.
+  w.local["cit-parked"] = JSON.stringify(["call the dentist", "check the invoice", "reply to Dana"]);
+  C.intent.toggle(false);
+  var rows = w.bodyEls["cit-intent-pop"].querySelectorAll(".cit-intent-note");
+
+  // The other tab removes the very thought I am about to press ✕ on.
+  w.local["cit-parked"] = JSON.stringify(["call the dentist", "reply to Dana"]);
+
+  var del = rows[1] && rows[1].querySelector(".cit-intent-del");
+  if (del && del.__ls && del.__ls.click) {
+    del.__ls.click[0]({ stopPropagation: function () {}, preventDefault: function () {} });
+  }
+  var left = JSON.parse(w.local["cit-parked"] || "[]");
+
+  check("dismissing a thought my other tab already deleted takes nothing else",
+    left.length === 2 && left[0] === "call the dentist" && left[1] === "reply to Dana",
+    "left=" + JSON.stringify(left));
+})();
+
 /* ---------------- verdict ---------------- */
 console.log("\n" + passed + " passed, " + failed + " failed");
 process.exit(failed ? 1 : 0);
