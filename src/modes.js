@@ -105,6 +105,16 @@
     // Restore what ZEN hid, never what the user chose to hide.
     if (rt.zenHidComposer && rt.composerHidden) CALM.core.showComposer();
     rt.zenHidComposer = false;
+    // Presentation and Pomodoro each borrow Zen and give it back on the way
+    // out. A loan only covers the Zen THEY switched on: once Zen is off — by
+    // their hand or the user's — the loan is settled, so a Zen the user turns
+    // on next is theirs to keep. Releasing here catches every route out of
+    // Zen, including the keyboard shortcut that still works while
+    // Presentation has hidden every Calm control.
+    rt.presentationEnteredZen = false;
+    if (CALM.pomodoro && CALM.pomodoro.state) {
+      CALM.pomodoro.state.enteredZen = false;
+    }
   }
 
   // ---------- Reader (typography) ----------
