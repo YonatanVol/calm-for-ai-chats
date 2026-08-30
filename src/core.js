@@ -107,6 +107,11 @@
     document.body.classList.remove("cit-composer-hidden");
     rt.composerHidden = false;
     rt.hiddenManually = false;
+    // Zen's claim on the composer lasts exactly as long as Zen's hide does.
+    // Once it is revealed — by the tile, the shortcut, or type-ahead — the
+    // next hide belongs to whoever asked for it, and leaving Zen must not
+    // undo it. Releasing here covers every reveal path at once.
+    rt.zenHidComposer = false;
     if (S.rememberState) CALM.saveState();
     restoreDraft();
     flushTypeAhead();

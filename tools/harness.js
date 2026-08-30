@@ -3003,6 +3003,105 @@ section("Focus Reader");
   C.modes.exit("focusreader");
 })();
 
+section("Who hid the input");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  C.rt.composerEl = w.makeEl("div");
+  C.settings.zenComposer = true;
+
+  // "Zen hid my input. I brought it back to type a question, then hid it
+  // again myself so I could read the reply in peace. Then I left Zen — and
+  // the input reappeared, even though the last person to hide it was me."
+  //
+  // zenExit promises to restore what ZEN hid and nothing else. The moment I
+  // reveal the composer by hand, Zen's hide is over; a later hide is mine.
+  C.rt.composerHidden = false;
+  C.modes.enter("zen");
+  var zenHid = C.rt.composerHidden;          // Zen took it
+  C.core.manualToggleComposer();             // I take it back, staying in Zen
+  var iRevealed = !C.rt.composerHidden;
+  C.core.manualToggleComposer();             // I hide it again, deliberately
+  var iHid = C.rt.composerHidden && C.rt.hiddenManually;
+  C.modes.exit("zen");
+
+  check("leaving Zen keeps an input I hid myself hidden",
+    zenHid && iRevealed && iHid && C.rt.composerHidden,
+    "zenHid=" + zenHid + " iRevealed=" + iRevealed + " iHid=" + iHid +
+    " stillHidden=" + C.rt.composerHidden);
+})();
+
+section("Who turned Zen on");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  C.rt.composerEl = w.makeEl("div");
+
+  // "I went into Presentation to share my screen and it turned Zen on for me.
+  // I dropped Zen for a second to check the sidebar, turned it back on because
+  // I like it, and then pressed Esc to leave Presentation — and it took my Zen
+  // with it."
+  //
+  // Presentation may take back the Zen IT turned on. The moment I turn Zen off
+  // myself, that loan is settled; the Zen I turn on next is mine.
+  C.modes.exit("zen");
+  C.modes.enter("presentation");
+  var lentZen = C.modes.isActive("zen");
+  C.modes.toggleZen();                       // I drop Zen...
+  var iDropped = !C.modes.isActive("zen");
+  C.modes.toggleZen();                       // ...and turn it back on myself
+  var iTurnedOn = C.modes.isActive("zen");
+  C.modes.exit("presentation");
+
+  check("leaving Presentation keeps a Zen I turned on myself",
+    lentZen && iDropped && iTurnedOn && C.modes.isActive("zen"),
+    "lent=" + lentZen + " dropped=" + iDropped + " mine=" + iTurnedOn +
+    " stillZen=" + C.modes.isActive("zen"));
+  C.modes.exit("zen");
+})();
+
+section("Who turned Zen on (Pomodoro)");
+(function () {
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  C.rt.composerEl = w.makeEl("div");
+  C.settings.pomoAutoZen = true;
+
+  // Same loan, different lender. "The timer turned Zen on. I switched it off
+  // mid-block to look something up, switched it back on, then pressed End —
+  // and ending the timer switched off the Zen I had chosen."
+  C.modes.exit("zen");
+  C.modes.enter("pomodoro");
+  var lentZen = C.modes.isActive("zen");
+  C.modes.toggleZen();                       // I drop Zen...
+  var iDropped = !C.modes.isActive("zen");
+  C.modes.toggleZen();                       // ...and turn it back on myself
+  var iTurnedOn = C.modes.isActive("zen");
+  C.modes.exit("pomodoro");                  // End
+
+  check("ending a Pomodoro keeps a Zen I turned on myself",
+    lentZen && iDropped && iTurnedOn && C.modes.isActive("zen"),
+    "lent=" + lentZen + " dropped=" + iDropped + " mine=" + iTurnedOn +
+    " stillZen=" + C.modes.isActive("zen"));
+  C.modes.exit("zen");
+
+  // The other half of the same loan: releasing it on every Zen exit must not
+  // release it during a NAVIGATION, where Zen is torn down and rebuilt as a
+  // matter of course. "I started a timer, it turned Zen on, I clicked through
+  // to another chat, and when I ended the timer Zen stayed stuck on."
+  C.modes.exit("zen");
+  C.modes.enter("pomodoro");
+  var ownedBefore = C.pomodoro.state.enteredZen === true && C.modes.isActive("zen");
+  w.nav("https://chatgpt.com/c/elsewhere");
+  var ownedAfter = C.pomodoro.state.enteredZen === true;
+  C.modes.exit("pomodoro");
+  check("a Pomodoro still owns its Zen after navigating to another chat",
+    ownedBefore && ownedAfter && !C.modes.isActive("zen"),
+    "ownedBefore=" + ownedBefore + " ownedAfter=" + ownedAfter +
+    " zenLeftOn=" + C.modes.isActive("zen"));
+  C.modes.exit("zen");
+})();
+
 /* ---------------- verdict ---------------- */
 console.log("\n" + passed + " passed, " + failed + " failed");
 process.exit(failed ? 1 : 0);

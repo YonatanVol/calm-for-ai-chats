@@ -4,6 +4,22 @@ All notable changes to Calm. Dates are release dates; the format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] — 2026-08-26
+
+Follow-up from reading the 3.2.0 diff back as a reviewer.
+
+### Fixed
+
+- The intention card can no longer get stuck open if its closer goes missing.
+- A width or text size set from ⌘K to a value the menu does not offer now shows
+  as its own value instead of highlighting a different one — opening the
+  settings drawer could otherwise change a setting you never touched.
+
+### Internal
+
+- The menu's offered values and ⌘K's ranges are now required to agree.
+- Suite 430 → 438.
+
 ## [3.2.0] — 2026-08-26
 
 The first release meant to be installed by someone who did not write it.
