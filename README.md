@@ -34,6 +34,10 @@ a quiet graphite design language.
   for it.
 - **Pomodoro** — animated timer with presets (10/2 starter, 25/5, 52/17, 90/20),
   auto-Zen during focus, chime, and a screen-width progress bar.
+- **Auto-scroll player** — a small dial reads the page to you. Tap to pause,
+  double-tap to skip to the next answer, drag the ring for speed. Glide
+  continuously, step line by line, or move one answer at a time with a pause
+  to read each. It stops the moment you scroll yourself.
 - **Reading ruler**, **Grayscale**, **Reduce motion** — attention anchors and
   stimulation control.
 - **Time awareness** — a gentle time-on-page chip and a hyperfocus nudge.
@@ -109,6 +113,8 @@ any script to click **Load unpacked** for you, so that last click is yours.
 | **Command palette** (everything) | `Ctrl/Cmd + K` |
 | Toggle input | `Ctrl/Cmd + Shift + H` |
 | Back to the start of the answer | `Ctrl/Cmd + Shift + J` |
+| Auto-scroll player on / off | `Ctrl/Cmd + Shift + S` |
+| …while it runs: play / pause · stop | `Space` · `Esc` |
 | Zen mode | `Ctrl/Cmd + Shift + Z` |
 | Presentation mode | `Ctrl/Cmd + Shift + P` (Esc exits) |
 | Thought parking lot | `Ctrl/Cmd + Shift + K` |

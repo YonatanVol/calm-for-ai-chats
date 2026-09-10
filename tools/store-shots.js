@@ -73,7 +73,7 @@ function consolePanel(running) {
     qt(I.book, "Reader", false) + qt(I.top, "Answer", false) + "</div>" +
     slider("Width", 55, "780") + slider("Text", 30, "110") +
     '<div class="cit-modes-row">' + chipm(I.night, "Night", false) +
-    chipm(I.ruler, "Reading ruler", true) + "</div>" +
+    chipm(I.ruler, "Reading ruler", true) + chipm(I.autoscroll, "Auto-scroll", false) + "</div>" +
     '<div class="cit-con-foot"><span class="cit-con-hint">⌘K</span>' +
     '<button class="cit-con-adv-btn">Advanced' + I.collapse + "</button></div></div>"
   );

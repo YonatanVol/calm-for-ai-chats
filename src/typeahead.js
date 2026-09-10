@@ -92,4 +92,10 @@
     },
     true // capture: run before the site's own key handling
   );
+
+  // The auto-scroll player uses Space as play/pause and must make the same
+  // "is the user typing somewhere?" decision this module already makes —
+  // one definition, or the two drift and Space starts eating keystrokes in
+  // one place and not the other.
+  CALM.typeahead = { inEditable: focusInEditable };
 })();

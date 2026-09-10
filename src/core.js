@@ -379,6 +379,12 @@
         modes.exit(id);
       } catch (_) {}
     });
+    // The auto-scroll player stops here rather than resuming: gliding from
+    // the top of a conversation you just opened is a surprise, not a
+    // convenience. (Exited above with everything else; simply not re-entered.)
+    rt.pendingModes = rt.pendingModes.filter(function (id) {
+      return id !== "autoscroll";
+    });
 
     // 2. Hard-clean any residue in case an exit had stale refs.
     ["cit-zen-style", "cit-reader-style", "cit-privacy-style", "cit-night-overlay",
@@ -424,7 +430,7 @@
     rt.scrollContainer = null;
     // Calm-owned singletons that popover-close doesn't cover.
     ["cit-reader-pane", "cit-intent-pop", "cit-intent-chip",
-     "cit-back"].forEach(function (id) {
+     "cit-back", "cit-glide"].forEach(function (id) {
       var e = document.getElementById(id);
       if (e) e.remove();
     });
@@ -464,6 +470,33 @@
       return [];
     }
   }
+  // Where the scroller's own top edge sits in the viewport. The page itself
+  // IS the viewport, so its base is zero; a nested scroller has a real one.
+  function scrollerBase(sc) {
+    try {
+      if (sc !== document.scrollingElement && sc !== document.documentElement &&
+          sc !== document.body && sc.getBoundingClientRect) {
+        return sc.getBoundingClientRect().top || 0;
+      }
+    } catch (_) {}
+    return 0;
+  }
+  // Every answer's start as a scrollTop, sorted — what the auto-scroll
+  // player walks between. Same margin as ⌃⇧J so the two agree on where an
+  // answer "starts".
+  function answerOffsets() {
+    var sc = currentScroller();
+    if (!sc) return [];
+    var base = scrollerBase(sc);
+    var top = sc.scrollTop || 0;
+    return answers()
+      .map(function (el) {
+        try { return top + (el.getBoundingClientRect().top - base) - C.JUMP_MARGIN; }
+        catch (_) { return null; }
+      })
+      .filter(function (x) { return x != null && !isNaN(x); })
+      .sort(function (a, b) { return a - b; });
+  }
   function jumpToAnswerStart() {
     var list = answers();
     if (!list.length) return; // a new chat has nothing to go back to
@@ -479,14 +512,7 @@
 
     var sc = currentScroller();
     if (!sc) return;
-    // The scroller may be the page itself, whose rect is already the viewport.
-    var base = 0;
-    try {
-      if (sc !== document.scrollingElement && sc !== document.documentElement &&
-          sc !== document.body && sc.getBoundingClientRect) {
-        base = sc.getBoundingClientRect().top || 0;
-      }
-    } catch (_) {}
+    var base = scrollerBase(sc);
     var target = (sc.scrollTop || 0) + (el.getBoundingClientRect().top - base) -
       C.JUMP_MARGIN;
     var max = Math.max(0, (sc.scrollHeight || 0) - (sc.clientHeight || 0));
@@ -508,6 +534,19 @@
       // state" could persist across reloads.
       if (e.code === "Escape" && CALM.modes.isActive("presentation")) {
         CALM.modes.exit("presentation");
+        return;
+      }
+      // While the auto-scroll player is on screen, Space is play/pause — a
+      // player without a spacebar is broken. This is a control on a surface
+      // the user put there, not a global shortcut, so it does not sit behind
+      // the shortcuts switch. Never inside a text field, and it consumes the
+      // key so the site does not ALSO page down.
+      if (e.code === "Space" && !e.ctrlKey && !e.metaKey && !e.altKey &&
+          CALM.glide && modes.isActive("autoscroll")) {
+        if (CALM.typeahead && CALM.typeahead.inEditable(e)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        CALM.glide.toggle();
         return;
       }
       if (!S.keyboardShortcut) return;
@@ -532,6 +571,10 @@
         e.preventDefault();
         e.stopPropagation();
         CALM.core.jumpToAnswerStart();
+      } else if (e.code === "KeyS") {
+        e.preventDefault();
+        e.stopPropagation();
+        modes.toggle("autoscroll");
       }
     },
     true
@@ -612,6 +655,7 @@
     discoverScroll: discoverScroll,
     currentScroller: currentScroller,
     jumpToAnswerStart: jumpToAnswerStart,
+    answerOffsets: answerOffsets,
     init: init,
   };
 

@@ -4,6 +4,46 @@ All notable changes to Calm. Dates are release dates; the format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] — 2026-09-11
+
+### Added
+
+- **Auto-scroll is a player now.** A small dial floats over the page: tap to
+  pause and resume, double-tap to jump to the start of the next answer, drag
+  around the ring or spin the wheel over it to change speed. Hover it and a
+  strip unfolds with a **style** — *Glide* (continuous), *Lines* (one line at
+  a time), *Answers* (one answer, then a pause long enough to read it) — and
+  a **speed** — Slow, Read, Skim — with a live readout relative to Read.
+  `Ctrl/Cmd+Shift+S` starts and stops it; while it runs, **Space is play/pause**
+  and `Esc` stops it. It notices when you take the wheel — scrolling, arrow
+  keys, PageDown, or hiding the tab all pause it — and it never resumes on its
+  own. It eases in when it starts and out when it stops, moves on animation
+  frames with sub-pixel accumulation so slow speeds drift rather than stutter,
+  stops exactly at the end of the conversation and lets itself out a few
+  seconds later. Switching conversations stops it rather than gliding from the
+  top of one you just opened.
+
+### Fixed
+
+- Auto-scroll read its scroll container once and kept it, so after the first
+  navigation it silently did nothing. It now reads the page fresh every frame.
+- Two fixes that had been waiting on `develop`: ✕ in the parking lot deleted
+  the row you pressed rather than the thought you pressed, and a mode Calm
+  borrowed for you (Zen during focus) is given back while one you chose is
+  left alone.
+
+### Changed
+
+- Auto-scroll speed is measured in pixels per second (20–300) instead of
+  "pixels per tick". Existing settings migrate: the old default lands on Read.
+- Auto-scroll moved from the Advanced drawer to the Console's mode row.
+
+### Internal
+
+- Suite 444 → 484. The test world now has animation frames and a clock
+  (`world.frame(ms)`) and records long timers so a scenario can say "four
+  seconds later". Ten mutations of the player each fail by name.
+
 ## [3.2.1] — 2026-08-26
 
 Follow-up from reading the 3.2.0 diff back as a reviewer.

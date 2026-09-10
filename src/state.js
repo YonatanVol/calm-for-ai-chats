@@ -26,12 +26,13 @@
     readingWidth: 0, // 0 = off; else px
     zenComposer: true, // zen also hides the composer
     typeAhead: "auto", // off | auto | buffer | both — typing while input hidden
-    settingsVersion: 3, // bump when a migration below needs to run
+    settingsVersion: 4, // bump when a migration below needs to run
     // Mode parameters
     readerFontScale: 100, // % (80..160) — host-page text size (100 = off)
     readerLineHeight: 16, // ×0.1 => 1.6 — host-page line height (16 = off)
     nightLevel: 35, // overlay opacity % (10..70) — Night/Dim
-    autoScrollSpeed: 3, // px per tick (1..10) — Auto-scroll
+    autoScrollSpeed: 80, // px per SECOND (20..300) — Auto-scroll; 80 = "Read"
+    autoScrollStyle: "glide", // glide | lines | answers — how it moves
     pauseMinutes: 15, // snooze duration (5..60) — Pause
     rulerHeight: 90, // reading-ruler band height in px (50..160)
     rulerDim: 45, // reading-ruler surround dim % (15..70)
@@ -80,6 +81,17 @@
           }
           merged.settingsVersion = 3;
         }
+        // v4 migration: auto-scroll speed was 1..10 "pixels per 60ms tick";
+        // it is now pixels per second. Map the old scale onto the new one so
+        // the old default (3) lands on Read (80) and the old maximum stays on
+        // the dial rather than becoming a crawl.
+        if ((saved.settingsVersion | 0) < 4) {
+          var oldSpeed = saved.autoScrollSpeed;
+          if (typeof oldSpeed === "number" && oldSpeed >= 1 && oldSpeed <= 10) {
+            merged.autoScrollSpeed = 40 + (oldSpeed - 1) * 20;
+          }
+          merged.settingsVersion = 4;
+        }
         return merged;
       }
     } catch (_) {}
@@ -126,6 +138,17 @@
     // Breathing room above an answer you jumped to, so its first line is not
     // welded to the top edge of the window.
     JUMP_MARGIN: 24,
+    // Auto-scroll player. Speed is pixels per second; Read (80) is what the
+    // readout calls 1.0×. Ease-in is longer than ease-out on purpose: starting
+    // should feel like a breath, stopping should feel like a hand on the page.
+    GLIDE_MIN: 20,
+    GLIDE_MAX: 300,
+    GLIDE_STEP: 10,
+    GLIDE_READ: 80,
+    GLIDE_EASE_IN_MS: 250,
+    GLIDE_EASE_OUT_MS: 150,
+    GLIDE_END_FADE_MS: 4000,
+    GLIDE_TAP_MS: 320, // two taps closer than this are one double-tap
   };
 
   CALM.IDS = {
@@ -158,6 +181,7 @@
     scrollLockTimer: null,
     lastScrollTop: 0,
     accUp: 0,
+    glide: { playing: false, speed: 80, style: "glide", done: false }, // the player
     jumpIdx: 0, // which answer ⌃⇧J lands on next (walks backwards)
     jumpTotal: -1, // answers seen last jump; a change re-anchors to the newest
     accTimer: null,

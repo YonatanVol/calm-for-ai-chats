@@ -780,6 +780,7 @@ html[class*="light"] #cit-reader-pane, html[data-theme="light"] #cit-reader-pane
 /* Presentation mode hides ALL Calm UI for clean capture/sharing —
    except the toast, which carries the "press Esc to exit" hint. */
 html.cit-presentation #cit-dock,
+html.cit-presentation #cit-glide,
 html.cit-presentation #cit-back,
 html.cit-presentation #cit-palette,
 html.cit-presentation #cit-reader-pane,
@@ -1428,6 +1429,147 @@ html.cit-presentation #cit-night-overlay {
 /* Timebar */
 #cit-timebar .cit-timebar-fill { background: linear-gradient(90deg, var(--cit-accent-deep), var(--cit-accent-bright)); }
 #cit-timebar.cit-timebar-break .cit-timebar-fill { background: var(--cit-break); }
+
+/* ----------------------------------------
+   Auto-scroll player — a small dial that reads the page to you.
+   The ring is speed; the centre is play/pause; the strip unfolds on hover.
+   Quiet graphite throughout: state is told by luminance, never by colour.
+---------------------------------------- */
+#cit-glide {
+  position: fixed;
+  left: 24px;
+  bottom: 96px;
+  z-index: 2147482900; /* below the Focus Reader, above the page */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--cit-sans);
+  color: var(--cit-ink);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.cit-glide-dial {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--cit-surface);
+  box-shadow: inset 0 0 0 1px var(--cit-hairline-accent), var(--cit-shadow);
+}
+.cit-glide-svg {
+  position: absolute;
+  inset: 0;
+  width: 56px;
+  height: 56px;
+  pointer-events: none;
+}
+.cit-glide-track {
+  fill: none;
+  stroke: var(--cit-hairline-strong);
+  stroke-width: 4;
+}
+.cit-glide-ring {
+  fill: none;
+  stroke: var(--cit-ink);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s var(--cit-ease), stroke 0.25s var(--cit-ease);
+}
+#cit-glide.cit-glide-paused .cit-glide-ring { stroke: var(--cit-ink-dim); }
+#cit-glide.cit-glide-done .cit-glide-ring { stroke: var(--cit-ink); }
+.cit-glide-btn {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--cit-ink);
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cit-glide-btn:active { cursor: grabbing; }
+.cit-glide-btn:focus-visible { outline: 2px solid var(--cit-ink-dim); outline-offset: 2px; }
+.cit-glide-icon { display: inline-flex; }
+.cit-glide-icon .cit-svg { width: 20px; height: 20px; }
+#cit-glide.cit-glide-paused .cit-glide-icon .cit-svg { margin-left: 2px; }
+/* The ring band is the dial's grab area: a thin annulus, so the centre stays
+   the button and the two never compete for a pointer. */
+.cit-glide-ring-hit {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  cursor: ns-resize;
+  -webkit-mask: radial-gradient(circle, transparent 20px, #000 21px);
+  mask: radial-gradient(circle, transparent 20px, #000 21px);
+}
+
+/* The strip: folded until you hover or focus the player. */
+.cit-glide-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  transform: translateX(-6px);
+  pointer-events: none;
+  transition: opacity 0.3s var(--cit-ease), transform 0.3s var(--cit-spring);
+}
+#cit-glide:hover .cit-glide-strip,
+#cit-glide:focus-within .cit-glide-strip {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.cit-glide-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px 4px 10px;
+  border-radius: 999px;
+  background: var(--cit-surface);
+  box-shadow: inset 0 0 0 1px var(--cit-hairline-accent), var(--cit-shadow);
+}
+.cit-glide-label {
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cit-ink-dim);
+  margin-right: 4px;
+}
+.cit-glide-chip {
+  border: 0;
+  background: transparent;
+  color: var(--cit-ink-dim);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.cit-glide-chip:hover { color: var(--cit-ink); }
+.cit-glide-chip.cit-active { color: var(--cit-ink); background: var(--cit-hairline-strong); }
+.cit-glide-chip:focus-visible { outline: 2px solid var(--cit-ink-dim); outline-offset: 1px; }
+.cit-glide-readout {
+  font-family: var(--cit-serif);
+  font-size: 13px;
+  color: var(--cit-ink);
+  padding: 0 6px 0 8px;
+  margin-left: 4px;
+  border-left: 1px solid var(--cit-hairline-strong);
+}
+#cit-glide.cit-glide-done { animation: cit-glide-settle 0.6s var(--cit-ease); }
+@keyframes cit-glide-settle {
+  from { transform: scale(1.04); }
+  to { transform: none; }
+}
+html.cit-motion #cit-glide *,
+html.cit-motion #cit-glide { transition: none !important; animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  #cit-glide, #cit-glide * { transition: none !important; animation: none !important; }
+}
 
 /* ----------------------------------------
    Focus Reader — Calm's own reading surface.
