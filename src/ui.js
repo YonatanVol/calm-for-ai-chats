@@ -353,6 +353,15 @@
         { value: 130, label: "Largest" },
       ], CALM.modes.applyReaderType)
     );
+    c.appendChild(
+      selectRow("Auto-scroll moves", "autoScrollStyle", [
+        { value: "glide", label: "Glide — smooth and continuous" },
+        { value: "lines", label: "Lines — one line at a time" },
+        { value: "answers", label: "Answers — one answer, then pause" },
+      ], function () {
+        if (CALM.glide) CALM.glide.setStyle(S.autoScrollStyle);
+      })
+    );
     // Every remaining reading number — line height, night dim, ruler height
     // and dim, spotlight dim, grayscale — is a fine adjustment to a mode you
     // are already looking at. They live in ⌘K, where the arrow keys change

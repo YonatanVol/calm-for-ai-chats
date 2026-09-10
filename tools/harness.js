@@ -261,14 +261,41 @@ function buildWorld(hostname, opts) {
   };
   // Short timers fire immediately; long timers (quiet 4s, collapse 6s) stay
   // pending like the real world. Intervals are registered for manual ticking.
+  // Long timers are recorded rather than dropped, so a test can fire them
+  // deliberately with world.fireLongTimers() — "four seconds later" is a
+  // thing scenarios need to say.
+  world.longTimers = {};
+  var tid = 100000;
   global.setTimeout = function (f, ms) {
-    if ((ms | 0) >= 3000) return 99999;
+    if ((ms | 0) >= 3000) { world.longTimers[++tid] = f; return tid; }
     try { f && f(); } catch (e) { throw e; }
     return 0;
   };
+  world.fireLongTimers = function () {
+    var due = world.longTimers;
+    world.longTimers = {};
+    Object.keys(due).forEach(function (k) { due[k](); });
+  };
   global.setInterval = function (f) { world.intervals[++iid] = f; return iid; };
-  global.clearTimeout = noop;
+  global.clearTimeout = function (id) { delete world.longTimers[id]; };
   global.clearInterval = function (id) { delete world.intervals[id]; };
+  // Animation frames are recorded, never fired on their own. A test advances
+  // the clock with world.frame(ms), which runs every frame that was pending
+  // when the call began — exactly one frame per call, like a browser. A
+  // callback that re-requests itself is queued for the NEXT call.
+  world.now = 0;
+  world.rafs = {};
+  var rafId = 0;
+  global.requestAnimationFrame = function (f) { world.rafs[++rafId] = f; return rafId; };
+  global.cancelAnimationFrame = function (id) { delete world.rafs[id]; };
+  global.performance = { now: function () { return world.now; } };
+  world.frame = function (ms) {
+    world.now += ms;
+    var due = world.rafs;
+    world.rafs = {};
+    Object.keys(due).forEach(function (k) { due[k](world.now); });
+  };
+  world.frames = function (n, ms) { for (var i = 0; i < n; i++) world.frame(ms); };
   global.MutationObserver = function (cb) {
     this.cb = cb; world.observers.push(this);
     this.observe = noop; this.disconnect = noop;
@@ -983,18 +1010,24 @@ section("Scenarios V");
     pausedNow && !C.rt.paused && !C.modes.isActive("pause"));
 
   // SCENARIO 16 — "Auto-scroll ran to the bottom of the page and stopped."
-  // The mode has to switch itself off, not just stop moving.
+  // The mode has to switch itself off, not just stop moving. It now does so
+  // after a beat — long enough for "done" to be seen — rather than vanishing
+  // the instant the page ends.
   var sc = w.makeEl("div");
   sc.clientHeight = 800; sc.scrollHeight = 1000; sc.scrollTop = 0;
+  sc.closest = function () { return null; };
+  sc.__rect = { top: 0, left: 0, right: 900, bottom: 800, width: 900, height: 800 };
   C.rt.scrollContainer = sc;
+  C.settings.autoScrollSpeed = 300;
   C.modes.enter("autoscroll");
-  var t2 = w.lastInterval();
-  for (var i = 0; i < 300 && C.modes.isActive("autoscroll"); i++) {
-    sc.scrollTop = Math.min(sc.scrollHeight - sc.clientHeight, sc.scrollTop + 20);
-    if (t2) t2();
-  }
-  check("auto-scroll turns itself off at the bottom",
-    !C.modes.isActive("autoscroll"));
+  w.frames(120, 16.7);
+  check("auto-scroll stops at the bottom and says so",
+    C.modes.isActive("autoscroll") && C.rt.glide.done && sc.scrollTop === 200,
+    "active " + C.modes.isActive("autoscroll") + " done " + C.rt.glide.done +
+      " scrollTop " + sc.scrollTop);
+  w.fireLongTimers();
+  check("and a few seconds later it lets itself out",
+    !C.modes.isActive("autoscroll") && !w.bodyEls["cit-glide"]);
 })();
 
 section("Scenarios VI");
@@ -2365,6 +2398,310 @@ section("Idle cost");
     fresh ? "\"" + fresh.textContent + "\"" : "(no node)");
 })();
 
+/* ---------------- Auto-scroll is a player, not a timer ------------------- */
+// A long answer, read hands-free. The old version was a 60ms timer adding
+// whole pixels with no way to pause and a scroll container that went stale
+// after a navigation. This is a media player for text: play, pause, speed,
+// skip to the next answer — and it notices when you take the wheel.
+section("Auto-scroll player");
+(function () {
+  function world(opts) {
+    var w = buildWorld("chatgpt.com", { lenient: true });
+    var sc = w.makeEl("div");
+    sc.clientHeight = 800;
+    sc.scrollHeight = (opts && opts.height) || 6000;
+    sc.scrollTop = 0;
+    sc.closest = function () { return null; };
+    sc.__rect = { top: 0, left: 0, right: 900, bottom: 800, width: 900, height: 800 };
+    sc.scrollTo = function (o) { sc.scrollTop = o.top; };
+    w.C.rt.scrollContainer = sc;
+    var starts = (opts && opts.answers) || [];
+    var els = starts.map(function (top, i) {
+      var a = w.makeEl("div");
+      a.__docTop = top;
+      a.__h = (starts[i + 1] || sc.scrollHeight) - top;
+      Object.defineProperty(a, "__rect", { get: function () {
+        return { top: a.__docTop - sc.scrollTop, left: 0, right: 900,
+                 bottom: a.__docTop - sc.scrollTop + a.__h, width: 900, height: a.__h };
+      } });
+      return a;
+    });
+    w.docQueryAll = function (sel) { return sel === w.C.site.responseSel ? els : []; };
+    global.getComputedStyle = function () { return { overflowY: "visible", lineHeight: "24px" }; };
+    w.sc = sc;
+    return w;
+  }
+  function bubble(w) { return w.bodyEls["cit-glide"]; }
+  function btn(w) { var b = bubble(w); return b && b.querySelector(".cit-glide-btn"); }
+  function click(el, when) {
+    if (when != null) Date.now = function () { return when; };
+    (el.__ls.click || []).forEach(function (f) {
+      f({ stopPropagation: function () {}, preventDefault: function () {},
+          target: el, clientX: 0, clientY: 0 });
+    });
+  }
+  var realNow = Date.now;
+
+  // SCENARIO 60 — "Read this to me." It moves at the speed I set, smoothly.
+  var w = world();
+  w.C.settings.autoScrollSpeed = 80;
+  w.C.settings.autoScrollStyle = "glide";
+  w.C.modes.enter("autoscroll");
+  check("turning it on puts the bubble on the page", !!bubble(w));
+  w.frames(120, 16.7); // ~2 seconds at 60fps
+  check("two seconds at 80 px/s moves about 160px, eased in from rest",
+    w.sc.scrollTop > 130 && w.sc.scrollTop < 165, "scrollTop " + w.sc.scrollTop.toFixed(1));
+  w.C.modes.exit("autoscroll");
+
+  // SCENARIO 61 — the first frame moves LESS than a steady one: it eases in
+  // rather than lurching. (Sub-pixel accumulation also means slow speeds
+  // move, instead of being rounded to a 1px stutter or to nothing.)
+  var w1 = world();
+  w1.C.settings.autoScrollSpeed = 80;
+  w1.C.modes.enter("autoscroll");
+  w1.frame(16.7); w1.frame(16.7);
+  var early = w1.sc.scrollTop;
+  w1.frames(60, 16.7);
+  var mid = w1.sc.scrollTop;
+  w1.frame(16.7);
+  var steady = w1.sc.scrollTop - mid;
+  check("it eases in: the first frames move less than a steady frame",
+    early < steady * 1.5 && steady > 1, "early " + early.toFixed(2) + " steady " + steady.toFixed(2));
+  w1.C.settings.autoScrollSpeed = 20;
+  w1.frames(30, 16.7);
+  check("a slow speed still moves rather than rounding to nothing",
+    w1.sc.scrollTop > mid + steady + 5, "moved " + (w1.sc.scrollTop - mid).toFixed(1));
+  w1.C.modes.exit("autoscroll");
+
+  // SCENARIO 62 — tap pauses, tap resumes. The ring says which.
+  var w2 = world();
+  w2.C.settings.autoScrollSpeed = 80;
+  w2.C.modes.enter("autoscroll");
+  w2.frames(30, 16.7);
+  click(btn(w2), 1000);
+  var b2 = bubble(w2);
+  check("a tap pauses it", !!b2 && b2.classList.contains("cit-glide-paused") &&
+    !w2.C.glide.state.playing);
+  w2.frames(30, 16.7); // ease-out then hold
+  var held = w2.sc.scrollTop;
+  w2.frames(30, 16.7);
+  check("and it stays put while paused", w2.sc.scrollTop === held,
+    held.toFixed(1) + " -> " + w2.sc.scrollTop.toFixed(1));
+  check("the button says what a tap will do now",
+    /resume/i.test(btn(w2).getAttribute("aria-label") || ""),
+    btn(w2).getAttribute("aria-label"));
+  click(btn(w2), 3000);
+  w2.frames(30, 16.7);
+  check("a second tap resumes", w2.C.glide.state.playing && w2.sc.scrollTop > held);
+  Date.now = realNow;
+  w2.C.modes.exit("autoscroll");
+
+  // SCENARIO 63 — a double-tap jumps to the start of the NEXT answer and
+  // keeps going. The first tap of the pair paused it; the second undoes that.
+  var w3 = world({ answers: [400, 1300, 2200, 3100] });
+  w3.C.settings.autoScrollSpeed = 80;
+  w3.C.modes.enter("autoscroll");
+  w3.sc.scrollTop = 500; // inside the first answer
+  click(btn(w3), 5000);
+  click(btn(w3), 5180);
+  check("a double-tap lands at the start of the next answer",
+    Math.abs(w3.sc.scrollTop - (1300 - w3.C.const.JUMP_MARGIN)) < 2,
+    "scrollTop " + w3.sc.scrollTop);
+  check("and it is still playing afterwards", w3.C.glide.state.playing);
+  Date.now = realNow;
+  w3.C.modes.exit("autoscroll");
+
+  // SCENARIO 64 — "I scrolled myself." Taking the wheel pauses it; it does
+  // not fight you. A wheel on the BUBBLE is a speed change, not a takeover.
+  var w4 = world();
+  w4.C.settings.autoScrollSpeed = 80;
+  w4.C.modes.enter("autoscroll");
+  var page = w4.makeEl("div");
+  (w4.docLs.wheel || []).forEach(function (f) {
+    f({ target: page, deltaY: 120, preventDefault: function () {} });
+  });
+  check("a wheel on the page pauses it", !w4.C.glide.state.playing);
+  w4.C.glide.play();
+  var ring = bubble(w4);
+  var before = w4.C.glide.state.speed;
+  (ring.__ls.wheel || []).forEach(function (f) {
+    f({ target: ring, deltaY: -120, preventDefault: function () {},
+        stopPropagation: function () {} });
+  });
+  check("a wheel on the bubble nudges speed up instead",
+    w4.C.glide.state.speed === before + 10 && w4.C.glide.state.playing,
+    before + " -> " + w4.C.glide.state.speed);
+  for (var i = 0; i < 60; i++) {
+    (ring.__ls.wheel || []).forEach(function (f) {
+      f({ target: ring, deltaY: -120, preventDefault: function () {},
+          stopPropagation: function () {} });
+    });
+  }
+  check("and clamps at the top of the range", w4.C.glide.state.speed === 300,
+    String(w4.C.glide.state.speed));
+  for (i = 0; i < 60; i++) {
+    (ring.__ls.wheel || []).forEach(function (f) {
+      f({ target: ring, deltaY: 120, preventDefault: function () {},
+          stopPropagation: function () {} });
+    });
+  }
+  check("and at the bottom", w4.C.glide.state.speed === 20, String(w4.C.glide.state.speed));
+  check("the setting follows the dial", w4.C.settings.autoScrollSpeed === 20);
+  w4.C.modes.exit("autoscroll");
+
+  // SCENARIO 65 — arrow keys and PageDown are also "I'm driving now"; hiding
+  // the tab is "I'm not even looking".
+  var w5 = world();
+  w5.C.modes.enter("autoscroll");
+  (w5.docLs.keydown || []).forEach(function (f) {
+    f({ code: "PageDown", key: "PageDown", target: w5.makeEl("div"),
+        ctrlKey: false, metaKey: false, shiftKey: false, altKey: false,
+        preventDefault: function () {}, stopPropagation: function () {} });
+  });
+  check("PageDown pauses it", !w5.C.glide.state.playing);
+  w5.C.glide.play();
+  global.document.hidden = true;
+  (w5.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  check("hiding the tab pauses it", !w5.C.glide.state.playing);
+  global.document.hidden = false;
+  (w5.docLs.visibilitychange || []).forEach(function (f) { f({}); });
+  check("and coming back does NOT resume on its own — that is your call",
+    !w5.C.glide.state.playing);
+  w5.C.modes.exit("autoscroll");
+
+  // SCENARIO 66 — Space is play/pause while it runs, like any player. It
+  // never fires inside a text field, and it does not page the site down.
+  var w6 = world();
+  w6.C.modes.enter("autoscroll");
+  var prevented = false;
+  function space(target) {
+    prevented = false;
+    (w6.docLs.keydown || []).forEach(function (f) {
+      f({ code: "Space", key: " ", target: target,
+          ctrlKey: false, metaKey: false, shiftKey: false, altKey: false,
+          composedPath: function () { return [target]; },
+          preventDefault: function () { prevented = true; },
+          stopPropagation: function () {} });
+    });
+  }
+  space(w6.makeEl("div"));
+  check("Space pauses it while it is running", !w6.C.glide.state.playing && prevented);
+  space(w6.makeEl("div"));
+  check("Space again resumes", w6.C.glide.state.playing);
+  var ta = w6.makeEl("textarea");
+  space(ta);
+  check("but Space inside a text field is just a space",
+    w6.C.glide.state.playing && !prevented);
+  w6.C.modes.exit("autoscroll");
+  space(w6.makeEl("div"));
+  check("and with the player off, Space is left alone entirely", !prevented);
+
+  // SCENARIO 67 — Escape stops it, and the topmost surface still wins.
+  var w7 = world();
+  w7.C.modes.enter("autoscroll");
+  (w7.docLs.keydown || []).forEach(function (f) {
+    f({ key: "Escape", code: "Escape", preventDefault: function () {},
+        stopPropagation: function () {} });
+  });
+  check("Escape stops the player", !w7.C.modes.isActive("autoscroll") && !bubble(w7));
+
+  // SCENARIO 68 — the end of the conversation. It eases to a stop rather
+  // than snapping, says so, and lets itself out.
+  var w8 = world({ height: 1000 }); // 200px of travel
+  w8.C.settings.autoScrollSpeed = 300;
+  w8.C.modes.enter("autoscroll");
+  w8.frames(120, 16.7);
+  var b8 = bubble(w8);
+  check("reaching the bottom marks it done",
+    !!b8 && b8.classList.contains("cit-glide-done") && w8.C.glide.state.done,
+    "scrollTop " + w8.sc.scrollTop);
+  check("and it stops exactly at the end, not past it",
+    w8.sc.scrollTop <= 200 && w8.sc.scrollTop >= 199, "scrollTop " + w8.sc.scrollTop);
+  w8.C.modes.exit("autoscroll");
+
+  // SCENARIO 69 — a navigation stops it. Gliding from the top of a
+  // conversation you just opened is a surprise, not a convenience.
+  var w9 = world();
+  w9.C.modes.enter("autoscroll");
+  w9.nav("https://chatgpt.com/c/another");
+  check("switching conversations stops it rather than resuming",
+    !w9.C.modes.isActive("autoscroll") && !bubble(w9));
+
+  // SCENARIO 70 — "Lines" steps one line at a time, at the cadence the
+  // speed implies. Reading along is easier when the text pauses between
+  // lines than when it never stops moving.
+  var wl = world();
+  wl.C.settings.autoScrollSpeed = 80;
+  wl.C.settings.autoScrollStyle = "lines";
+  wl.C.modes.enter("autoscroll");
+  wl.frames(60, 16.7); // one second → ~3 lines of 24px
+  check("Lines: a second at 80px/s covers roughly three 24px lines",
+    wl.sc.scrollTop >= 48 && wl.sc.scrollTop <= 100, "scrollTop " + wl.sc.scrollTop.toFixed(1));
+  wl.C.modes.exit("autoscroll");
+
+  // SCENARIO 71 — "Answers" goes to the next answer, waits long enough to
+  // read it, and then moves on.
+  var wa = world({ answers: [400, 1300, 2200, 3100] });
+  wa.C.settings.autoScrollSpeed = 300;
+  wa.C.settings.autoScrollStyle = "answers";
+  wa.C.modes.enter("autoscroll");
+  wa.frames(200, 16.7); // ~3.3s: enough to reach the first answer and dwell
+  var at = wa.sc.scrollTop;
+  check("Answers: it travels to an answer's start and holds there",
+    Math.abs(at - (400 - wa.C.const.JUMP_MARGIN)) < 2 ||
+    Math.abs(at - (1300 - wa.C.const.JUMP_MARGIN)) < 2,
+    "scrollTop " + at.toFixed(1));
+  wa.frames(20, 16.7);
+  check("...holding, not creeping, while you read", wa.sc.scrollTop === at,
+    at.toFixed(1) + " -> " + wa.sc.scrollTop.toFixed(1));
+  wa.C.modes.exit("autoscroll");
+
+  // SCENARIO 72 — the strip's choices write the same settings the dial does.
+  var ws = world();
+  ws.C.modes.enter("autoscroll");
+  var chips = bubble(ws).querySelectorAll(".cit-glide-chip");
+  var skim = chips.filter(function (c) { return c.getAttribute("data-cit-speed") === "160"; })[0];
+  var lines = chips.filter(function (c) { return c.getAttribute("data-cit-style") === "lines"; })[0];
+  check("(setup) the strip offers speed and style chips", !!skim && !!lines);
+  if (skim) click(skim);
+  if (lines) click(lines);
+  check("choosing Skim sets the speed the ring shows",
+    ws.C.glide.state.speed === 160 && ws.C.settings.autoScrollSpeed === 160);
+  check("choosing Lines switches the style", ws.C.glide.state.style === "lines" &&
+    ws.C.settings.autoScrollStyle === "lines");
+  var readout = bubble(ws).querySelector(".cit-glide-readout");
+  check("the readout is relative to Read speed", !!readout && /2\.0×/.test(readout.textContent || ""),
+    readout ? readout.textContent : "(none)");
+  ws.C.modes.exit("autoscroll");
+
+  // SCENARIO 73 — every control on it is named, and it is out of the way of
+  // the reader who cannot see it either.
+  var wn = world();
+  wn.C.modes.enter("autoscroll");
+  var unnamed = bubble(wn).querySelectorAll("button").filter(function (b) {
+    return !(b.getAttribute("aria-label") || String(b.textContent || "").trim());
+  });
+  check("every button on the bubble has a name", !unnamed.length, unnamed.length + " unnamed");
+  wn.C.modes.exit("autoscroll");
+
+  // SCENARIO 74 — old settings. Speed used to be 1..10 "pixels per tick";
+  // it is now pixels per second. 3 was the default then, Read is now.
+  var wm = buildWorld("chatgpt.com", { lenient: true, seed: {
+    "cit-settings": JSON.stringify({ settingsVersion: 3, autoScrollSpeed: 3 }) } });
+  check("an old default speed migrates to Read (80 px/s)",
+    wm.C.settings.autoScrollSpeed === 80 && wm.C.settings.settingsVersion >= 4,
+    "speed " + wm.C.settings.autoScrollSpeed + " v" + wm.C.settings.settingsVersion);
+  var wm2 = buildWorld("chatgpt.com", { lenient: true, seed: {
+    "cit-settings": JSON.stringify({ settingsVersion: 3, autoScrollSpeed: 10 }) } });
+  check("and the old maximum lands on Skim-ish, not off the dial",
+    wm2.C.settings.autoScrollSpeed === 220, "speed " + wm2.C.settings.autoScrollSpeed);
+  var wm3 = buildWorld("chatgpt.com", { lenient: true, seed: {
+    "cit-settings": JSON.stringify({ settingsVersion: 4, autoScrollSpeed: 120 }) } });
+  check("a value already in px/s is left alone", wm3.C.settings.autoScrollSpeed === 120);
+
+  Date.now = realNow;
+})();
+
 section("Auto-hide");
 (function () {
   var w = buildWorld("chatgpt.com", {});
@@ -2643,13 +2980,13 @@ section("Mode registry");
   // Named rather than counted: the count changes whenever a mode is promoted,
   // and a magic number turns an intentional change into a false failure.
   check("the everyday modes are the ones on tiles",
-    ["zen", "focusreader", "night", "ruler", "chatspot", "pomodoro"].every(
+    ["zen", "focusreader", "night", "ruler", "chatspot", "pomodoro", "autoscroll"].every(
       function (id) { return tiles.indexOf(id) >= 0; }
     ), tiles.join(","));
   check("and the tile row stays small enough to scan",
     tiles.length <= 7, tiles.length + " tiles");
   check("niche modes still exist, just moved off the tiles",
-    ["gray", "motion", "privacy", "autoscroll", "presentation"].every(function (id) {
+    ["gray", "motion", "privacy", "presentation"].every(function (id) {
       return !!M.MODES[id] && M.MODES[id].surface !== "tile";
     }));
   check("every surfaced mode has an icon",

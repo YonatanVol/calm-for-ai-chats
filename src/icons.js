@@ -52,6 +52,8 @@
     presentation: svg('<rect x="3.5" y="5" width="17" height="11" rx="1.5"/><path d="M9 20h6M12 16v4"/>'),
     autoscroll: svg('<path d="M7 6l5 5 5-5M7 13l5 5 5-5"/>'),
     pause: svg('<path d="M9 5v14M15 5v14"/>'),
+    play: svg('<path d="M8.5 5.5v13l10-6.5z"/>'),
+    check: svg('<path d="M5 12.5l4.5 4.5L19 7"/>'),
   };
 
   // Per-mode icon lookup for the modes popover / settings rows.

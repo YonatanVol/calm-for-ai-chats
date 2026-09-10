@@ -34,7 +34,7 @@
     rulerDim: [15, 70, 5],
     grayLevel: [40, 100, 5],
     spotDim: [10, 70, 5],
-    autoScrollSpeed: [1, 10, 1],
+    autoScrollSpeed: [20, 300, 10],
     pauseMinutes: [5, 60, 5],
     hyperfocusMin: [0, 180, 15],
     whereWasIMin: [5, 120, 5],
