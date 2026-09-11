@@ -113,6 +113,7 @@ any script to click **Load unpacked** for you, so that last click is yours.
 | **Command palette** (everything) | `Ctrl/Cmd + K` |
 | Toggle input | `Ctrl/Cmd + Shift + H` |
 | Back to the start of the answer | `Ctrl/Cmd + Shift + J` |
+| Down to the next answer (or the end) | `Ctrl/Cmd + Shift + E` |
 | Auto-scroll player on / off | `Ctrl/Cmd + Shift + S` |
 | …while it runs: play / pause · stop | `Space` · `Esc` |
 | Zen mode | `Ctrl/Cmd + Shift + Z` |

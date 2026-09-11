@@ -376,15 +376,13 @@
     var sc = scroller();
     if (!sc) return;
     var here = sc.scrollTop || 0;
-    var offs = answerOffsets();
-    var to = null;
-    for (var i = 0; i < offs.length; i++) {
-      if (offs[i] > here + 1) { to = offs[i]; break; }
-    }
-    // No answer below. This used to return — two taps, nothing, in exactly
-    // the place people double-tap most: inside the last, longest answer. The
-    // next place worth going is the end, which the player then reports as
-    // "reached the end".
+    // The same rule as the ↓ button, from the same function, so a double-tap
+    // and ↓ can never disagree about where "next" is: the next answer's
+    // start — or, with no answer below (exactly where people double-tap
+    // most, inside the last and longest one), the end, which the player then
+    // reports as "reached the end".
+    var to = CALM.core && CALM.core.nextAnswerTarget
+      ? CALM.core.nextAnswerTarget(here) : null;
     if (to == null) to = maxTop(sc);
     var target = Math.min(maxTop(sc), Math.max(0, to));
     sc.scrollTop = target;

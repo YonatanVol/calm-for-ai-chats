@@ -2107,7 +2107,12 @@ section("Jump to answer");
   var named = w3.C.palette._items().filter(function (i) {
     return i.kind === "action" && /answer/i.test(i.name);
   });
-  check("⌘K offers it by name", named.length === 1,
+  // Two actions now — up to the start, down to the next — and each must be
+  // findable by what it does, not merely "something about answers".
+  check("⌘K offers both directions by name",
+    named.length === 2 &&
+      named.some(function (i) { return /start of the answer/i.test(i.name); }) &&
+      named.some(function (i) { return /next answer/i.test(i.name); }),
     named.map(function (i) { return i.name; }).join(", "));
   w3.C.palette.close();
   var jumped = false;
@@ -2120,6 +2125,122 @@ section("Jump to answer");
   });
   check("⌃⇧J runs it", jumped);
   w3.C.core.jumpToAnswerStart = realJump;
+})();
+
+/* ---------------- Down to the next answer ------------------------------- */
+// The opposite of ↑. Once you have walked up three answers, the way back down
+// was to scroll by hand or reach for "Scroll to end", which throws away your
+// place. ↓ goes to the start of the next answer below you and, when there is
+// none, to the very end — so from the top it steps down answer by answer, and
+// from the last answer it lands on the latest reply.
+section("Down to the next answer");
+(function () {
+  // Answers at 400 / 1300 / 2200 / 3100 on a 4000px page; the window is 800
+  // tall, so the bottom is 3200 and the answer starts (less the 24px
+  // breathing room) are 376 / 1276 / 2176 / 3076.
+  function world(opts) {
+    var w = buildWorld("chatgpt.com", { lenient: true });
+    var sc = w.makeEl("div");
+    sc.clientHeight = 800;
+    sc.scrollHeight = 4000;
+    sc.scrollTop = (opts && opts.at) || 0;
+    sc.closest = function () { return null; };
+    sc.__rect = { top: 0, left: 0, right: 900, bottom: 800, width: 900, height: 800 };
+    w.moves = [];
+    sc.scrollTo = function (o) {
+      w.moves.push(o.top);
+      if (!(opts && opts.frozen)) sc.scrollTop = o.top; // frozen = still mid-glide
+    };
+    w.C.rt.scrollContainer = sc;
+    var els = [400, 1300, 2200, 3100].map(function (top) {
+      var a = w.makeEl("div");
+      Object.defineProperty(a, "__rect", { get: function () {
+        return { top: top - sc.scrollTop, left: 0, right: 900,
+                 bottom: top - sc.scrollTop + 500, width: 900, height: 500 };
+      } });
+      return a;
+    });
+    w.docQueryAll = function (sel) { return sel === w.C.site.responseSel ? els : []; };
+    w.sc = sc;
+    return w;
+  }
+  function down(w) { if (w.C.core.jumpToNextAnswer) w.C.core.jumpToNextAnswer(); }
+  function up(w) { w.C.core.jumpToAnswerStart(); }
+  function near(a, b) { return Math.abs(a - b) < 2; }
+
+  // SCENARIO 75 — reading the first answer, ↓ goes to the second.
+  var w = world({ at: 376 });
+  down(w);
+  check("↓ from the first answer lands on the second",
+    near(w.sc.scrollTop, 1276), "scrollTop " + w.sc.scrollTop);
+  down(w);
+  check("and again to the third", near(w.sc.scrollTop, 2176), "scrollTop " + w.sc.scrollTop);
+
+  // SCENARIO 76 — on the last answer there is no next one: the end is.
+  var w1 = world({ at: 3076 });
+  down(w1);
+  check("↓ on the last answer lands on the very end",
+    near(w1.sc.scrollTop, 3200), "scrollTop " + w1.sc.scrollTop);
+  down(w1);
+  check("and at the end it stays put", near(w1.sc.scrollTop, 3200),
+    "scrollTop " + w1.sc.scrollTop);
+
+  // SCENARIO 77 — the two are inverses: up, up, down lands where the first
+  // up did.
+  var w2 = world({ at: 3200 });
+  up(w2);
+  var first = w2.sc.scrollTop;
+  up(w2);
+  down(w2);
+  check("↑ ↑ ↓ lands exactly where the first ↑ did",
+    near(w2.sc.scrollTop, first) && near(first, 3076),
+    "first " + first + ", after " + w2.sc.scrollTop);
+
+  // SCENARIO 78 — pressing twice before a smooth scroll has arrived. The page
+  // is still at the old position mid-glide; reading it would jump to the
+  // same answer twice. The second press must continue from where the first
+  // was GOING.
+  var w3 = world({ at: 376, frozen: true });
+  down(w3);
+  down(w3);
+  check("↓ ↓ in quick succession advances two answers, not one twice",
+    w3.moves.length === 2 && near(w3.moves[1], 2176),
+    "moves " + w3.moves.join(" → "));
+
+  // SCENARIO 79 — after scrolling by hand, the next press starts from where
+  // you ARE, not from where the old walk left off.
+  var w4 = world({ at: 3200 });
+  up(w4); up(w4); // walked to 2176
+  (w4.docLs.wheel || []).forEach(function (f) {
+    f({ target: w4.makeEl("div"), deltaY: 120 });
+  });
+  w4.sc.scrollTop = 2600; // the wheel took them here
+  up(w4);
+  check("after scrolling by hand, ↑ goes to the answer above where you are",
+    near(w4.sc.scrollTop, 2176), "scrollTop " + w4.sc.scrollTop);
+
+  // SCENARIO 80 — ⌃⇧E runs it, and both halves of the Answer tile are real,
+  // named buttons.
+  var w5 = world({ at: 376 });
+  var ran = false;
+  var real = w5.C.core.jumpToNextAnswer;
+  w5.C.core.jumpToNextAnswer = function () { ran = true; };
+  (w5.docLs.keydown || []).forEach(function (f) {
+    f({ code: "KeyE", key: "E", ctrlKey: true, shiftKey: true, metaKey: false,
+        altKey: false, target: w5.makeEl("div"),
+        preventDefault: function () {}, stopPropagation: function () {} });
+  });
+  check("⌃⇧E runs ↓", ran);
+  w5.C.core.jumpToNextAnswer = real;
+  w5.C.dock.build();
+  w5.C.console.open();
+  var pair = w5.bodyEls["cit-console"].querySelectorAll(".cit-qt-pair")[0];
+  var halves = pair ? pair.querySelectorAll("button") : [];
+  var names = halves.map(function (b) { return b.getAttribute("aria-label") || ""; });
+  check("the Answer tile has an ↑ half and a ↓ half, each named",
+    halves.length === 2 && /start of the answer/i.test(names[0]) &&
+      /next answer/i.test(names[1]),
+    names.join(" | ") || "(no pair tile)");
 })();
 
 /* ---------------- Surfaces let go of what they took --------------------- */

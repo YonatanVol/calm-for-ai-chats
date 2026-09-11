@@ -18,6 +18,13 @@
  * ChatGPT adapter — a file:// page matches no host — opens the player, and
  * uses elementFromPoint to ask what sits under the centre and under the ring.
  *
+ * It also opens the Console and MEASURES the quick row. The Answer tile became
+ * a <div> holding two buttons, and its label quietly inherited a different
+ * line-height from the other tiles (which are <button>s and get the browser's
+ * own) — 2px out of line, invisible to the scenario suite, obvious to an eye.
+ * Every label and icon in the row must share one line, and each half of the
+ * pair must be the thing a click in its middle actually reaches.
+ *
  *   node tools/glide-test.js          (needs Google Chrome; CHROME=/path works)
  */
 "use strict";
@@ -81,7 +88,31 @@ var probe = function () {
     // — the same fall-through that on ChatGPT means ChatGPT's typography.
     var chip = root.querySelector(".cit-glide-chip");
     out.font = chip ? getComputedStyle(chip).fontFamily : "";
-    out.ok =
+    // ---- the Console's quick row ----
+    CALM.dock.build();
+    CALM.console.open();
+    var tiles = [].slice.call(document.querySelectorAll(".cit-quick > .cit-qt"));
+    var labelTops = tiles.map(function (t) {
+      return t.querySelector(".cit-qt-label").getBoundingClientRect().top;
+    });
+    var iconMids = tiles.map(function (t) {
+      var b = t.querySelector("svg").getBoundingClientRect();
+      return b.top + b.height / 2;
+    });
+    function spread(a) { return Math.max.apply(null, a) - Math.min.apply(null, a); }
+    out.tiles = tiles.length;
+    out.labelSpread = +spread(labelTops).toFixed(2);
+    out.iconSpread = +spread(iconMids).toFixed(2);
+    var halves = [].slice.call(document.querySelectorAll(".cit-qt-pair .cit-qt-half"));
+    out.halvesHit = halves.length === 2 && halves.every(function (h) {
+      var r = h.getBoundingClientRect();
+      var hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return !!hit && (hit === h || h.contains(hit));
+    });
+    out.rowOk = out.tiles >= 4 && out.labelSpread <= 0.5 && out.iconSpread <= 0.5 &&
+      out.halvesHit;
+
+    out.ok = out.rowOk &&
       out.centre === "button" && out.nearCentre === "button" &&
       out.band === "ring" && out.bandTop === "ring" &&
       /ring/i.test(out.title) && /double-tap/i.test(out.btnTitle) && out.knob &&
@@ -96,6 +127,9 @@ var html =
   '<!doctype html><html><head><meta charset="utf-8">' +
   '<link rel="stylesheet" href="' + url("content.css") + '">' +
   "</head><body style=\"margin:0;height:3000px;background:#131417\">" +
+  // The first-run tour hangs off the menu and would cover the row being
+  // measured; mark it seen, as it is for anyone who has used Calm once.
+  "<script>try{localStorage.setItem('cit-onboarded','1')}catch(e){}</script>" +
   tags + "\n<script>(" + probe.toString() + ")();</script></body></html>";
 
 var page = path.join(os.tmpdir(), "calm-glide-test.html");
@@ -129,5 +163,9 @@ line(/double-tap/i.test(res.btnTitle), "the button tells you what a double-tap d
 line(res.knob, "the ring has a knob to take hold of");
 line(/apple-system|BlinkMacSystemFont|sans-serif/.test(res.font),
   "the strip uses Calm's own font, not the host page's", "font: " + res.font);
-console.log("\n" + (res.ok ? "bubble hit-testing OK (" + res.size + ")" : "bubble hit-testing BROKEN"));
+line(res.labelSpread <= 0.5, "the quick row's labels sit on one line",
+  "spread " + res.labelSpread + "px across " + res.tiles + " tiles");
+line(res.iconSpread <= 0.5, "and so do its icons", "spread " + res.iconSpread + "px");
+line(res.halvesHit, "each half of the Answer pair is what a click in its middle reaches");
+console.log("\n" + (res.ok ? "browser checks OK (bubble " + res.size + ", row of " + res.tiles + ")" : "browser checks BROKEN"));
 process.exit(res.ok ? 0 : 1);

@@ -83,6 +83,12 @@
     });
     items.push({
       kind: "action",
+      name: "Down to the next answer",
+      hint: "⌃⇧E",
+      run: function () { CALM.core.jumpToNextAnswer(); },
+    });
+    items.push({
+      kind: "action",
       name: "Intention and parked thoughts",
       hint: "⌃⇧K",
       run: function () { if (CALM.intent) CALM.intent.toggle(false); },

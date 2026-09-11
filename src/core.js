@@ -424,7 +424,7 @@
     rt.pendingText = "";
     rt.initialized = false;
     rt.accUp = 0;
-    rt.jumpIdx = 0;
+    rt.jumpRef = null; // a new conversation: nothing to continue from
     rt.jumpTotal = -1; // forces a re-anchor to the newest answer
     rt.composerEl = null;
     rt.scrollContainer = null;
@@ -497,32 +497,80 @@
       .filter(function (x) { return x != null && !isNaN(x); })
       .sort(function (a, b) { return a - b; });
   }
-  function jumpToAnswerStart() {
-    var list = answers();
-    if (!list.length) return; // a new chat has nothing to go back to
-
-    // A new turn makes the walk-back position stale: you are asking about the
-    // conversation as it is now, not as it was three answers ago.
-    if (rt.jumpTotal !== list.length) {
-      rt.jumpTotal = list.length;
-      rt.jumpIdx = list.length - 1;
+  // ---- Up and down through the answers ----
+  // ↑ goes to the start of the answer above you; ↓ to the start of the one
+  // below, or the very end when there is none. They share ONE reference point
+  // so they are exact inverses: ↑ ↑ ↓ lands where the first ↑ did.
+  //
+  // The reference is where the last jump was GOING, not where the page is,
+  // because jumps are smooth: press twice quickly and the page is still
+  // mid-glide, so reading scrollTop would land on the same answer twice.
+  // Anything that means "I'm driving now" drops it (below), so after
+  // scrolling by hand the next press starts from where you ARE. The old
+  // index-based walk carried on from where it had left off, however far you
+  // had scrolled since.
+  function scrollBottom(sc) {
+    return Math.max(0, (sc.scrollHeight || 0) - (sc.clientHeight || 0));
+  }
+  // The start of the next answer below `from`, or the end if there is none.
+  // Shared with the auto-scroll player's double-tap, so the two can never
+  // disagree about where "next" is.
+  function nextAnswerTarget(from) {
+    var sc = currentScroller();
+    if (!sc) return null;
+    var offs = answerOffsets();
+    for (var i = 0; i < offs.length; i++) {
+      if (offs[i] > from + 1) return Math.min(scrollBottom(sc), Math.max(0, offs[i]));
     }
-    var el = list[rt.jumpIdx];
-    if (!el || !el.getBoundingClientRect) return;
-
+    return scrollBottom(sc);
+  }
+  function answerNav(dir) {
     var sc = currentScroller();
     if (!sc) return;
-    var base = scrollerBase(sc);
-    var target = (sc.scrollTop || 0) + (el.getBoundingClientRect().top - base) -
-      C.JUMP_MARGIN;
-    var max = Math.max(0, (sc.scrollHeight || 0) - (sc.clientHeight || 0));
-    CALM.ui.smoothScrollTo(Math.max(0, Math.min(max, target)));
-
-    // Step back for next time, and STOP at the first answer rather than
-    // wrapping — wrapping would fling you to the bottom of a long
-    // conversation just as you reached the top of it.
-    if (rt.jumpIdx > 0) rt.jumpIdx--;
+    var offs = answerOffsets();
+    if (!offs.length) return; // a new chat has nothing to walk through
+    var ref = rt.jumpRef != null ? rt.jumpRef : sc.scrollTop || 0;
+    var target = null;
+    if (dir < 0) {
+      if (rt.jumpTotal !== offs.length) {
+        // A new turn arrived since the last jump: you sent a message, the
+        // reply landed, and ↑ means "read it from the top".
+        target = offs[offs.length - 1];
+      } else {
+        for (var i = offs.length - 1; i >= 0; i--) {
+          if (offs[i] < ref - 1) { target = offs[i]; break; }
+        }
+        // Nothing above: STAY on the first rather than wrapping — wrapping
+        // would fling you to the bottom just as you reached the top.
+        if (target == null) target = offs[0];
+      }
+    } else {
+      target = nextAnswerTarget(ref);
+    }
+    target = Math.max(0, Math.min(scrollBottom(sc), target));
+    rt.jumpRef = target;
+    rt.jumpTotal = offs.length;
+    CALM.ui.smoothScrollTo(target);
   }
+  function jumpToAnswerStart() { answerNav(-1); }
+  function jumpToNextAnswer() { answerNav(1); }
+
+  // A hand on the page: forget where the last jump was going. Input events
+  // only, never `scroll` — the smooth jump itself fires that. Calm's own
+  // surfaces are exempt, so wheeling over the menu does not count.
+  function dropJumpRef(e) {
+    try {
+      if (e && e.target && e.target.closest &&
+          e.target.closest("#cit-dock, #cit-console, #cit-palette, #cit-glide")) return;
+    } catch (_) {}
+    rt.jumpRef = null;
+  }
+  var NAV_KEYS = { ArrowUp: 1, ArrowDown: 1, PageUp: 1, PageDown: 1, Home: 1, End: 1, Space: 1 };
+  document.addEventListener("wheel", dropJumpRef, { passive: true, capture: true });
+  document.addEventListener("touchstart", dropJumpRef, { passive: true, capture: true });
+  document.addEventListener("keydown", function (e) {
+    if (NAV_KEYS[e.code]) dropJumpRef(e);
+  }, true);
 
   // ---- Keyboard ----
   document.addEventListener(
@@ -575,6 +623,13 @@
         e.preventDefault();
         e.stopPropagation();
         modes.toggle("autoscroll");
+      } else if (e.code === "KeyE") {
+        // E for "end", where repeated presses finish. N was the obvious
+        // letter and cannot be had: Ctrl+Shift+N and ⌘⇧N open an incognito
+        // window before the page ever sees the key.
+        e.preventDefault();
+        e.stopPropagation();
+        CALM.core.jumpToNextAnswer();
       }
     },
     true
@@ -655,6 +710,8 @@
     discoverScroll: discoverScroll,
     currentScroller: currentScroller,
     jumpToAnswerStart: jumpToAnswerStart,
+    jumpToNextAnswer: jumpToNextAnswer,
+    nextAnswerTarget: nextAnswerTarget,
     answerOffsets: answerOffsets,
     init: init,
   };

@@ -8,6 +8,13 @@ All notable changes to Calm. Dates are release dates; the format follows
 
 ### Added
 
+- **↓ beside ↑ on the Answer tile** (`Ctrl/Cmd+Shift+E`, or ⌘K). ↑ goes to
+  the start of the answer above you; ↓ to the start of the next one below,
+  or the very end when there is none. They walk the conversation in both
+  directions and are exact inverses, and pressing twice before a smooth
+  scroll lands still moves two answers. After you scroll by hand, the next
+  press starts from where you are rather than from where the last walk left
+  off — which ↑ used not to do.
 - **Auto-scroll is a player now.** A small dial floats over the page: tap to
   pause and resume, double-tap to jump to the start of the next answer, drag
   around the ring or spin the wheel over it to change speed. Hover it and a
