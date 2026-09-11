@@ -377,6 +377,40 @@ section("Static");
   check("every colour is quiet graphite, or named as deliberate", !strays.length,
     strays.map(function (c) { return c[0] + " (chroma " + chroma(c[1]) + ")"; })
       .slice(0, 4).join(", "));
+  // Every custom property the stylesheet or the scripts READ must be defined
+  // somewhere — in content.css, or at runtime through setProperty. An
+  // undefined var() is not an error anyone sees: it is valid at parse time,
+  // WINS the cascade, and then behaves as `unset` — which for font-family
+  // means "inherit the host page's font". That is how the auto-scroll bubble
+  // came to render in whatever typography the chat site uses: it referenced
+  // --cit-sans, a token that was never defined. A var() with a fallback is
+  // exempt; the fallback is the stated intent.
+  (function () {
+    var defined = {}, used = {};
+    // Comments are not usage. The first run of this check failed on the very
+    // comment that explains the bug it guards against — which is the same
+    // lesson as the menu-reachability review: a text scan that a comment can
+    // pass or fail is not measuring the code. Block comments go everywhere;
+    // `//` only when it starts a line, so "http://" inside a string survives.
+    function strip(t) {
+      return t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    }
+    var texts = [strip(css)];
+    fs.readdirSync(path.join(ROOT, "src")).forEach(function (f) {
+      if (/\.js$/.test(f)) texts.push(strip(fs.readFileSync(path.join(ROOT, "src", f), "utf8")));
+    });
+    texts.forEach(function (t) {
+      t.replace(/(--cit-[a-z0-9-]+)\s*:/g, function (_, n) { defined[n] = 1; return _; });
+      t.replace(/setProperty\(\s*["'](--cit-[a-z0-9-]+)["']/g, function (_, n) { defined[n] = 1; return _; });
+      t.replace(/var\(\s*(--cit-[a-z0-9-]+)\s*\)/g, function (_, n) { used[n] = 1; return _; });
+    });
+    var missing = Object.keys(used).filter(function (n) { return !defined[n]; });
+    check("(setup) the token scan reads real definitions",
+      Object.keys(defined).length >= 30, Object.keys(defined).length + " defined");
+    check("every --cit-* token that is used is defined somewhere", !missing.length,
+      missing.join(", "));
+  })();
+
   var mf = JSON.parse(fs.readFileSync(path.join(ROOT, "manifest.json"), "utf8"));
   check("manifest v3 parses", mf.manifest_version === 3);
 
@@ -2511,6 +2545,23 @@ section("Auto-scroll player");
   Date.now = realNow;
   w3.C.modes.exit("autoscroll");
 
+  // SCENARIO 63b — the most common place to double-tap is inside the LAST
+  // answer, the long one you are reading, which has no next answer. That
+  // used to return silently: two taps, nothing. The next place worth going
+  // is the end of the conversation.
+  var w3b = world({ answers: [400, 1300], height: 6000 });
+  w3b.C.settings.autoScrollSpeed = 80;
+  w3b.C.modes.enter("autoscroll");
+  w3b.sc.scrollTop = 2000; // well inside the last answer
+  click(btn(w3b), 7000);
+  click(btn(w3b), 7150);
+  w3b.frames(5, 16.7);
+  check("a double-tap inside the last answer goes to the end, and says so",
+    w3b.sc.scrollTop === 5200 && w3b.C.glide.state.done,
+    "scrollTop " + w3b.sc.scrollTop + " done " + w3b.C.glide.state.done);
+  Date.now = realNow;
+  w3b.C.modes.exit("autoscroll");
+
   // SCENARIO 64 — "I scrolled myself." Taking the wheel pauses it; it does
   // not fight you. A wheel on the BUBBLE is a speed change, not a takeover.
   var w4 = world();
@@ -2908,6 +2959,53 @@ section("Sanitizer");
 
 /* ---------------- Host isolation ---------------- */
 section("Host isolation");
+// Every surface Calm puts on <body> is dropped into a page it does not own,
+// and inherits that page's line-height, letter-spacing, direction and font
+// unless it is under the reset. The list of roots is hand-written, so — like
+// the Presentation list — derive the expectation: raise every surface, and
+// require each one to be named in all of the reset's :where() lists. The
+// auto-scroll bubble was added without joining it and rendered in the host's
+// typography. Four surfaces are exempt, each for a reason stated here.
+(function () {
+  var css = fs.readFileSync(path.join(ROOT, "content.css"), "utf8");
+  var lists = (css.match(/:where\(([^)]*#cit-console[^)]*)\)/g) || []).map(function (l) {
+    var ids = {};
+    l.replace(/#(cit-[a-z0-9-]+)/g, function (_, id) { ids[id] = 1; return _; });
+    return ids;
+  });
+  check("(setup) the reset's root lists were found", lists.length >= 3,
+    lists.length + " lists");
+  var EXEMPT = {
+    "cit-reader-pane": "shows the user's own conversation; its own reset leaves bidi free",
+    "cit-back": "carries the user's goal with dir=auto, which the chrome reset's " +
+      "direction:ltr would override — it sets its own font instead",
+    "cit-night-overlay": "a tint; no text",
+    "cit-ruler": "a band; no text",
+  };
+  var w = buildWorld("chatgpt.com", { lenient: true });
+  var C = w.C;
+  C.modes.ids().forEach(function (id) {
+    if (id === "presentation") return;
+    try { C.modes.enter(id); } catch (_) {}
+  });
+  try { C.ui.showToast("hello", true); } catch (_) {}
+  try { C.ui.showChip("time", "25m here"); } catch (_) {}
+  try { C.intent.toggle(true); } catch (_) {}
+  try { C.palette.open(); } catch (_) {}
+  try { C.intent.state.goal = "x"; C.back.show(); } catch (_) {}
+  var onBody = (global.document.body.children || [])
+    .map(function (e) { return e && e.__id; })
+    .filter(function (id, i, a) { return id && /^cit-/.test(id) && a.indexOf(id) === i; });
+  check("(setup) the surfaces are on the page", onBody.length >= 8,
+    onBody.length + " surfaces");
+  onBody.forEach(function (id) {
+    if (EXEMPT[id]) return;
+    check("the host page's typography cannot reach " + id,
+      lists.every(function (l) { return l[id]; }),
+      "missing from " + lists.filter(function (l) { return !l[id]; }).length +
+        " of " + lists.length + " reset lists");
+  });
+})();
 (function () {
   var css = fs.readFileSync(path.join(ROOT, "content.css"), "utf8");
   var rules = css.match(/:where\([^)]*#cit-console[^)]*\)[^{]*\{[^}]*\}/g) || [];

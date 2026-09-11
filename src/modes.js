@@ -381,7 +381,11 @@
     for (var i = 0; i < offs.length; i++) {
       if (offs[i] > here + 1) { to = offs[i]; break; }
     }
-    if (to == null) return;
+    // No answer below. This used to return — two taps, nothing, in exactly
+    // the place people double-tap most: inside the last, longest answer. The
+    // next place worth going is the end, which the player then reports as
+    // "reached the end".
+    if (to == null) to = maxTop(sc);
     var target = Math.min(maxTop(sc), Math.max(0, to));
     sc.scrollTop = target;
     G.pos = target;
@@ -447,10 +451,17 @@
       ring.setAttribute("cx", "28"); ring.setAttribute("cy", "28"); ring.setAttribute("r", String(RING_R));
       ring.setAttribute("stroke-dasharray", RING_LEN.toFixed(2));
       ring.setAttribute("transform", "rotate(-90 28 28)");
+      // A small knob at the end of the arc, shown on hover, so the ring reads
+      // as something you can take hold of rather than as decoration.
+      var knob = document.createElementNS(svgNS, "circle");
+      knob.setAttribute("class", "cit-glide-knob");
+      knob.setAttribute("r", "4");
       svg.appendChild(track);
       svg.appendChild(ring);
+      svg.appendChild(knob);
       dial.appendChild(svg);
-    } catch (_) { ring = null; }
+      G.knob = knob;
+    } catch (_) { ring = null; G.knob = null; }
     G.ring = ring;
 
     var btn = mk("button", "cit-glide-btn");
@@ -480,6 +491,7 @@
     // The ring band is a dial: drag around it to set speed.
     var hit = mk("div", "cit-glide-ring-hit");
     hit.setAttribute("aria-hidden", "true");
+    hit.setAttribute("title", "Drag the ring to change speed");
     hit.addEventListener("pointerdown", function (e) {
       e.stopPropagation();
       e.preventDefault();
@@ -500,7 +512,14 @@
       document.addEventListener("pointercancel", up, true);
       at(e);
     });
-    dial.appendChild(hit);
+    // UNDER the button, not over it. It used to be appended last with a CSS
+    // mask cutting out its centre — but a mask changes what you see, not what
+    // the pointer hits, so every tap in the middle landed here and silently
+    // changed the speed while the play button never heard a click. The
+    // button is a circle, and border-radius does clip hit-testing, so with
+    // the button on top it wins the centre and only the outer band reaches
+    // the ring. tools/glide-test.js asks a real browser to confirm it.
+    dial.insertBefore(hit, btn);
     root.appendChild(dial);
 
     // Wheel over the bubble nudges speed — same target as the ring, no chrome.
@@ -543,7 +562,8 @@
   function removeBubble() {
     var e = document.getElementById("cit-glide");
     if (e) e.remove();
-    G.el = null; G.ring = null; G.icon = null; G.btn = null; G.readout = null;
+    G.el = null; G.ring = null; G.knob = null; G.icon = null; G.btn = null;
+    G.readout = null;
   }
   function paint() {
     var g = gl();
@@ -556,6 +576,12 @@
       var frac = g.done ? 1 : (g.speed - C.GLIDE_MIN) / (C.GLIDE_MAX - C.GLIDE_MIN);
       G.ring.style.strokeDashoffset = (RING_LEN * (1 - frac)).toFixed(2);
     }
+    if (G.knob) {
+      // Same angle the drag maps FROM: 0 at the top, clockwise.
+      var th = ((g.speed - C.GLIDE_MIN) / (C.GLIDE_MAX - C.GLIDE_MIN)) * 2 * Math.PI;
+      G.knob.setAttribute("cx", (28 + RING_R * Math.sin(th)).toFixed(2));
+      G.knob.setAttribute("cy", (28 - RING_R * Math.cos(th)).toFixed(2));
+    }
     if (G.icon && CALM.icons) {
       G.icon.innerHTML = g.done ? CALM.icons.check : g.playing ? CALM.icons.pause : CALM.icons.play;
     }
@@ -563,6 +589,12 @@
       G.btn.setAttribute("aria-label",
         g.done ? "Auto-scroll finished — play again from the top"
         : g.playing ? "Pause auto-scroll" : "Resume auto-scroll");
+      // The hover hint is the only place a double-tap is announced, and it
+      // has to be true in every state — so it changes with the state.
+      G.btn.setAttribute("title",
+        g.done ? "Play again from the top"
+        : (g.playing ? "Tap to pause" : "Tap to resume") +
+          " · double-tap for the next answer");
     }
     if (G.readout) G.readout.textContent = (g.speed / C.GLIDE_READ).toFixed(1) + "×";
     if (root.querySelectorAll) {
