@@ -113,12 +113,12 @@ html[class*="light"] #cit-reader-pane, html[data-theme="light"] #cit-reader-pane
 :where(
   #cit-dock, #cit-console, #cit-palette, #cit-intent-pop, #cit-intent-chip,
   #cit-pomo-widget, #cit-pomo-overlay, #cit-toast, #cit-chip-stack,
-  #cit-type-chip, #cit-timebar, .cit-fr-bar
+  #cit-type-chip, #cit-timebar, #cit-glide, .cit-fr-bar
 ),
 :where(
   #cit-dock, #cit-console, #cit-palette, #cit-intent-pop, #cit-intent-chip,
   #cit-pomo-widget, #cit-pomo-overlay, #cit-toast, #cit-chip-stack,
-  #cit-type-chip, #cit-timebar, .cit-fr-bar
+  #cit-type-chip, #cit-timebar, #cit-glide, .cit-fr-bar
 ) * {
   box-sizing: border-box;
   margin: 0;
@@ -155,7 +155,7 @@ html[class*="light"] #cit-reader-pane, html[data-theme="light"] #cit-reader-pane
 :where(
   #cit-dock, #cit-console, #cit-palette, #cit-intent-pop, #cit-intent-chip,
   #cit-pomo-widget, #cit-pomo-overlay, #cit-toast, #cit-chip-stack,
-  #cit-type-chip, #cit-timebar, .cit-fr-bar
+  #cit-type-chip, #cit-timebar, #cit-glide, .cit-fr-bar
 ) {
   color: var(--cit-ink);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -1443,8 +1443,11 @@ html.cit-presentation #cit-night-overlay {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: var(--cit-sans);
-  color: var(--cit-ink);
+  /* No font-family or color here: the host-isolation roots set both. This
+     rule used to say font-family: var(--cit-sans) — a token that was never
+     defined. An undefined var() still WINS the cascade over the reset and
+     then falls back to inheriting, so the bubble took the chat site's font.
+     Declaring nothing lets the reset do its job. */
   user-select: none;
   -webkit-user-select: none;
 }
@@ -1496,16 +1499,30 @@ html.cit-presentation #cit-night-overlay {
 .cit-glide-icon { display: inline-flex; }
 .cit-glide-icon .cit-svg { width: 20px; height: 20px; }
 #cit-glide.cit-glide-paused .cit-glide-icon .cit-svg { margin-left: 2px; }
-/* The ring band is the dial's grab area: a thin annulus, so the centre stays
-   the button and the two never compete for a pointer. */
+/* The ring's grab area sits UNDER the play button: a full circle whose middle
+   the 40px button covers. It used to sit on top with a mask cutting a hole in
+   it, but a mask changes what you see and not what the pointer hits, so every
+   tap in the centre landed on the ring. border-radius DOES clip hit-testing,
+   so the button's circle wins the middle and only the outer band reaches
+   this. tools/glide-test.js checks it in a real browser, because the scenario
+   suite has no layout and cannot. */
 .cit-glide-ring-hit {
   position: absolute;
   inset: -2px;
   border-radius: 50%;
-  cursor: ns-resize;
-  -webkit-mask: radial-gradient(circle, transparent 20px, #000 21px);
-  mask: radial-gradient(circle, transparent 20px, #000 21px);
+  cursor: grab;
 }
+.cit-glide-ring-hit:active { cursor: grabbing; }
+/* On hover the ring admits it is a control: the track lifts and a knob
+   appears where the arc ends. */
+.cit-glide-knob {
+  fill: var(--cit-ink);
+  opacity: 0;
+  transition: opacity 0.2s var(--cit-ease);
+}
+#cit-glide:hover .cit-glide-knob { opacity: 1; }
+#cit-glide.cit-glide-done .cit-glide-knob { opacity: 0; }
+#cit-glide:hover .cit-glide-track { stroke: var(--cit-ink-dim); stroke-opacity: 0.35; }
 
 /* The strip: folded until you hover or focus the player. */
 .cit-glide-strip {
