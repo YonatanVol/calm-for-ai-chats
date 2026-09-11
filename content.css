@@ -336,6 +336,11 @@ html[class*="light"] #cit-reader-pane, html[data-theme="light"] #cit-reader-pane
 .cit-qt .cit-svg { width: 18px; height: 18px; }
 .cit-qt-label {
   font-size: 8px;
+  /* Chosen, not inherited. A tile that is a <button> gets line-height:normal
+     from the browser's own button style; the Answer pair is a <div> and
+     inherited the Console's 1.45 instead — 11.6px against 9px, which put its
+     label 2px out of line with its neighbours. Measured in Chrome. */
+  line-height: 1.15;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.15em;
@@ -343,6 +348,50 @@ html[class*="light"] #cit-reader-pane, html[data-theme="light"] #cit-reader-pane
   color: var(--cit-tile-label);
 }
 .cit-qt.cit-active .cit-qt-label { color: var(--cit-on-accent); }
+
+/* The Answer tile is a pair — ↑ and ↓ over one label. The tile keeps the
+   row's look; each half is its own button with its own hover, press and
+   focus, split by a hairline so the two targets read as two. */
+.cit-qt-pair { cursor: default; }
+.cit-qt-pair:active { transform: none; }
+/* The halves are 30px tall for a comfortable target, but the row overhangs
+   by 6px above and below, so in the layout it occupies exactly an 18px icon's
+   height. Without that, the taller content centred differently and the
+   ANSWER label sat 9px below INPUT / ZEN / READER. Measured in a real
+   browser, not judged by eye. */
+.cit-qt-pair-row {
+  position: relative;
+  display: flex;
+  align-self: stretch;
+  margin: -6px 5px;
+}
+.cit-qt-pair-row::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--cit-hairline-strong);
+  pointer-events: none;
+}
+.cit-qt-half {
+  flex: 1;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--cit-ink);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.16s var(--cit-spring);
+}
+.cit-qt-half:hover { background: var(--cit-hairline); }
+.cit-qt-half:active { transform: scale(0.9); }
+.cit-qt-half:focus-visible { outline: 2px solid var(--cit-ink-dim); outline-offset: -2px; }
 
 /* Inline sliders — the two most-adjusted values, no drawer needed. */
 .cit-con-slider {
@@ -520,6 +569,7 @@ html[class*="light"] #cit-reader-pane, html[data-theme="light"] #cit-reader-pane
 /* Reduced motion: kill Calm's own animations too */
 @media (prefers-reduced-motion: reduce) {
   #cit-dock .cit-qt,
+  #cit-dock .cit-qt-half,
   #cit-console,
       #cit-intent-pop {
     transition: none !important;

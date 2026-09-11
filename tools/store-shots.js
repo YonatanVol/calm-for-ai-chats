@@ -70,7 +70,10 @@ function consolePanel(running) {
     '<div class="cit-live-side"><button class="cit-live-btn">' + I.pause +
     '</button><button class="cit-live-btn">' + I.focus + "</button></div></div>" +
     '<div class="cit-quick">' + qt(I.input, "Input", false) + qt(I.zen, "Zen", true) +
-    qt(I.book, "Reader", false) + qt(I.top, "Answer", false) + "</div>" +
+    qt(I.book, "Reader", false) + ('<div class="cit-qt cit-qt-pair"><div class="cit-qt-pair-row">' +
+      '<button class="cit-qt-half">' + I.top + '</button>' +
+      '<button class="cit-qt-half">' + I.bottom + '</button>' +
+      '</div><span class="cit-qt-label">Answer</span></div>') + "</div>" +
     slider("Width", 55, "780") + slider("Text", 30, "110") +
     '<div class="cit-modes-row">' + chipm(I.night, "Night", false) +
     chipm(I.ruler, "Reading ruler", true) + chipm(I.autoscroll, "Auto-scroll", false) + "</div>" +

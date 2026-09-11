@@ -108,6 +108,37 @@
     return b;
   }
 
+  // The Answer tile is a PAIR: ↑ to the start of the answer, ↓ to the next
+  // one. Two real buttons sharing one tile — a fifth tile would squeeze every
+  // tile in the row to 45px, taller than wide, and the two directions read
+  // as one idea anyway.
+  function pairTile() {
+    var t = el("div", "cit-qt cit-qt-pair");
+    var row = el("div", "cit-qt-pair-row");
+    function half(iconName, label, run) {
+      var b = el("button", "cit-qt-half");
+      b.type = "button";
+      b.title = label;
+      b.setAttribute("aria-label", label);
+      b.appendChild(icon(iconName));
+      b.addEventListener("click", function (e) {
+        e.stopPropagation();
+        run();
+        bump();
+      });
+      return b;
+    }
+    row.appendChild(half("top", "Back to the start of the answer", function () {
+      CALM.core.jumpToAnswerStart();
+    }));
+    row.appendChild(half("bottom", "Down to the next answer", function () {
+      CALM.core.jumpToNextAnswer();
+    }));
+    t.appendChild(row);
+    t.appendChild(el("span", "cit-qt-label", "Answer"));
+    return t;
+  }
+
   // The live tile: the timer when one is running, an invitation when not.
   // Pause lives here too — it is a state of the session, not a "mode".
   function liveTile() {
@@ -257,13 +288,7 @@
         return t;
       })()
     );
-    quick.appendChild(
-      quickTile(null, "top", "Answer", function () {
-        return false; // an action, not a state — never shows as "on"
-      }, function () {
-        CALM.core.jumpToAnswerStart();
-      })
-    );
+    quick.appendChild(pairTile());
     c.appendChild(quick);
 
     c.appendChild(inlineSlider("Width", "readingWidth", 0, 1400, 20, CALM.modes.applyWidth));

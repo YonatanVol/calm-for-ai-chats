@@ -182,7 +182,7 @@
     lastScrollTop: 0,
     accUp: 0,
     glide: { playing: false, speed: 80, style: "glide", done: false }, // the player
-    jumpIdx: 0, // which answer ⌃⇧J lands on next (walks backwards)
+    jumpRef: null, // where the last ↑/↓ jump was going; null = where the page is
     jumpTotal: -1, // answers seen last jump; a change re-anchors to the newest
     accTimer: null,
     draftSaved: false,
