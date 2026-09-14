@@ -24,3 +24,9 @@ node_modules/
 .next/
 .env
 .env.local
+
+# Landing page (site/). The generic rules above already match these; they are
+# spelled out so nobody has to work out that a site build is never committed.
+site/node_modules/
+site/dist/
+site/.vercel/
