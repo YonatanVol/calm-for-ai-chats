@@ -13,6 +13,7 @@
 @import 'tailwindcss';
 
 @import '@fontsource/fragment-mono/latin-400.css';
+@import './demo/demo.css';
 
 /* Latin only, and the `wght` axis rather than `opsz`.
    The opsz files carry a second axis and cost 130KB each; we render

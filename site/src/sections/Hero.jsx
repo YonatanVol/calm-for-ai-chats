@@ -2,7 +2,7 @@ import Container from '../components/Container'
 import Button from '../components/Button'
 import Reveal from '../components/Reveal'
 import Bionic from '../components/Bionic'
-import Shot from '../components/Shot'
+import Demo from '../demo/Demo'
 
 const TRUST = ['No extension permissions', 'No account', 'No network code']
 
@@ -78,8 +78,10 @@ export default function Hero() {
           </p>
         </Reveal>
 
+        {/* Tried, not watched. The screenshot that used to sit here moved
+            to the Focus Reader block, where it describes what it shows. */}
         <Reveal y={20} delay={120} className="w-full max-w-[1000px]">
-          <Shot src="/media/02-focus-reader.png" alt="Calm's Focus Reader showing an AI response in its own reading pane with bionic fixation and Hebrew support" />
+          <Demo />
         </Reveal>
       </Container>
     </section>
