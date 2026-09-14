@@ -30,6 +30,15 @@ sys.dont_write_bytecode = True  # never drop __pycache__ into the extension fold
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 EXTENSION_FILES = ["manifest.json", "src", "content.css", "icons"]
+# Top-level folders that are never packaged and never checked. site/ is the
+# landing page: its node_modules and Vite build routinely hold _-prefixed
+# names, which would fail validation on any machine that has built the site.
+NOT_EXTENSION = {"site"}
+
+
+def prune(base, dirs):
+    if base == ROOT:
+        dirs[:] = [d for d in dirs if d not in NOT_EXTENSION]
 
 
 def c(code, text):
@@ -50,6 +59,7 @@ def sweep():
         if ".git" in base:
             dirs[:] = []
             continue
+        prune(base, dirs)
         for d in list(dirs):
             if d != "__pycache__":
                 continue
@@ -78,6 +88,7 @@ def validate():
     for base, dirs, files in os.walk(ROOT):
         if ".git" in base:
             continue
+        prune(base, dirs)
         for name in dirs + files:
             if name.startswith("_") or name.endswith(".pem"):
                 bad.append(os.path.join(base, name))

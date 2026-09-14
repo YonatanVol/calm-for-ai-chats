@@ -495,17 +495,46 @@ section("Static");
     if (/CALM\.config|CALM\.auth\b|CALM\.sync\b|supabase/i.test(t)) leaks.push(f);
   });
   check("no source file references auth/sync/Supabase", !leaks.length, leaks.join(","));
-  var offenders = [];
-  (function walk(dir) {
-    fs.readdirSync(dir).forEach(function (name) {
-      if (name === ".git") return;
-      var full = path.join(dir, name);
-      if (name.charAt(0) === "_" || /\.pem$/.test(name)) offenders.push(full);
-      if (fs.statSync(full).isDirectory()) walk(full);
-    });
-  })(ROOT);
+  function folderOffenders(root) {
+    var found = [];
+    (function walk(dir) {
+      fs.readdirSync(dir).forEach(function (name) {
+        if (name === ".git") return;
+        if (dir === root && name === "site") return; // the landing page; never packaged
+        var full = path.join(dir, name);
+        if (name.charAt(0) === "_" || /\.pem$/.test(name)) found.push(full);
+        if (fs.statSync(full).isDirectory()) walk(full);
+      });
+    })(root);
+    return found;
+  }
+  var offenders = folderOffenders(ROOT);
   check("no _-prefixed names or .pem in folder (Chrome refuses them)",
     offenders.length === 0, offenders.join(","));
+  // The landing page lives in site/ and is never packaged. Its node_modules
+  // and its Vite build routinely contain _-prefixed names (Rollup names shared
+  // chunks "_commonjsHelpers-…"), so a check that walks into site/ fails on
+  // any machine that has built the site while CI, which never has, stays
+  // green. Prove on a throwaway folder that the site is skipped AND that a
+  // real offender beside the manifest is still caught.
+  (function () {
+    var tmp = fs.mkdtempSync(path.join(require("os").tmpdir(), "calm-folder-"));
+    try {
+      fs.mkdirSync(path.join(tmp, "site", "node_modules", "_pkg"), { recursive: true });
+      fs.writeFileSync(path.join(tmp, "site", "node_modules", "_pkg", "_x.js"), "");
+      fs.mkdirSync(path.join(tmp, "site", "dist", "assets"), { recursive: true });
+      fs.writeFileSync(path.join(tmp, "site", "dist", "assets", "_commonjsHelpers.js"), "");
+      var siteOnly = folderOffenders(tmp);
+      fs.mkdirSync(path.join(tmp, "__pycache__"));
+      var withReal = folderOffenders(tmp);
+      check("a built site/ folder does not trip the extension-folder check",
+        siteOnly.length === 0, siteOnly.join(","));
+      check("…while a _-prefixed name beside the manifest is still caught",
+        withReal.length === 1 && /__pycache__$/.test(withReal[0]), withReal.join(","));
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  })();
   MODULES.forEach(function (f) {
     try { new Function(fs.readFileSync(f, "utf8")); check("syntax " + path.basename(f), true); }
     catch (e) { check("syntax " + path.basename(f), false, e.message); }
