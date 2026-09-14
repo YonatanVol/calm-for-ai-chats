@@ -14,8 +14,8 @@ export default function Read() {
         <div className="flex flex-col gap-5">
           <FeatureBlock
             title="Focus Reader"
-            src="/media/05-margin.png"
-            alt="Calm's reading width and typography controls applied to a chat response"
+            src="/media/02-focus-reader.png"
+            alt="Calm's Focus Reader: an answer in its own reading pane with bionic fixation, and a Hebrew paragraph reading right to left"
           >
             Bionic fixation, adjustable 20–60%. Ease spacing for dyslexic reading. A spotlight
             that dims everything but the block you're on, and arrow keys to walk it. Right-to-left
@@ -27,8 +27,9 @@ export default function Read() {
             shortcut="⌘⇧Z"
             delay={60}
           >
-            Sidebar, header and suggestion chips gone in one keypress. What remains is the
-            conversation.
+            Sidebar and header gone in one keypress, and the suggestion chips too where a site
+            shows them. By default the input bar goes with them, and comes back when you leave Zen.
+            What remains is the conversation.
           </FeatureBlock>
 
           <FeatureBlock
@@ -36,17 +37,18 @@ export default function Read() {
             shortcut="⌘⇧H"
             delay={60}
           >
-            Full-height reading with the composer out of the way. It auto-hides as you scroll and
-            reappears the instant you start typing — whatever you typed lands in the input, nothing
-            lost, in either writing direction.
+            Full-height reading with the composer out of the way. It hides itself when you scroll
+            back up to reread, returns when you reach the bottom, and comes back the instant you
+            start typing — whatever you typed lands in the input.
           </FeatureBlock>
 
           <FeatureBlock
             title="Reading width, type, and warmth"
             delay={60}
           >
-            Set the measure, the font size and the line height, then warm the screen with Night or
-            Dim. The reading ruler and grayscale are there when a page still has too much pull.
+            Set the measure, the font size and the line height, then warm the screen with Night, as
+            strongly as you like. The reading ruler and grayscale are there when a page still has
+            too much pull.
           </FeatureBlock>
         </div>
       </Container>

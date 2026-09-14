@@ -3,9 +3,9 @@ import SectionHeading from '../components/SectionHeading'
 import Reveal from '../components/Reveal'
 
 const FOR = [
-  { title: 'ADHD readers', body: 'Nothing opens by itself. One panel, one keystroke, a parking lot for the thought that just arrived, and a nudge when hyperfocus has run long.' },
+  { title: 'ADHD readers', body: 'Panels open only when you ask. One menu, one keystroke, a parking lot for the thought that just arrived, and a nudge when hyperfocus has run long.' },
   { title: 'Dyslexic readers', body: 'Ease spacing, adjustable bionic fixation, a reading ruler, and a spotlight that dims every block but the one you are on.' },
-  { title: 'Hebrew and Arabic readers', body: 'Right-to-left detected per paragraph, so a mixed answer reads correctly without a setting — including the input bar you type into.' },
+  { title: 'Hebrew and Arabic readers', body: 'Focus Reader finds the direction of each paragraph on its own, so an answer that mixes Hebrew or Arabic with English reads correctly without a setting.' },
   { title: 'People who read AI answers all day', body: 'Long responses in a pane built for reading rather than a chat column built to keep you replying.' },
   { title: 'Anyone on a small screen', body: 'Hiding the composer and the sidebar gives a laptop back the vertical space the interface was using.' },
   { title: 'People who present from a browser', body: 'Presentation mode strips the interface for clean captures, screenshots and screen shares.' },

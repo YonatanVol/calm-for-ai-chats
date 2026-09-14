@@ -7,8 +7,9 @@ export default function Focus() {
     <section id="focus" className="py-24">
       <Container className="flex flex-col gap-14">
         <SectionHeading label="Focus" title="Built for attention that wanders">
-          Calm was designed around ADHD workflows first, not retrofitted for them. Nothing opens
-          by itself, nothing nags, and every control lives behind one keystroke.
+          Calm was designed around ADHD workflows first, not retrofitted for them. After a
+          three-card welcome on first run, its panels open only when you ask, and every control is
+          one keystroke away.
         </SectionHeading>
 
         <div className="flex flex-col gap-5">
@@ -17,32 +18,43 @@ export default function Focus() {
             src="/media/01-one-menu.png"
             alt="Calm's console — a single panel with a timer tile, quick toggles and inline sliders"
           >
-            One draggable pill, anchored to a corner so it can never open off-screen. It opens a
-            single panel — live timer, quick toggles, inline sliders, and an Advanced drawer that
-            slides in rather than spawning a second window.
+            One draggable pill that snaps to the nearest corner. It opens a single panel — live
+            timer, quick toggles, inline sliders, and an Advanced drawer that slides in rather than
+            spawning a second window.
+          </FeatureBlock>
+
+          <FeatureBlock
+            title="Or no panel at all"
+            src="/media/05-margin.png"
+            alt="Calm's margin menu: a few quiet marks beside the conversation instead of a panel"
+            delay={60}
+          >
+            Prefer nothing floating over the page? Switch the menu to the margin. Where the page
+            has room beside the text, Calm's controls become a few faint marks there that brighten
+            as your pointer comes near; where it does not, the corner pill stays.
           </FeatureBlock>
 
           <FeatureBlock
             title="Command palette"
             shortcut="⌘K"
             src="/media/04-palette.png"
-            alt="Calm's command palette listing every mode, action and setting"
+            alt="Calm's command palette searching “ni”: Night, Night Level, Reading ruler and Pomodoro Cycles"
             delay={60}
           >
-            Every mode, action and setting in one keystroke. Arrow keys nudge numeric settings in
-            place, so you can adjust reading width without leaving the keyboard or losing the line
-            you were on.
+            Every mode and action, and nearly every setting, one keystroke away. Arrow keys nudge
+            numeric settings in place, so you can adjust reading width without leaving the keyboard
+            or losing the line you were on.
           </FeatureBlock>
 
           <FeatureBlock
             title="Pomodoro that gets out of the way"
             src="/media/03-timer.png"
-            alt="Calm's animated Pomodoro timer with presets and a screen-width progress bar"
+            alt="Calm's console with a focus block running: 24:31 left, block 2 of 4, Zen on"
             delay={60}
           >
-            Presets for 10/2, 25/5, 52/17 and 90/20. Zen engages automatically during focus, a
-            chime marks the end, and a screen-width progress bar tells you where you are without
-            a number to stare at.
+            Presets for 10/2, 25/5, 52/17 and 90/20. By default Zen comes on during focus, a chime
+            marks the end, and a thin bar across the top of the screen shows how far along you are
+            without a number to stare at.
           </FeatureBlock>
 
           <FeatureBlock

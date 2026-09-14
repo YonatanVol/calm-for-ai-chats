@@ -1,3 +1,5 @@
+import { fixate } from '../lib/bionic'
+
 /**
  * CALM'S FLOURISH — the equivalent of Supaste's notch nav.
  *
@@ -10,32 +12,21 @@
  * demonstrates the product instead of describing it, and no other
  * landing page can borrow it, because no other product does this.
  *
- * `ratio` matches the extension's adjustable 20–60% fixation.
+ * The split is the extension's own (src/reader.js, via lib/bionic), and
+ * `ratio` defaults to the extension's default fixation of 40%, so "set the
+ * way Calm sets one" is literally true. The emphasis colour is the site's.
  */
-export default function Bionic({ children, ratio = 0.42, className = '' }) {
-  const text = String(children)
-
+export default function Bionic({ children, ratio = 0.4, className = '' }) {
   return (
     <span className={className}>
-      {text.split(/(\s+)/).map((chunk, i) => {
-        if (/^\s+$/.test(chunk)) return chunk
-        const letters = chunk.replace(/[^\p{L}\p{N}]/gu, '').length
-        const cut = Math.max(1, Math.round(letters * ratio))
-        // Count only letters toward the fixation point so punctuation
-        // never eats into it.
-        let seen = 0
-        let split = chunk.length
-        for (let c = 0; c < chunk.length; c++) {
-          if (/[\p{L}\p{N}]/u.test(chunk[c])) seen++
-          if (seen === cut) { split = c + 1; break }
-        }
-        return (
+      {fixate(String(children), ratio).map(([bold, rest], i) =>
+        bold === null ? rest : (
           <span key={i}>
-            <b className="font-semibold text-text">{chunk.slice(0, split)}</b>
-            {chunk.slice(split)}
+            <b className="font-semibold text-text">{bold}</b>
+            {rest}
           </span>
         )
-      })}
+      )}
     </span>
   )
 }

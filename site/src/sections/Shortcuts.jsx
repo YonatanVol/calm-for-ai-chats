@@ -2,6 +2,7 @@ import Container from '../components/Container'
 import SectionHeading from '../components/SectionHeading'
 import Reveal from '../components/Reveal'
 import Kbd from '../components/Kbd'
+import { IS_MAC, keys } from '../lib/platform'
 
 const KEYS = [
   ['Command palette — everything', '⌘K'],
@@ -17,7 +18,8 @@ export default function Shortcuts() {
     <section id="shortcuts" className="py-24">
       <Container prose className="flex flex-col gap-12">
         <SectionHeading label="Keyboard" title="Six keys is the whole product">
-          If you only ever learn one, learn ⌘K — every mode, action and setting is behind it.
+          If you only ever learn one, learn {keys('⌘K')} — every mode and action, and nearly every
+          setting, is behind it.
         </SectionHeading>
 
         <Reveal delay={80}>
@@ -33,7 +35,9 @@ export default function Shortcuts() {
 
         <Reveal delay={120}>
           <p className="type-body text-center text-fine text-faint">
-            On Windows and Linux, ⌘ is Ctrl.
+            {IS_MAC
+              ? 'Ctrl works in place of ⌘ too.'
+              : 'On a Mac, ⌘ works in place of Ctrl.'}
           </p>
         </Reveal>
       </Container>

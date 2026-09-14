@@ -1,12 +1,13 @@
 import Container from '../components/Container'
 import Reveal from '../components/Reveal'
 import Button from '../components/Button'
+import { keysIn } from '../lib/platform'
 
 const STEPS = [
   ['Download and unzip', 'Grab calm-extension.zip from Releases. Keep the unzipped folder somewhere safe — Chrome loads it from that path on every start, so moving or deleting it uninstalls Calm.'],
   ['Open chrome://extensions', 'Turn on Developer mode, top right.'],
   ['Load unpacked', 'Select the folder you unzipped.'],
-  ['Open a chat', 'ChatGPT, Gemini or Claude. The Calm pill appears bottom-right. Press ⌘K to see everything it does.'],
+  ['Open a chat', keysIn('ChatGPT, Gemini or Claude. The Calm pill appears bottom-right. Press ⌘K to see everything it does.')],
 ]
 
 /**
