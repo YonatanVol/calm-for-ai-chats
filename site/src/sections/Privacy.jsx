@@ -24,8 +24,9 @@ const SOURCE = [
  *
  * What an empty permission list does NOT do: stop a content script from
  * reaching the network through the page it runs on (inserting an image is
- * enough). So the claim is "no network code in the source", which is
- * checkable, never "cannot contact a server", which is not true.
+ * enough). So the claim here is "no network code in the source", which a
+ * reader can check — never a promise about what the extension could not do,
+ * which nothing in the manifest makes true.
  */
 export default function Privacy() {
   return (

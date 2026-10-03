@@ -137,7 +137,10 @@ export default function Demo() {
     if (previewingRef.current) return
     const root = rootRef.current
     const active = document.activeElement
-    const adrift = !active || active === document.body
+    // Adrift also covers focus still sitting on an element that has just
+    // turned inert: Chrome blurs it a moment later, and by then nothing else
+    // would re-run this.
+    const adrift = !active || active === document.body || !!active.closest?.('[inert]')
     const last = lastAny.current
     // "Gone" covers both ways focus is lost: the element was removed (Stop
     // preview, End timer, a palette row) — in which case it is no longer in
