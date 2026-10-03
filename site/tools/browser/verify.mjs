@@ -86,9 +86,13 @@ async function freshPage(b, { width = 1280, height = 900, mobile = false, reduce
   await sleep(1500);
 }
 
-async function stateContrast(b, label, width) {
+async function stateContrast(b, label, width, min = 10) {
+  // Measure it where it is on screen: a scrolled-away demo yields a handful
+  // of lines and a check that passes without checking anything.
+  await b.evaluate(`document.querySelector('.demo').scrollIntoView({ block: 'center', behavior: 'instant' }); true`);
   await sleep(700);
   const c = await contrast(b, { scope: ".demo" });
+  check(`${width}px ${label}: enough of the demo was on screen to measure`, c.count >= min, `${c.count} lines, expected ${min}+`);
   check(`${width}px ${label}: every demo text passes AA (${c.count} lines measured)`, c.fails.length === 0,
     c.fails.slice(0, 4).map((f) => `${JSON.stringify(f.text)} ${f.fgHex} on ${f.bg} p10=${f.p10} need ${f.need}`).join(" | "));
   const o = await b.evaluate(OVERFLOW);
@@ -160,12 +164,20 @@ try {
     s = await snap(b);
     check("the Stop preview button stops it", !s.stopBtn && !s.keycap, s);
 
+    // A real Tab, from the last focusable thing before the demo: the first
+    // stop in the demo is the Stop preview button, which removes itself.
     await freshPage(b);
     await sleep(1800);
-    await b.evaluate(`document.querySelector('.demo-window').focus(); true`);
-    await sleep(200);
+    await b.evaluate(`[...document.querySelectorAll('a,button')].find(e => e.textContent.includes('Install Calm')).focus(); true`);
+    await press(b, "Tab", "Tab");
+    await sleep(400);
     s = await snap(b);
-    check("focusing the demo (Tab) stops the preview", !s.stopBtn, s);
+    check("Tab into the demo stops the preview", !s.stopBtn, s);
+    check("…and the keyboard is still in the demo, with the marker lit", s.inDemo && (await b.evaluate(`document.querySelector('.demo-keys')?.textContent`)) === "keys on", s);
+    await press(b, "k", "KeyK", CMD);
+    s = await snap(b);
+    check("…so ⌘K works straight away", !!s.palette, s);
+    await press(b, "Escape", "Escape");
 
     // Scrolled away: it resets; back on screen: it plays again.
     await freshPage(b);
@@ -318,6 +330,93 @@ try {
   });
 
   /* ------------------------------------------------------------ */
+  await run("layers", async () => {
+    section("Layers, Escape and focus at 1280px");
+    await freshPage(b);
+    await click(b, ".demo-convo");
+
+    // A control that removes itself must not drop the keyboard on the page —
+    // for the keyboard user who was standing on it.
+    await clickBtn(b, "10/2");
+    await b.evaluate(`[...document.querySelectorAll('.demo-ctl')].find(x => x.textContent.startsWith('End timer')).focus(); true`);
+    await press(b, "Enter", "Enter");
+    let s = await snap(b);
+    check("ending the timer from its own button keeps the keyboard in the demo", s.inDemo && !s.timer, s);
+    check("…and the marker says so", (await b.evaluate(`document.querySelector('.demo-keys')?.textContent`)) === "keys on");
+    // Clicking a control that then removes itself keeps the keyboard here too
+    // (Chrome focuses a button on click), and the marker tells the truth when
+    // the keyboard genuinely goes elsewhere on the page.
+    await freshPage(b);
+    await b.evaluate(`document.querySelector('.demo-stop')?.click(); true`);
+    await clickBtn(b, "10/2");
+    await clickBtn(b, "End timer");
+    check("a clicked control that removes itself also keeps the keyboard in the demo",
+      (await b.evaluate(`document.querySelector('.demo-keys')?.textContent`)) === "keys on" &&
+      (await snap(b)).inDemo);
+    await b.evaluate(`(() => { const faq = document.querySelector('#faq button'); faq.scrollIntoView({block:'center', behavior:'instant'}); faq.focus(); return true; })()`);
+    await sleep(200);
+    check("…and says nothing when the keyboard is elsewhere on the page",
+      (await b.evaluate(`document.querySelector('.demo-keys')?.textContent`)) !== "keys on");
+
+    // Reading in Focus Reader when a break arrives. The only way the timer
+    // screen can appear over the reader is by itself, at the end of a block,
+    // so run the clock out with virtual time — in a browser of its own,
+    // because Chrome leaves virtual time paused afterwards and the next
+    // navigation would never finish.
+    const vb = await launch();
+    try {
+      await vb.size(1280, 900);
+      await vb.media([{ name: "prefers-reduced-motion", value: "reduce" }]); // no preview, no animations to starve virtual time
+      await vb.goto(URL, 900);
+      await vb.evaluate(`document.querySelector('.demo').scrollIntoView({ block: 'center', behavior: 'instant' }); true`);
+      await clickBtn(vb, "10/2");
+      await clickBtn(vb, "Focus Reader");
+      await vb.evaluate(`document.querySelector('.demo-fr').focus(); true`);
+      const under = await vb.evaluate(`(() => { const w = document.querySelector('.demo-pomo'); return w ? w.inert : 'no widget'; })()`);
+      check("the timer widget under Focus Reader is inert", under === true, under);
+      const spent = vb.waitFor("Emulation.virtualTimeBudgetExpired", 60000);
+      await vb.send("Emulation.setVirtualTimePolicy", { policy: "advance", budget: 615000, maxVirtualTimeTaskStarvationCount: 1000000 });
+      check("the clock could be run out with virtual time", await spent);
+      await sleep(600);
+      let v = await snap(vb);
+      check("a block ending while reading brings the break screen up over Focus Reader", v.screen && v.reader && v.screenPhase === "Break", v);
+      check("…Focus Reader beneath it is inert", (await vb.evaluate(`document.querySelector('.demo-fr').inert`)) === true);
+      check("…and the keyboard is on the break screen, not lost to the page",
+        await vb.evaluate(`!!document.activeElement.closest('.demo-pomo-screen')`), v.active);
+      await press(vb, "Escape", "Escape");
+      v = await snap(vb);
+      check("Esc closes what is on top first: the break screen, not the reader", !v.screen && v.reader, v);
+      check("…and the keyboard moves into the reader", await vb.evaluate(`!!document.activeElement.closest('.demo-fr')`), v.active);
+      await press(vb, "Escape", "Escape");
+      v = await snap(vb);
+      check("Esc then closes Focus Reader", !v.reader && v.inDemo, v);
+    } finally {
+      await vb.close();
+    }
+
+    // An automatic close must not pull focus back from elsewhere on the page.
+    await clickBtn(b, "10/2");
+    await click(b, ".demo-pomo");
+    await b.evaluate(`(() => { const faq = document.querySelector('#faq button'); faq.scrollIntoView({block:'center', behavior:'instant'}); faq.focus(); return true; })()`);
+    await b.evaluate(`(() => { const btns = [...document.querySelectorAll('.demo-pomo-btn')]; btns.find(x => x.textContent.startsWith('Skip')).click(); return true; })()`);
+    await sleep(400);
+    const stillFaq = await b.evaluate(`document.activeElement.closest('#faq') !== null`);
+    check("a break arriving on its own does not steal the keyboard from the page", stillFaq === true);
+    await b.evaluate(`document.querySelector('.demo-window').focus(); true`);
+    await press(b, "Escape", "Escape");
+    await press(b, "Escape", "Escape");
+
+    // ⌘⇧J, which the palette advertises
+    await b.evaluate(`document.querySelector('.demo-convo').scrollTop = 200; true`);
+    await b.evaluate(`document.querySelector('.demo-window').focus(); true`);
+    await press(b, "J", "KeyJ", CMD | MOD.shift);
+    await sleep(700);
+    const scrolled = await b.evaluate(`document.querySelector('.demo-convo').scrollTop`);
+    const k = await lastKey(b);
+    check("⌘⇧J goes back to the start of the answer, and is prevented", scrolled < 200 && k.prevented, { scrolled, k });
+  });
+
+  /* ------------------------------------------------------------ */
   await run("click", async () => {
     section("Every path by clicking at 1280px");
     await freshPage(b);
@@ -398,10 +497,12 @@ try {
       await clickBtn(b, "Command palette");
       await b.evaluate(`(() => { const inp = document.querySelector('.demo-pal-input'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(inp, 'size'); inp.dispatchEvent(new Event('input', { bubbles: true })); return true; })()`);
       await sleep(200);
-      const plus = await b.evaluate(`getComputedStyle(document.querySelector('.demo-pal-nudge')).display`);
-      await b.evaluate(`document.querySelectorAll('.demo-pal-nudge')[1].click(); true`); await sleep(150);
+      const plus = await b.evaluate(`getComputedStyle(document.querySelector('.demo-pal-nudgebar')).display`);
+      const nested = await b.evaluate(`!!document.querySelector('[role=option] button')`);
+      await b.evaluate(`document.querySelectorAll('.demo-pal-nudgebar button')[1].click(); true`); await sleep(150);
       s = await snap(b);
-      check(`${w}px: a number row offers − and + on touch, and + nudges`, plus !== "none" && /^Reader Size\D*19/.test(s.palRows[0]), { plus, rows: s.palRows });
+      check(`${w}px: a number gets − and + on touch, outside the list, and + nudges`,
+        plus !== "none" && !nested && /^Reader Size\D*19/.test(s.palRows[0]), { plus, nested, rows: s.palRows });
       await stateContrast(b, "touch palette", w);
       await clickBtn(b, "Command palette");
       await clickBtn(b, "Focus Reader"); await stateContrast(b, "touch reader", w);

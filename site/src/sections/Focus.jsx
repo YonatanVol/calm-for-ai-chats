@@ -1,15 +1,17 @@
 import Container from '../components/Container'
 import SectionHeading from '../components/SectionHeading'
 import FeatureBlock from '../components/FeatureBlock'
+import { keys } from '../lib/platform'
 
 export default function Focus() {
   return (
     <section id="focus" className="py-24">
       <Container className="flex flex-col gap-14">
         <SectionHeading label="Focus" title="Built for attention that wanders">
-          Calm was designed around ADHD workflows first, not retrofitted for them. After a
-          three-card welcome on first run, its panels open only when you ask, and every control is
-          one keystroke away.
+          Calm was designed around ADHD workflows first, not retrofitted for them. Its menus open
+          only when you ask, and {keys('⌘K')} reaches every mode. Three things appear on their own, all of
+          them quiet: a three-card welcome on first run, the break screen when a focus block ends,
+          and a card on returning after a long gap, if you had set a goal or parked a thought.
         </SectionHeading>
 
         <div className="flex flex-col gap-5">
@@ -41,7 +43,7 @@ export default function Focus() {
             alt="Calm's command palette searching “ni”: Night, Night Level, Reading ruler and Pomodoro Cycles"
             delay={60}
           >
-            Every mode and action, and nearly every setting, one keystroke away. Arrow keys nudge
+            Every mode and action, and nearly every setting, behind one keystroke. Arrow keys nudge
             numeric settings in place, so you can adjust reading width without leaving the keyboard
             or losing the line you were on.
           </FeatureBlock>

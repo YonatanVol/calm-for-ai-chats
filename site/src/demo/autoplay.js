@@ -11,8 +11,11 @@
 const sleep = (ms, signal) =>
   new Promise((resolve, reject) => {
     if (signal.aborted) return reject(new DOMException('stopped', 'AbortError'))
-    const t = setTimeout(resolve, ms)
-    signal.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('stopped', 'AbortError')) }, { once: true })
+    const stop = () => { clearTimeout(t); reject(new DOMException('stopped', 'AbortError')) }
+    // Drop the listener when the wait ends; a loop that runs for minutes
+    // would otherwise leave one behind every few hundred milliseconds.
+    const t = setTimeout(() => { signal.removeEventListener('abort', stop); resolve() }, ms)
+    signal.addEventListener('abort', stop, { once: true })
   })
 
 export async function runPreview({ dispatch, showKeys, signal }) {

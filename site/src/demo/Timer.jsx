@@ -35,12 +35,13 @@ export function TimeBar({ timer }) {
   )
 }
 
-export function TimerWidget({ timer, dispatch, raised, onExpand }) {
+export function TimerWidget({ timer, dispatch, raised, onExpand, inert }) {
   const brk = timer.phase === 'break' || timer.phase === 'long'
   const frac = timer.total ? timer.remaining / timer.total : 0
   return (
     <button
       type="button"
+      inert={inert}
       className={`demo-pomo${brk ? ' is-break' : ''}${raised ? ' is-raised' : ''}`}
       onClick={() => { onExpand?.(); dispatch({ type: 'timerOverlay', open: true }) }}
       aria-label={`${phaseLabel(timer.phase)}, ${fmtTime(timer.remaining)} left${timer.paused ? ', paused' : ''}. Expand the timer.`}
@@ -57,7 +58,7 @@ export function TimerWidget({ timer, dispatch, raised, onExpand }) {
   )
 }
 
-export function TimerOverlay({ timer, cycles, dispatch, focusOnOpen }) {
+export function TimerOverlay({ timer, cycles, dispatch, focusOnOpen, inert }) {
   const brk = timer.phase === 'break' || timer.phase === 'long'
   const frac = timer.total ? timer.remaining / timer.total : 0
   const first = useRef(null)
@@ -65,7 +66,7 @@ export function TimerOverlay({ timer, cycles, dispatch, focusOnOpen }) {
     if (focusOnOpen) first.current?.focus({ preventScroll: true })
   }, [focusOnOpen])
   return (
-    <div className={`demo-pomo-screen${brk ? ' is-break' : ''}`} role="dialog" aria-label="Focus timer">
+    <div className={`demo-pomo-screen${brk ? ' is-break' : ''}`} role="dialog" aria-label="Focus timer" inert={inert}>
       <div className="demo-pomo-card">
         <div className="demo-pomo-phase">{phaseLabel(timer.phase)}</div>
         <div className="demo-pomo-big">

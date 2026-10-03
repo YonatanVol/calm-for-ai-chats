@@ -45,11 +45,24 @@ export default function Demo() {
   const previewCtl = useRef(null)
   const previewingRef = useRef(previewing)
   const lastFocus = useRef(null)
+  const lastAny = useRef(null)
   const focusComposer = useRef(false)
   const expandAsked = useRef(false)
   stateRef.current = state
   if (!state.timer.overlay) expandAsked.current = false
   previewingRef.current = previewing
+
+  // "keys on" is a fact about the document, not a count of blur events: a
+  // control that removes itself (Stop preview, End timer) must not leave the
+  // marker lit while focus has fallen to the page.
+  const syncKeys = useCallback(() => {
+    const inside = !!rootRef.current?.contains(document.activeElement)
+    setKeysOn(inside)
+    // Once the keyboard has left the demo for something else on the page,
+    // forget where it was: a later mouse click in here must not pull focus
+    // back to a place the person left long ago.
+    if (!inside && document.activeElement && document.activeElement !== document.body) lastAny.current = null
+  }, [])
 
   /* ---------- the preview ---------- */
 
@@ -102,47 +115,42 @@ export default function Demo() {
     return () => clearInterval(id)
   }, [state.timer.running, state.timer.paused])
 
-  /* ---------- focus ---------- */
+  /* ---------- layers and focus ---------- */
 
-  const overlayOpen = !!state.palette || state.reader || (state.timer.running && state.timer.overlay)
-  const wasOpen = useRef(overlayOpen)
-  useLayoutEffect(() => {
-    if (!wasOpen.current && overlayOpen && !previewingRef.current) {
-      // An overlay opened over the chat, which is now inert. If focus was in
-      // the chat (typing in the input when a break arrived), hold it on the
-      // demo window so Escape still works. Overlays that take focus
-      // themselves do so right after this.
-      const active = document.activeElement
-      const app = rootRef.current?.querySelector('.demo-app')
-      if (app && (app.contains(active) || (active === document.body && app.contains(lastFocus.current)))) {
-        windowRef.current?.focus({ preventScroll: true })
-      }
-    }
-    if (wasOpen.current && !overlayOpen) {
-      // An overlay closed. If focus went with it, put it back where it was.
-      const active = document.activeElement
-      const lost = !active || active === document.body || !rootRef.current?.contains(active)
-      if (lost && !previewingRef.current) {
-        const back = lastFocus.current
-        const usable = back && back.isConnected && !back.closest('[inert]')
-        ;(usable ? back : windowRef.current)?.focus({ preventScroll: true })
-      }
-    }
-    wasOpen.current = overlayOpen
-  }, [overlayOpen])
+  // Visual stacking, top first: the palette covers the timer screen, which
+  // covers Focus Reader. Escape and focus both follow this order, and
+  // everything below the top layer is inert so Tab cannot reach a control
+  // nobody can see (WCAG 2.4.11).
+  const timerScreen = state.timer.running && state.timer.overlay
+  const topLayer = state.palette ? 'palette' : timerScreen ? 'timer' : state.reader ? 'reader' : null
+  const TOP_FOCUS = {
+    palette: '.demo-pal-input',
+    timer: '.demo-pomo-screen button',
+    reader: '.demo-fr',
+  }
 
-  // Hiding the input while typing in it (⌘⇧H or Zen from inside the field)
-  // would drop focus to the page, and every later shortcut would silently do
-  // nothing. Keep focus in the demo.
+  // After every render: if whatever had focus has gone away or turned inert,
+  // put focus somewhere usable inside the demo — the top layer if one is
+  // open, otherwise where it was before. Focus that is alive and well
+  // somewhere else on the page is never taken.
   useLayoutEffect(() => {
-    if (!state.composerHidden) return
-    const input = composerRef.current
+    if (previewingRef.current) return
+    const root = rootRef.current
     const active = document.activeElement
-    // `inert` may already have blurred it to <body> by the time this runs.
-    if (input && (active === input || (active === document.body && lastFocus.current === input))) {
-      windowRef.current?.focus({ preventScroll: true })
+    const adrift = !active || active === document.body
+    const last = lastAny.current
+    // "Gone" covers both ways focus is lost: the element was removed (Stop
+    // preview, End timer, a palette row) — in which case it is no longer in
+    // the page at all — or it is still there but now inert under a layer.
+    const gone = last && root?.contains(last) === false ? !last.isConnected : !!last?.closest?.('[inert]')
+    if (adrift && last && gone) {
+      const inTop = topLayer && root.querySelector(TOP_FOCUS[topLayer])
+      const back = lastFocus.current
+      const usable = !topLayer && back && back.isConnected && root.contains(back) && !back.closest('[inert]')
+      ;(inTop || (usable ? back : windowRef.current))?.focus({ preventScroll: true })
     }
-  }, [state.composerHidden])
+    syncKeys()
+  })
 
   useEffect(() => {
     if (!state.composerHidden && focusComposer.current) {
@@ -166,6 +174,9 @@ export default function Demo() {
   }
 
   function onKeyDownCapture(e) {
+    // Mid-composition keys belong to the input method: in Japanese or Chinese
+    // input, Return confirms a candidate and Escape cancels one.
+    if (e.isComposing || e.keyCode === 229) return
     takeOver()
     const s = stateRef.current
     const mod = e.metaKey || e.ctrlKey
@@ -176,11 +187,12 @@ export default function Demo() {
     if (mod && !e.shiftKey && !e.altKey && e.code === 'KeyK') return handled(e, { type: 'palette' })
     if (mod && e.shiftKey && !e.altKey && e.code === 'KeyZ') return handled(e, { type: 'zen' })
     if (mod && e.shiftKey && !e.altKey && e.code === 'KeyH') return handled(e, { type: 'composer' })
+    if (mod && e.shiftKey && !e.altKey && e.code === 'KeyJ') return handled(e, { type: 'answerTop' })
 
     // Type-ahead, as src/typeahead.js "auto": with the input hidden, a
     // printable key reveals it and lands in it. Space stays a scroll key.
     if (
-      s.composerHidden && !overlayOpen && e.key.length === 1 && e.key !== ' ' &&
+      s.composerHidden && !topLayer && e.key.length === 1 && e.key !== ' ' &&
       !mod && !e.altKey && !isEditable(e.target)
     ) {
       focusComposer.current = true
@@ -190,12 +202,17 @@ export default function Demo() {
 
   function onFocusCapture(e) {
     takeOver()
-    setKeysOn(true)
+    lastAny.current = e.target
+    // The restore target skips the layers themselves: closing the palette
+    // should land where you were before it opened, not on a gone row.
     if (!e.target.closest('.demo-pal, .demo-fr, .demo-pomo-screen')) lastFocus.current = e.target
+    syncKeys()
   }
 
-  function onBlurCapture(e) {
-    if (!rootRef.current?.contains(e.relatedTarget)) setKeysOn(false)
+  function onBlurCapture() {
+    // Focus may be on its way to another element in the demo; look after it
+    // has landed, and read the document rather than guessing from the event.
+    setTimeout(syncKeys, 0)
   }
 
   const hint = touch
@@ -243,22 +260,28 @@ export default function Demo() {
           aria-label="Calm demo: a pretend AI chat"
           aria-describedby="demo-help"
         >
-          <ChatWindow state={state} dispatch={dispatch} composerRef={composerRef} covered={overlayOpen} />
+          <ChatWindow state={state} dispatch={dispatch} composerRef={composerRef} covered={!!topLayer} />
 
           {t.running && <TimeBar timer={t} />}
           {t.running && !t.overlay && (
-            <TimerWidget timer={t} dispatch={dispatch} raised={!state.composerHidden} onExpand={() => { expandAsked.current = true }} />
+            <TimerWidget timer={t} dispatch={dispatch} raised={!state.composerHidden}
+              inert={!!topLayer || undefined} onExpand={() => { expandAsked.current = true }} />
           )}
-          {state.reader && <FocusReader state={state} dispatch={dispatch} focusOnOpen={!previewing} />}
-          {t.running && t.overlay && (
+          {state.reader && (
+            <FocusReader state={state} dispatch={dispatch} focusOnOpen={!previewing}
+              inert={topLayer !== 'reader' || undefined} />
+          )}
+          {timerScreen && (
             // Focus moves in only when someone expanded it. A break arriving on
             // its own surfaces the screen without taking the keyboard away.
-            <TimerOverlay timer={t} cycles={state.S.pomoCycles} dispatch={dispatch} focusOnOpen={!previewing && expandAsked.current} />
+            <TimerOverlay timer={t} cycles={state.S.pomoCycles} dispatch={dispatch}
+              inert={topLayer !== 'timer' || undefined}
+              focusOnOpen={!previewing && expandAsked.current} />
           )}
           {state.palette && <Palette state={state} dispatch={dispatch} focusOnOpen={!previewing} />}
 
           {keycap && (
-            <div className="demo-keycap" aria-hidden="true" data-raised={!state.composerHidden && !overlayOpen}>
+            <div className="demo-keycap" aria-hidden="true" data-raised={!state.composerHidden && !topLayer}>
               {keycap.combo && <kbd>{keys(keycap.combo)}</kbd>}
               <span>{keycap.label}</span>
             </div>

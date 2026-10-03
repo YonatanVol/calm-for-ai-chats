@@ -30,15 +30,21 @@ sys.dont_write_bytecode = True  # never drop __pycache__ into the extension fold
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 EXTENSION_FILES = ["manifest.json", "src", "content.css", "icons"]
-# Top-level folders that are never packaged and never checked. site/ is the
-# landing page: its node_modules and Vite build routinely hold _-prefixed
-# names, which would fail validation on any machine that has built the site.
+# site/ is the landing page and is never packaged. Its node_modules and its
+# Vite build routinely hold _-prefixed names (Rollup names shared chunks that
+# way), which would fail validation on any machine that has built the site —
+# so the _ rule does not apply in there. A stray private key still does.
 NOT_EXTENSION = {"site"}
 
 
+def in_site(base):
+    rel = os.path.relpath(base, ROOT)
+    return rel == "site" or rel.startswith("site" + os.sep)
+
+
 def prune(base, dirs):
-    if base == ROOT:
-        dirs[:] = [d for d in dirs if d not in NOT_EXTENSION]
+    if "node_modules" in dirs:
+        dirs.remove("node_modules")
 
 
 def c(code, text):
@@ -89,8 +95,9 @@ def validate():
         if ".git" in base:
             continue
         prune(base, dirs)
+        site = in_site(base)
         for name in dirs + files:
-            if name.startswith("_") or name.endswith(".pem"):
+            if name.endswith(".pem") or (not site and name.startswith("_")):
                 bad.append(os.path.join(base, name))
     if bad:
         print(c("31", "✗ Chrome will refuse this folder — remove these first:"))

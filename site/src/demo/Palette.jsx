@@ -26,6 +26,7 @@ export default function Palette({ state, dispatch, focusOnOpen }) {
   }, [cursor, query])
 
   function onKeyDown(e) {
+    if (e.isComposing || e.keyCode === 229) return // the input method owns these
     if (e.key === 'ArrowDown') { e.preventDefault(); dispatch({ type: 'paletteMove', dir: 1 }) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); dispatch({ type: 'paletteMove', dir: -1 }) }
     else if (e.key === 'ArrowRight' && rows[cursor]?.kind === 'range') { e.preventDefault(); dispatch({ type: 'paletteNudge', dir: 1 }) }
@@ -76,24 +77,27 @@ export default function Palette({ state, dispatch, focusOnOpen }) {
               >
                 <span>{it.name}</span>
                 <span className="demo-pal-state">
-                  {it.kind === 'range' && on ? (
-                    // The extension nudges with ← and →. A phone has neither,
-                    // so the selected number row also offers − and +.
-                    <>
-                      <button type="button" className="demo-pal-nudge" aria-label={`Decrease ${it.name}`} tabIndex={-1}
-                        onClick={(e) => { e.stopPropagation(); dispatch({ type: 'paletteNudge', dir: -1 }) }}>−</button>
-                      <span>{hint}</span>
-                      <button type="button" className="demo-pal-nudge" aria-label={`Increase ${it.name}`} tabIndex={-1}
-                        onClick={(e) => { e.stopPropagation(); dispatch({ type: 'paletteNudge', dir: 1 }) }}>+</button>
-                      <span className="demo-pal-arrows" aria-hidden="true">← →</span>
-                    </>
-                  ) : hint}
+                  {hint}
+                  {it.kind === 'range' && on ? <span className="demo-pal-arrows" aria-hidden="true">{'← →'}</span> : null}
                 </span>
               </div>
             )
           })}
-          {!rows.length && <div className="demo-pal-empty">Nothing matches</div>}
         </div>
+        {!rows.length && <p className="demo-pal-empty">Nothing matches</p>}
+        {rows[cursor]?.kind === 'range' && (
+          // The extension nudges a number with ← and →. A touch screen has
+          // neither, so the selected number also gets a pair of buttons —
+          // outside the list, because an option may not contain controls.
+          <div className="demo-pal-nudgebar">
+            <span>{rows[cursor].name}</span>
+            <button type="button" className="demo-pal-nudge" aria-label={`Decrease ${rows[cursor].name}`}
+              onClick={() => dispatch({ type: 'paletteNudge', dir: -1 })}>−</button>
+            <span className="demo-pal-nudgeval">{state.S[rows[cursor].key]}</span>
+            <button type="button" className="demo-pal-nudge" aria-label={`Increase ${rows[cursor].name}`}
+              onClick={() => dispatch({ type: 'paletteNudge', dir: 1 })}>+</button>
+          </div>
+        )}
         <p className="demo-pal-note">A few of Calm's commands, the ones this demo can run.</p>
       </div>
     </div>

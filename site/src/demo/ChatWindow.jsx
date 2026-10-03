@@ -20,10 +20,14 @@ export default function ChatWindow({ state, dispatch, composerRef, covered }) {
     const sc = scrollRef.current
     if (!sc || !state.scroll) return
     const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches
+    const answer = answerRef.current
     const top =
       state.scroll.to === 'top' ? 0
       : state.scroll.to === 'end' ? sc.scrollHeight
-      : answerRef.current ? answerRef.current.offsetTop - 16 : 0
+      // Relative to the scroller, not to the window: offsetTop counts the
+      // header too and would overshoot by its height.
+      : answer ? sc.scrollTop + answer.getBoundingClientRect().top - sc.getBoundingClientRect().top - 16
+      : 0
     sc.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' })
   }, [state.scroll])
 
@@ -39,7 +43,7 @@ export default function ChatWindow({ state, dispatch, composerRef, covered }) {
       <aside className="demo-side" inert={zen || undefined} aria-label="Conversations">
         <div className="demo-side-new">
           <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg>
-          New chat
+          New conversation
         </div>
         <p className="demo-side-h">Recent</p>
         <ul className="demo-side-list">
@@ -54,7 +58,7 @@ export default function ChatWindow({ state, dispatch, composerRef, covered }) {
             <header className="demo-head">
               <svg className="demo-head-menu" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" /></svg>
               <span className="demo-head-title">{TITLE}</span>
-              <span className="demo-head-share">Share</span>
+              <span className="demo-head-count">4 messages</span>
             </header>
           </div>
         </div>
@@ -96,9 +100,7 @@ export default function ChatWindow({ state, dispatch, composerRef, covered }) {
                 value={state.draft}
                 onChange={(e) => dispatch({ type: 'draft', value: e.target.value })}
               />
-              <button type="submit" className="demo-send" aria-label="Send (demo)">
-                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" /></svg>
-              </button>
+              <button type="submit" className="demo-send">Send</button>
             </form>
             <p className={`demo-sent${sentNote ? ' is-on' : ''}`} aria-hidden="true">This is a demo. Nothing is sent anywhere.</p>
           </div>

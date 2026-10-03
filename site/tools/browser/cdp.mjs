@@ -61,6 +61,12 @@ export async function launch({ extraArgs = [] } = {}) {
       await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile });
     },
     async media(features) { await send("Emulation.setEmulatedMedia", { features }); },
+    waitFor(method, ms = 20000) {
+      return new Promise((resolve) => {
+        const t = setTimeout(() => resolve(false), ms);
+        listeners.push((d) => { if (d.method === method) { clearTimeout(t); resolve(true); } });
+      });
+    },
     async goto(url, wait = 1500) {
       const loaded = new Promise((r) => listeners.push((d) => d.method === "Page.loadEventFired" && r()));
       await send("Page.navigate", { url }); await loaded; await sleep(wait);

@@ -18,8 +18,8 @@ export default function Read() {
             alt="Calm's Focus Reader: an answer in its own reading pane with bionic fixation, and a Hebrew paragraph reading right to left"
           >
             Bionic fixation, adjustable 20–60%. Ease spacing for dyslexic reading. A spotlight
-            that dims everything but the block you're on, and arrow keys to walk it. Right-to-left
-            is detected per paragraph, so mixed Hebrew and English reads correctly without a setting.
+            that dims everything but the block you're on, and arrow keys to walk it. Each block
+            gets its own reading direction, so Hebrew and Arabic read right to left without a setting.
           </FeatureBlock>
 
           <FeatureBlock
@@ -27,9 +27,10 @@ export default function Read() {
             shortcut="⌘⇧Z"
             delay={60}
           >
-            Sidebar and header gone in one keypress, and the suggestion chips too where a site
-            shows them. By default the input bar goes with them, and comes back when you leave Zen.
-            What remains is the conversation.
+            The sidebar goes in one keypress, and with it whatever else each site puts around the
+            conversation: the header on ChatGPT and Claude, the mode switcher and new-chat
+            suggestions on Gemini. By default the input bar goes too, and comes back when you leave
+            Zen. What remains is the conversation.
           </FeatureBlock>
 
           <FeatureBlock

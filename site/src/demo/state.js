@@ -140,7 +140,10 @@ function timerStop(s) {
   let n = s
   // Leave no Zen behind that WE turned on.
   if (n.timer.enteredZen && n.zen) n = zenExit(n)
-  return { ...n, timer: { ...IDLE_TIMER } }
+  // Like pomodoro.js stop(): the clock itself is left where it stood (nothing
+  // shows it once the timer is gone) — only the phase and the flags reset.
+  // (pomodoro.js stop() does not clear `paused` either; start() does.)
+  return { ...n, timer: { ...n.timer, running: false, phase: 'idle', overlay: false, enteredZen: false } }
 }
 
 function nextPhase(s) {
@@ -152,7 +155,8 @@ function nextPhase(s) {
     if (n.timer.enteredZen && n.zen) n = zenExit(n)
     return { ...n, timer: { ...n.timer, enteredZen: false, overlay: true } }
   }
-  if (n.timer.phase === 'long') return timerStop(n) // whole set done
+  // The whole set is done. pomodoro.js refills the clock before exiting.
+  if (n.timer.phase === 'long') return timerStop({ ...n, timer: { ...n.timer, remaining: n.timer.total } })
   n = { ...n, timer: { ...n.timer, cycle: n.timer.cycle + 1 } }
   n = enterPhase(n, 'focus')
   if (n.S.pomoAutoZen && !n.zen) {
@@ -266,6 +270,11 @@ export function reducer(s, a) {
       return say(n, 'Input bar back, with what you typed in it.', a)
     }
 
+    // ⌘⇧J in the extension (src/core.js jumpToAnswerStart), and the palette's
+    // "Back to the start of the answer".
+    case 'answerTop':
+      return say({ ...s, scroll: { to: 'answer', n: (s.scroll?.n || 0) + 1 } }, 'Back to the start of the answer.', a)
+
     case 'draft':
       return { ...s, draft: a.value }
 
@@ -336,7 +345,10 @@ export function reducer(s, a) {
     case 'readerBlock': {
       if (!s.reader || !s.S.frSpotlight) return s
       const i = a.index != null ? a.index : s.readerBlock + a.dir
-      return { ...s, readerBlock: Math.max(0, Math.min(a.count - 1, i)) }
+      const next = Math.max(0, Math.min(a.count - 1, i))
+      // Hovering within the same block must not re-render (and re-fixate)
+      // the whole demo on every mouse move.
+      return next === s.readerBlock ? s : { ...s, readerBlock: next }
     }
 
     case 'preset': {
@@ -363,6 +375,7 @@ export function reducer(s, a) {
     }
 
     case 'timerPause': {
+      if (!s.timer.running) return s // only reachable from the running timer
       const n = { ...s, timer: { ...s.timer, paused: !s.timer.paused } }
       return say(n, n.timer.paused ? 'Timer paused.' : 'Timer running.', a)
     }
@@ -388,15 +401,19 @@ export function reducer(s, a) {
       return say(timerStop(s), 'Focus timer ended.', a)
     }
 
-    // Escape peels one layer at a time: palette, then Focus Reader, then the
-    // timer's full screen — the same order the extension's shared Escape
-    // handler closes surfaces in. With nothing left open it resets the demo.
-    // (The extension itself does not leave Zen or show the input on Escape;
-    // the controls under the demo say "Esc resets the demo" for that reason.)
+    // Escape peels one layer at a time, from the top of the stack down: the
+    // palette, then the timer's full screen, then Focus Reader — what you
+    // can see, in the order you can see it. With nothing left open it resets
+    // the demo.
+    //
+    // The extension differs here, deliberately: there, Escape closes the
+    // palette and Focus Reader but has no handler on the timer screen, and it
+    // never leaves Zen or shows the input. The note under the demo says Esc
+    // resets the demo, and the README lists both as demo-only.
     case 'escape': {
       if (s.palette) return { ...s, palette: null }
-      if (s.reader) return reducer(s, { ...a, type: 'reader' })
       if (s.timer.overlay) return { ...s, timer: { ...s.timer, overlay: false } }
+      if (s.reader) return reducer(s, { ...a, type: 'reader' })
       if (s.zen || s.composerHidden || s.timer.running) {
         return say(reset(s), 'Demo reset. Everything is back.', a)
       }

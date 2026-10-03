@@ -181,15 +181,17 @@ test('palette: Return runs and closes; a number row stays open and nudges within
 })
 
 test('Escape peels one layer at a time, then resets the demo', () => {
-  let s = run({ type: 'preset', key: '25/5' }, { type: 'timerOverlay', open: true }, 'reader', 'palette')
+  // Top of the stack down, the order they are drawn in: palette, timer
+  // screen, Focus Reader.
+  let s = run({ type: 'preset', key: '25/5' }, 'reader', { type: 'timerOverlay', open: true }, 'palette')
   s = reducer(s, { type: 'escape' })
   assert.equal(s.palette, null)
-  assert.equal(s.reader, true)
-  s = reducer(s, { type: 'escape' })
-  assert.equal(s.reader, false)
   assert.equal(s.timer.overlay, true)
   s = reducer(s, { type: 'escape' })
   assert.equal(s.timer.overlay, false)
+  assert.equal(s.reader, true)
+  s = reducer(s, { type: 'escape' })
+  assert.equal(s.reader, false)
   assert.equal(s.timer.running, true)
   s = reducer(s, { type: 'escape' })
   assert.equal(s.timer.running, false)
@@ -200,4 +202,205 @@ test('Escape peels one layer at a time, then resets the demo', () => {
 test('the preview is never announced; a person is', () => {
   assert.equal(reducer(initialState, { type: 'zen', quiet: true }).announce.text, '')
   assert.match(reducer(initialState, { type: 'zen' }).announce.text, /^Zen on/)
+})
+
+/* ---------- the same actions, run through the extension itself ---------- */
+
+/**
+ * A working copy of the extension's Zen, input-bar and timer logic, built from
+ * its real source with the DOM and the UI stubbed out. Everything that decides
+ * behaviour is the extension's own code; everything that only draws is a stub.
+ *
+ * This is what makes "the demo behaves like the extension" checkable instead of
+ * asserted: the same sequence of actions goes through both, and the state after
+ * every step has to match.
+ */
+const machineCode = new Map() // per ref: the shim is built once, not per sequence
+
+function extensionMachine(ref) {
+  if (machineCode.has(ref)) return buildMachine(machineCode.get(ref))
+  const read = (rel) => (ref
+    ? execFileSync('git', ['-C', REPO, 'show', `${ref}:${rel}`], { encoding: 'utf8' })
+    : readFileSync(join(REPO, rel), 'utf8'))
+  const code = [
+    ...['zenEnter', 'zenExit', 'modeEnter', 'modeExit', 'modeToggle', 'isActive'].map((n) => extract(read('src/modes.js'), n)),
+    ...['currentComposer', 'hideComposer', 'showComposer', 'manualToggleComposer'].map((n) => extract(read('src/core.js'), n)),
+    ...['minsFor', 'enterPhase', 'elapsedMin', 'logElapsed', 'start', 'stop', 'tick', 'nextPhase', 'pauseResume', 'skip', 'reset'].map((n) => extract(read('src/pomodoro.js'), n)),
+  ].join('\n')
+
+  const shim = `
+    "use strict";
+    var noop = function () {};
+    var S = SETTINGS;
+    var rt = { composerEl: null, composerHidden: false, hiddenManually: false, zenHidComposer: false,
+               zenOn: false, zenHidden: [], activeModes: {}, modeTimers: {}, tearingDown: false };
+    rt.composerEl = { isConnected: true, style: { setProperty: noop, removeProperty: noop } };
+    var st = { phase: "idle", remaining: 0, total: 0, cycle: 1, running: false, paused: false,
+               timer: null, enteredZen: false, overlay: false };
+    var site = { zenCss: function () { return ""; }, zenInline: false, zenTargets: function () { return []; },
+                 composer: function () { return rt.composerEl; } };
+    var document = { documentElement: { classList: { add: noop, remove: noop } },
+                     body: { classList: { add: noop, remove: noop } }, getElementById: function () { return null; } };
+    var C = { HINT_EVERY_DAYS: 7 };
+    var ui = { showToast: noop };
+    var injectStyle = noop, removeEl = noop, saveDraft = noop, lockScroll = noop,
+        restoreDraft = noop, flushTypeAhead = noop,
+        buildWidget = noop, buildTimeBar = noop, render = noop, removeWidget = noop, removeTimeBar = noop,
+        setModeBtnActive = noop, afterLayoutChange = noop, persist = noop;
+    function showOverlay() { st.overlay = true; }
+    function removeOverlay() { st.overlay = false; }
+    function setInterval() { return 1; }
+    function clearInterval() {}
+    var CALM = {
+      audio: null, stats: null, hints: { shouldShow: function () { return false; }, markShown: noop },
+      saveState: noop, entitled: function () { return true; },
+    };
+    ${code}
+    var MODES = {
+      zen: { enter: zenEnter, exit: zenExit },
+      pomodoro: { enter: function () { start(); }, exit: function () { stop(); } },
+    };
+    CALM.core = { hideComposer: hideComposer, showComposer: showComposer, manualToggleComposer: manualToggleComposer };
+    CALM.modes = { enter: modeEnter, exit: modeExit, toggle: modeToggle, isActive: isActive };
+    CALM.pomodoro = { state: st, start: start, stop: stop, skip: skip, reset: reset };
+    return {
+      S: S, rt: rt, st: st, CALM: CALM,
+      showOverlay: showOverlay, removeOverlay: removeOverlay,
+      tick: tick, pauseResume: pauseResume, skip: skip, reset: reset,
+    };
+  `
+  machineCode.set(ref, shim)
+  return buildMachine(shim)
+}
+
+function buildMachine(shim) {
+  const m = new Function('SETTINGS', shim)(structuredClone(DEFAULT_SETTINGS))
+
+  return {
+    observe: () => ({
+      zen: !!m.rt.activeModes.zen,
+      composerHidden: m.rt.composerHidden,
+      hiddenManually: m.rt.hiddenManually,
+      zenHidComposer: m.rt.zenHidComposer,
+      running: m.st.running,
+      phase: m.st.phase,
+      remaining: m.st.remaining,
+      cycle: m.st.cycle,
+      paused: m.st.paused,
+      overlay: m.st.overlay,
+      enteredZen: m.st.enteredZen,
+    }),
+    act(a) {
+      switch (a.type) {
+        case 'zen': return m.CALM.modes.toggle('zen')
+        case 'composer': return m.CALM.core.manualToggleComposer()
+        // src/typeahead.js "auto": a printable key reveals the input.
+        case 'typeAhead': return m.rt.composerHidden ? m.CALM.core.showComposer() : undefined
+        case 'preset': {
+          const p = PRESETS[a.key]
+          m.CALM.modes.exit('pomodoro')
+          m.S.pomoFocusMin = p.focus; m.S.pomoBreakMin = p.brk; m.S.pomoLongBreakMin = p.long
+          return m.CALM.modes.enter('pomodoro')
+        }
+        case 'timerStart': return m.CALM.modes.enter('pomodoro')
+        case 'timerEnd': return m.CALM.modes.exit('pomodoro')
+        case 'timerSkip': return m.st.running ? m.skip() : undefined
+        case 'timerReset': return m.st.running ? m.reset() : undefined
+        case 'timerPause': return m.st.running ? m.pauseResume() : undefined
+        case 'tick': return m.tick()
+        case 'tickToEnd': {
+          if (!m.st.running || m.st.paused) return
+          m.st.remaining = 1
+          return m.tick()
+        }
+        case 'timerOverlay': return m.st.running ? (a.open ? m.showOverlay() : m.removeOverlay()) : undefined
+        default: throw new Error('unmapped action ' + a.type)
+      }
+    },
+  }
+}
+
+const observeDemo = (s) => ({
+  zen: s.zen,
+  composerHidden: s.composerHidden,
+  hiddenManually: s.hiddenManually,
+  zenHidComposer: s.zenHidComposer,
+  running: s.timer.running,
+  phase: s.timer.phase,
+  remaining: s.timer.remaining,
+  cycle: s.timer.cycle,
+  paused: s.timer.paused,
+  overlay: s.timer.overlay,
+  enteredZen: s.timer.enteredZen,
+})
+
+function demoAct(s, a) {
+  if (a.type === 'tickToEnd') {
+    if (!s.timer.running || s.timer.paused) return s
+    return reducer({ ...s, timer: { ...s.timer, remaining: 1 } }, { type: 'tick' })
+  }
+  return reducer(s, a)
+}
+
+const ACTIONS = [
+  { type: 'zen' }, { type: 'zen' }, { type: 'composer' }, { type: 'composer' },
+  { type: 'typeAhead', ch: 'a' },
+  { type: 'preset', key: '10/2' }, { type: 'preset', key: '25/5' }, { type: 'preset', key: '90/20' },
+  { type: 'timerStart' }, { type: 'timerEnd' }, { type: 'timerSkip' }, { type: 'timerReset' },
+  { type: 'timerPause' }, { type: 'tick' }, { type: 'tickToEnd' }, { type: 'tickToEnd' },
+  { type: 'timerOverlay', open: true }, { type: 'timerOverlay', open: false },
+]
+
+// Deterministic PRNG, so a failure names a sequence anyone can replay.
+function rng(seed) {
+  return () => {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function differ(seed, length, refA, refB) {
+  // Returns the first step where the two machines part company, or null.
+  const rand = rng(seed)
+  const a = refA === 'demo' ? null : extensionMachine(refA)
+  const b = refB === 'demo' ? null : extensionMachine(refB)
+  let sa = initialState, sb = initialState
+  const seq = []
+  for (let i = 0; i < length; i++) {
+    const act = ACTIONS[Math.floor(rand() * ACTIONS.length)]
+    seq.push(act)
+    if (a) a.act(act); else sa = demoAct(sa, act)
+    if (b) b.act(act); else sb = demoAct(sb, act)
+    const oa = a ? a.observe() : observeDemo(sa)
+    const ob = b ? b.observe() : observeDemo(sb)
+    if (JSON.stringify(oa) !== JSON.stringify(ob)) return { step: i, seq, oa, ob }
+  }
+  return null
+}
+
+test('the demo and the extension answer every sequence of actions the same way', () => {
+  for (let seed = 1; seed <= 2000; seed++) {
+    const d = differ(seed, 14, 'demo', null) // null = the working tree, src/
+    assert.equal(d, null, d && `seed ${seed}, step ${d.step}\n  actions: ${JSON.stringify(d.seq)}\n  demo: ${JSON.stringify(d.oa)}\n  src:  ${JSON.stringify(d.ob)}`)
+  }
+})
+
+test('every difference from the released extension is one develop changed on purpose', { skip: !REF && 'run with CALM_REF=v3.2.1' }, () => {
+  let divergent = 0
+  for (let seed = 1; seed <= 2000; seed++) {
+    const vsRelease = differ(seed, 14, 'demo', REF)
+    if (!vsRelease) continue
+    divergent++
+    // The same sequence must also split develop from the release: the demo
+    // follows develop's two ownership fixes (3.3.0), not the release's bugs.
+    const devVsRelease = differ(seed, 14, null, REF)
+    assert.ok(
+      devVsRelease && devVsRelease.step <= vsRelease.step,
+      `seed ${seed}: the demo differs from ${REF} at step ${vsRelease.step} in a way develop does not explain\n  actions: ${JSON.stringify(vsRelease.seq)}\n  demo: ${JSON.stringify(vsRelease.oa)}\n  ${REF}: ${JSON.stringify(vsRelease.ob)}`
+    )
+  }
+  assert.ok(divergent > 0, 'expected the release to differ somewhere; did the extraction silently match nothing?')
+  console.log(`      (${divergent} of 2000 sequences differ from ${REF}; develop explains each)`)
 })

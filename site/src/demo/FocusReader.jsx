@@ -15,7 +15,7 @@ import { fixate } from '../lib/bionic'
  * beside the fixation slider says the value, which the extension leaves to
  * the slider's tooltip.
  */
-export default function FocusReader({ state, dispatch, focusOnOpen }) {
+export default function FocusReader({ state, dispatch, focusOnOpen, inert }) {
   const paneRef = useRef(null)
   const S = state.S
   const frac = (S.frFixation | 0) / 100 || 0.4
@@ -39,6 +39,7 @@ export default function FocusReader({ state, dispatch, focusOnOpen }) {
       role="dialog"
       aria-label="Focus Reader"
       tabIndex={-1}
+      inert={inert}
       onKeyDown={(e) => {
         if (!S.frSpotlight) return
         if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {

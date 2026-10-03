@@ -79,15 +79,34 @@ poor substitute for driving one.
 - **Announced**: each mode change a person makes is read out through a polite
   live region.
 
-Deliberate differences from the extension, all for accessibility or honesty:
-the extension's 32%-ink greys and its 22%-opacity spotlight dim measure under
-WCAG AA, so the demo uses the site's lifted greys and dims to 5.3:1 instead; a
-small number beside the fixation slider says its value; the palette lists only
-the commands this demo can run and says so, and a number row offers − and + on
-touch screens; choosing a timer preset starts the block in one tap (the
-extension sets the preset in Advanced and starts from the Console); and Esc
-resets the demo when nothing is open, which the extension does not do — the
-note under the demo says so.
+Deliberate differences from the extension, all for accessibility, honesty or
+the fact that this is a demo:
+
+- **Contrast.** The extension's 32%-ink greys and its 22%-opacity spotlight dim
+  measure under WCAG AA, so the demo uses the site's lifted greys and dims the
+  other blocks to 5.3:1 instead.
+- **Escape.** Here it closes the top layer — palette, then the timer screen,
+  then Focus Reader — and resets the demo when nothing is open. The extension's
+  Escape closes the palette and Focus Reader, has no handler on the timer
+  screen, and never leaves Zen or shows the input. The note under the demo says
+  "Esc closes what is open, then resets the demo".
+- **Layers.** Everything under the top layer is `inert`, so Tab cannot reach a
+  control that is covered. The extension does not do this.
+- **Type-ahead** is held back while a layer is open; the extension would reveal
+  the input underneath it.
+- **The fixation slider** shows its value; the extension leaves that to the
+  slider's tooltip. ↑↓ on a focused slider adjust the slider rather than walking
+  the spotlight.
+- **The palette** lists only the commands this demo can run, and says so. A
+  number gets − and + buttons on touch screens, below the list.
+- **Timer presets** start the block in one tap; the extension sets the preset in
+  the Advanced drawer and starts it from the Console.
+- **Version.** The demo follows `develop` (3.3.0), which fixed two ownership
+  rules: showing the input bar releases Zen's claim on it, and leaving Zen
+  settles a timer's borrowed Zen. Against the downloadable v3.2.1 those two
+  show up in random action sequences (1466 of 2000 in the fuzz below), but both
+  need you to toggle Zen or the input bar while Zen or a block is already on.
+  Ship 3.3.0 before this page goes live, or accept that difference.
 
 ## Palette provenance
 
@@ -113,20 +132,35 @@ the `v3.2.1` tag. When 3.3.0 ships: add ⌘⇧E (down to the next answer) and �
 (auto-scroll) to the shortcuts section, and refresh the media from
 `store-assets/`.
 
-## Verified (2026-09-14, headless Chrome 152, `npm run check:browser`: 129 checks)
+## Verified
 
-- Every line of text on the page passes WCAG AA against the **rendered pixels**
-  behind it (218–237 lines at 375, 810 and 1280), and every demo state does too:
-  preview keycap, Zen, palette, Focus Reader with spotlight, timer focus and
-  break screens, the send note, and the touch layouts at 375 and 810.
-- No horizontal overflow at 375, 810 or 1280, in every demo state.
-- Every scroll reveal fires; no console errors or warnings.
-- Every demo path works by keyboard and by clicking; shortcuts outside the demo
-  are not prevented; the preview starts, stops on takeover, resets when
-  scrolled away and resumes; reduced motion has no preview and no transitions;
-  Windows labels read Ctrl.
-- `npm test` / `npm run test:release`: 10 tests; each was shown to fail when the
-  rule it guards was broken on purpose.
+`npm test` / `npm run test:release` — 12 tests, each shown to fail when the rule
+it guards is broken on purpose:
+
+- **Differential fuzz.** The extension's own Zen, input-bar and timer functions
+  are lifted out of `src/` (DOM and drawing stubbed) and driven through the same
+  2000 random action sequences as the demo's reducer. Every observable — Zen,
+  the input bar and who hid it, phase, clock, cycle, pause, the break screen,
+  the borrowed Zen — has to match after every step. It caught three real
+  mismatches while being written (a cleared clock, a cleared pause flag, and
+  pausing an idle timer).
+- Bionic splitting, palette names/ranges/scoring, timer presets and defaults are
+  all compared against the extension's source, not a copy of it.
+
+`npm run check:browser` — headless Chrome, 375 / 810 / 1280:
+
+- Every line of text passes WCAG AA against the **rendered pixels** behind it,
+  on the whole page and in every demo state (preview, Zen, palette, Focus Reader
+  with spotlight, timer focus and break, the send note, touch layouts), with a
+  minimum line count per state so a scrolled-away demo cannot pass by measuring
+  nothing.
+- No horizontal overflow anywhere; every scroll reveal fires; no console errors.
+- Every demo path by keyboard and by clicking; shortcuts outside the demo are
+  left alone; Tab into the demo keeps the keyboard there; layers are inert
+  beneath the top one; Escape peels them top-down; an automatic break screen
+  does not steal focus from the rest of the page; the preview starts, stops on
+  takeover, resets when scrolled away and resumes; reduced motion has no
+  preview; Windows labels read Ctrl.
 
 ## Still to do
 
@@ -134,6 +168,20 @@ the `v3.2.1` tag. When 3.3.0 ships: add ⌘⇧E (down to the next answer) and �
   honestly, including the Chrome warning. Replace that section with a store
   button once listed.
 - No OG image or favicon set beyond the extension icon.
+- `02-focus-reader.png` has "full Hebrew and Arabic support" baked into the
+  image, which is a stronger claim than the copy around it now makes, and it
+  predates the reader's sliders and Refresh button. Regenerate it with
+  `node tools/store-shots.js` when the reader's chrome next changes.
+- Per-block right-to-left is proven in the demo and in ChatGPT's markup. On
+  Gemini and Claude the response may arrive inside a single wrapper, in which
+  case the whole answer becomes one block (one direction, one spotlight step).
+  Worth checking live on both, and worth `unicode-bidi: plaintext` on the
+  reader's paragraphs if it does.
+- The parity tests are not in CI. Adding `node --test site/tools/*.test.mjs` to
+  `.github/workflows/harness.yml` would catch the demo drifting when the
+  extension changes — at the cost of failing the extension's own merge gate
+  until the demo is updated. Owner's call.
 - In the extension (not this site): the manifest description and several docs
   still say "no permissions" and "incapable of contacting a server"; the timer's
-  breathing ring ignores reduced motion.
+  breathing ring ignores reduced motion. Both are being handled on
+  `fix/honest-privacy-and-motion`.

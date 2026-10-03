@@ -20,10 +20,13 @@ const COLLECT = (scope) => `(() => {
     if (r - x < 2 || b - y < 2) return;
     if (rect.top < -1 || rect.bottom > H + 1) return; // only lines fully on screen
     const op = opacityOf(el); if (op < 0.1) return;
-    // Covered anywhere — by an overlay, or by the fixed nav it is scrolling under — is not measured here.
+    // Covered anywhere — by an overlay, or by the fixed nav it is scrolling
+    // under — is not measured here. Fully transparent elements are not
+    // covering anything, so look past them (a hidden toast once "covered"
+    // the suggestion chips, and they were silently never measured).
     const pts = [[(x + r) / 2, (y + b) / 2], [x + 1.5, y + 1.5], [r - 1.5, y + 1.5], [x + 1.5, b - 1.5], [r - 1.5, b - 1.5]];
     for (const [px, py] of pts) {
-      const hit = document.elementFromPoint(px, py);
+      const hit = document.elementsFromPoint(px, py).find((e) => opacityOf(e) > 0.05 && getComputedStyle(e).visibility !== 'hidden');
       if (!hit || !(el === hit || el.contains(hit) || hit.contains(el))) return;
     }
     const size = parseFloat(cs.fontSize), weight = parseInt(cs.fontWeight, 10) || 400;

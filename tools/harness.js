@@ -497,15 +497,18 @@ section("Static");
   check("no source file references auth/sync/Supabase", !leaks.length, leaks.join(","));
   function folderOffenders(root) {
     var found = [];
-    (function walk(dir) {
+    (function walk(dir, inSite) {
       fs.readdirSync(dir).forEach(function (name) {
-        if (name === ".git") return;
-        if (dir === root && name === "site") return; // the landing page; never packaged
+        if (name === ".git" || name === "node_modules") return;
         var full = path.join(dir, name);
-        if (name.charAt(0) === "_" || /\.pem$/.test(name)) found.push(full);
-        if (fs.statSync(full).isDirectory()) walk(full);
+        var site = inSite || (dir === root && name === "site");
+        // Inside site/ (the landing page, never packaged) a leading _ is
+        // normal — Rollup names shared chunks that way. A private key is
+        // not normal anywhere in this repo, so that half of the rule stays.
+        if (/\.pem$/.test(name) || (!site && name.charAt(0) === "_")) found.push(full);
+        if (fs.statSync(full).isDirectory()) walk(full, site);
       });
-    })(root);
+    })(root, false);
     return found;
   }
   var offenders = folderOffenders(ROOT);
@@ -525,12 +528,16 @@ section("Static");
       fs.mkdirSync(path.join(tmp, "site", "dist", "assets"), { recursive: true });
       fs.writeFileSync(path.join(tmp, "site", "dist", "assets", "_commonjsHelpers.js"), "");
       var siteOnly = folderOffenders(tmp);
+      fs.writeFileSync(path.join(tmp, "site", "key.pem"), "");
+      var sitePem = folderOffenders(tmp);
       fs.mkdirSync(path.join(tmp, "__pycache__"));
       var withReal = folderOffenders(tmp);
       check("a built site/ folder does not trip the extension-folder check",
         siteOnly.length === 0, siteOnly.join(","));
-      check("…while a _-prefixed name beside the manifest is still caught",
-        withReal.length === 1 && /__pycache__$/.test(withReal[0]), withReal.join(","));
+      check("…but a private key inside site/ is still caught",
+        sitePem.length === 1 && /key\.pem$/.test(sitePem[0]), sitePem.join(","));
+      check("…and a _-prefixed name beside the manifest is still caught",
+        withReal.length === 2, withReal.join(","));
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
     }

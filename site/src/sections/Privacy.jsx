@@ -1,11 +1,18 @@
 import Container from '../components/Container'
 import Reveal from '../components/Reveal'
 
-const CLAIMS = [
-  ['permissions', '[]', 'Asks Chrome for no extension permissions.'],
-  ['host_permissions', '[]', 'No extra site access requested.'],
-  ['content_scripts', '3 sites', 'Runs only on chatgpt.com, gemini.google.com and claude.ai, and reads those pages to restyle them. Chrome lists this as site access.'],
-  ['network code', '0', 'No fetch, XHR, beacon or socket in the source.'],
+// Two groups, because they are two different kinds of claim: what the
+// manifest declares (Chrome enforces it) and what the source contains (you
+// check it). Keys the manifest does not declare say so, rather than showing
+// an empty array that is not in the file.
+const MANIFEST = [
+  ['permissions', 'not declared', 'It asks Chrome for no extension permissions.'],
+  ['host_permissions', 'not declared', 'No site access beyond the three below.'],
+  ['content_scripts', '3 sites', 'chatgpt.com, gemini.google.com and claude.ai. It reads those pages to restyle them, which Chrome lists as site access.'],
+  ['background', 'not declared', 'Nothing runs when you are not on one of those sites.'],
+]
+const SOURCE = [
+  ['network calls', 'none in the source', 'No fetch, XHR, beacon or socket anywhere in src/.'],
   ['account', 'none', 'There is nothing to sign into.'],
 ]
 
@@ -46,7 +53,19 @@ export default function Privacy() {
               <span className="label">manifest.json</span>
             </div>
             <ul className="divide-y divide-line">
-              {CLAIMS.map(([key, value, note]) => (
+              {MANIFEST.map(([key, value, note]) => (
+                <li key={key} className="flex flex-col gap-1 px-5 py-4 tablet:flex-row tablet:items-baseline tablet:gap-5">
+                  <code className="font-mono text-fine text-muted tablet:w-44 tablet:shrink-0">{key}</code>
+                  <code className="font-mono text-body text-ember whitespace-nowrap tablet:shrink-0">{value}</code>
+                  <span className="type-body text-fine text-faint tablet:ml-auto tablet:text-right">{note}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex items-center gap-3 border-y border-line px-5 py-3">
+              <span className="label">src/</span>
+            </div>
+            <ul className="divide-y divide-line">
+              {SOURCE.map(([key, value, note]) => (
                 <li key={key} className="flex flex-col gap-1 px-5 py-4 tablet:flex-row tablet:items-baseline tablet:gap-5">
                   <code className="font-mono text-fine text-muted tablet:w-44 tablet:shrink-0">{key}</code>
                   <code className="font-mono text-body text-ember whitespace-nowrap tablet:shrink-0">{value}</code>
@@ -63,7 +82,7 @@ export default function Privacy() {
               <span className="text-muted">Check it yourself.</span> Before loading, open{' '}
               <code className="font-mono text-muted">manifest.json</code> in the folder you downloaded.
               After loading, <code className="font-mono text-muted">chrome://extensions</code> → Calm →
-              Details lists exactly those three sites under Permissions, and nothing else.
+              Details lists exactly those three sites under Site access, and nothing under Permissions.
             </p>
             <p className="type-body text-center text-fine text-faint">
               <span className="text-muted">Where the guarantee stops.</span> Chrome does not prevent a
